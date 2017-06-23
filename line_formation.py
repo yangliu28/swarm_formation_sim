@@ -1,9 +1,7 @@
-
 # line formation simulation
 
 import pygame
-
-from line_formation_robot import Robot
+from line_formation_robot import LFRobot
 
 pygame.init()  # initialize pygame
 
