@@ -7,10 +7,11 @@ class LFRobot:  # LF stands for line formation
         self.vel = vel  # unsigned scalar
         self.ori = ori  # global orientation of moving direction
         # variables for the line formation control
-        self.state = 0
-            # '0' for being single, wondering around
-            # '1' for in group but climbing the line, not on the line yet
-            # '2' for in group and on the line
+        self.state = 0  # indicate robot's status in the line formation
+            # '0' for being single, and seeking connections
+            # '1' for in a group, but climbing the line, not on the line yet
+            # '2' for in a group, and in correct position for the line
+            # '-1' for being single, and ignoring all connections
         self.group_id = 0  # random number to uniquely identify the group
         self.group_size = 0  # number of robots in the group
         self.group_index = 0  # sequence along the line

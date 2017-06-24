@@ -5,7 +5,7 @@ from line_formation_robot import LFRobot
 
 pygame.init()  # initialize pygame
 
-# for display
+# for display, window origin is at left up corner
 screen_size = (1200, 900)  # width and height
 background_color = (0, 0, 0)  # black background
 robot_color = (255, 255, 255)  # white robot
@@ -16,6 +16,13 @@ icon = pygame.image.load('geometry_art.jpg')
 pygame.display.set_icon(icon)
 screen = pygame.display.set_mode(screen_size)
 pygame.display.set_caption('Line Formation Simulation')
+
+# for physics, origin is at left bottom corner, starting (0, 0)
+# the continuous, physical world for the robots
+world_size = (100.0, 100.0 * screen_size[1]/screen_size[0])
+
+# instantiate the robot swarm
+robot = []  # container for all robots, index is also the IDs
 
 
 # the loop
