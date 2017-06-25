@@ -46,7 +46,7 @@ for i in range(robot_quantity):
 
 # instantiate a distance table for every pair of robots
 # will calculate once for symmetric data
-dist_table = [[0 for i in range(robot_quantity)] for j in range(robot_quantity)]
+dist_table = [[-1.0 for i in range(robot_quantity)] for j in range(robot_quantity)]
 
 # the loop
 sim_exit = False  # simulation exit flag
@@ -70,7 +70,7 @@ while not sim_exit:
     # update the physics, control rules and graphics at the same time
     timer_now = pygame.time.get_ticks()
     if (timer_now - timer_last) > frame_period:
-        # calculate the distance of every pair of robots
+        # prepare the distance data for every pair of robots
         for i in range(robot_quantity):
             for j in range(i+1, robot_quantity):
                 # it only covers the upper triangle without the diagonal
@@ -79,16 +79,38 @@ while not sim_exit:
                 dist_temp = math.sqrt(pos_temp[0]*pos_temp[0] +
                                       pos_temp[1]*pos_temp[1])
                 if dist_temp <= comm_range:
+                    # only record distance smaller than communication range
                     dist_table[i][j] = dist_temp
                     dist_table[j][i] = dist_temp
                 else:  # ignore the neighbors too far away
-                    dist_table[i][j] = 0
-                    dist_table[j][i] = 0
-        # sort the distance in another table, record the index
-        
+                    dist_table[i][j] = -1.0
+                    dist_table[j][i] = -1.0
+        # sort the distance in another table, record the index here
+        index_list = [[] for i in range(robot_quantity)]  # index of neighbors in range
+        # find all non-zero distances
+        for i in range(robot_quantity):
+            for j in range(robot_quantity):
+                if j == i: continue  # skip the self, not necessary
+                if dist_table[i][j] > 0: index_list[i].append(j)
+        # sort the index_list in the order of increasing distance
+        for i in range(robot_quantity):
+            len_temp = len(index_list[i])  # number of neighbors
+            if (len_temp < 2): continue  # no need to sort
+            else:
+                # bubble sort
+                for j in range(len_temp-1):
+                    for k in range(len_temp-1-j):
+                        if dist_table[i][index_list[i][k]] >
+                           dist_table[i][index_list[i][k+1]]:
+                           # swap the position of the two index
+                           index_temp = index_list[i][k]
+                           index_list[i][k] = index_list[i][k+1]
+                           index_list[i][k+1] = index_temp
+
         # check the status change with control rules for the line formation
         for i in range(robot_quantity):
-
+            # for the robot with status of '0'
+            if robots[i].status == 0:
 
     pygame.display.update()
 
