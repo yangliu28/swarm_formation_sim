@@ -117,12 +117,71 @@ while not sim_exit:
 
         # check the status change with control rules for the line formation
         for i in range(robot_quantity):
-            # for the robot with status of '0'
+            # check if this robot has valid neighbors at all
+            if len(index_list[i]) == 0:
+                continue;  # skip the neighbor check
+            # for the host robot has status of '0'
             if robots[i].status == 0:
-                # check if any neighbor is in status '2'
+                # process neighbors with stauts '2', highest priority
                 if 2 in status_list[i]:
-                    # check if all the '2' are in same group
-                    # get the group id, check if they belong to same group
+                    # check the group attribution of all the '2'
+                    # get the robot id and group id of the first '2'
+                    current_index = status_list[i].index(2)
+                    current_robot = index_list[i][current_index]
+                    current_group = robots[current_robot].group_id
+                    group_temp = {current_group:[current_robot]}
+                    # check if there is still '2' in the list
+                    while 2 in status_list[i][current_index+1:]:
+                        # indexing the next '2' from current_index+1
+                        # update the current_index, current_robot, current_group
+                        current_index = status_list[i].index(2, current_index+1)
+                        current_robot = index_list[i][current_index]
+                        current_group = robots[current_robot].group_id
+                        # update group_temp
+                        if current_group in group_temp.keys():
+                            # append this robot in the existing group
+                            group_temp[current_group].append(current_robot)
+                        else:
+                            # add new group id in group_temp and add this robot
+                            group_temp[current_group] = [current_robot]
+                    # check if there are multiple groups detected from the '2'
+                    target_robot = -1  # the target robot to grab on
+                    if len(group_temp.keys()) == 1:
+                        # there is only one group detected
+                        dist_min = 2*comm_range  # start with a large dist
+                        robot_min = -1  # corresponding robot with min distance
+                        # search the closest '2'
+                        for j in group_temp.values()[0]:
+                            if dist_table[i][j] < dist_min:
+                                dist_min = dist_table[i][j]
+                                robot_min = j
+                        target_robot = robot_min
+                    else:
+                        # there is more than one group detected
+                        # no need to disassemble any group yet
+                        # compare which group has the most members in it
+                        member_max = 0  # start with 0 number of members
+                        group_max = -1  # corresponding group id with most members
+                        for j in group_temp.keys():
+                            if len(group_temp[j]) > member_max:
+                                member_max = len(group_temp[j])
+                                group_max = j
+                        # search the closeat '2' inside that group
+                        dist_min = 2*comm_range
+                        robot_min = -1
+                        for j in group_temp[group_max]:
+                            if dist_table[i][j] < dist_min:
+                                dist_min = dist_table[i][j]
+                                robot_min = j
+                        target_robot = robot_min
+                    # target_robot located
+                    # stack an action to grab on this robot
+                    ################################ action to be added
+                # process neighbors with status '1', second priority
+                else if 1 in status_list[i]:
+                    #
+                # process neighbors with status '0', least priority
+                else:
 
 
 
