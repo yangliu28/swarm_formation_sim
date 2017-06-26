@@ -106,14 +106,22 @@ while not sim_exit:
                            index_temp = index_list[i][k]
                            index_list[i][k] = index_list[i][k+1]
                            index_list[i][k+1] = index_temp
+        # get the status list corresponds to the sorted index_list
+        status_list = [[] for i in range(robot_quantity)]
+        for i in range(robot_quantity):
+            for j in index_list[i]:
+                status_list[i].append(robots[j].status)
 
         # check the status change with control rules for the line formation
         for i in range(robot_quantity):
             # for the robot with status of '0'
             if robots[i].status == 0:
+                # check if any neighbor is in status '2'
+                if 2 in status_list[i]:
+                    # check if all the '2' are in same group
+
 
     pygame.display.update()
-
 
 pygame.quit()
 
