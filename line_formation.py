@@ -3,6 +3,7 @@
 import pygame
 import math, random
 from line_formation_robot import LFRobot
+from line_formation_group import LFGroup
 from line_formation_functions import *
 
 pygame.init()  # initialize pygame
@@ -43,6 +44,8 @@ for i in range(robot_quantity):
     ori_temp = random.random() * 2*math.pi  # random in (0, 2*pi)
     object_temp = LFRobot(pos_temp, vel_temp, ori_temp)
     robots.append(object_temp)
+# instantiate the group object
+groups = []  # container for all groups
 
 # instantiate a distance table for every pair of robots
 # will calculate once for symmetric data
@@ -119,6 +122,8 @@ while not sim_exit:
                 # check if any neighbor is in status '2'
                 if 2 in status_list[i]:
                     # check if all the '2' are in same group
+                    # get the group id, check if they belong to same group
+
 
 
     pygame.display.update()
