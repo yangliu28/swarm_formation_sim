@@ -76,6 +76,11 @@ while not sim_exit:
         # prepare the distance data for every pair of robots
         for i in range(robot_quantity):
             for j in range(i+1, robot_quantity):
+                # status of '-1' does not involve in any connection, so skip
+                if (i == -1) or (j == -1):
+                    dist_table[i][j] == -1.0
+                    dist_table[j][i] == -1.0
+                    continue  # skip the rest
                 # it only covers the upper triangle without the diagonal
                 pos_temp = (robots[i].pos[0]-robots[j].pos[0],
                             robots[i].pos[1]-robots[j].pos[1])
@@ -175,14 +180,31 @@ while not sim_exit:
                                 robot_min = j
                         target_robot = robot_min
                     # target_robot located
-                    # stack an action to grab on this robot
-                    ################################ action to be added
+                    ################################ stack action to grab on '2'
                 # process neighbors with status '1', second priority
-                else if 1 in status_list[i]:
-                    #
+                elif 1 in status_list[i]:
+                    # find the closest '1' and get bounced away by it
+                    # it doesn't matter if the '1's belong to different group
+                    dist_min = 2*comm_range
+                    robot_min = -1
+                    for j in range(len(status_list[i])):
+                        if status_list[i][j] != 1: continue
+                        if dist_table[i][index_list[i][j]] < dist_min:
+                            dist_min = dist_table[i][index_list[i][j]]
+                            robot_min = index_list[i][j]
+                    # target robot located, the robot_min
+                    ################################ stack action to be bounced away by '1'
                 # process neighbors with status '0', least priority
                 else:
-
+                    # establish a list of all '0', in order of increasing distance
+                    # to be checked later if grouping is possible
+                    # this list should be only '0's, already sorted
+                    target_list = index_list[i][:]
+                    ################################ stack action for grouping
+            # for the host robot has status of '1'
+            elif robots[i].status == 1:
+                # status of '1' is already a progress and needs to be constantly checked
+                
 
 
     pygame.display.update()
