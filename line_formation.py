@@ -32,7 +32,8 @@ distrib_coef = 0.5
 const_vel = 2  # all moving robots are moving at a constant speed
 frame_period = 100  # updating period of the simulation and graphics, in ms
 comm_range = 7  # communication range, the radius
-
+line_space = comm_range * 0.7  # a little more than half the communication range
+space_err = line_space * 0.1  # the error to determine the space is good
 
 # instantiate the robot swarm
 robots = []  # container for all robots, index is also the IDs
@@ -125,7 +126,7 @@ while not sim_exit:
             # check if this robot has valid neighbors at all
             if len(index_list[i]) == 0:
                 continue;  # skip the neighbor check
-            # for the host robot has status of '0'
+            # for the host robot having status of '0'
             if robots[i].status == 0:
                 # process neighbors with stauts '2', highest priority
                 if 2 in status_list[i]:
@@ -201,10 +202,29 @@ while not sim_exit:
                     # this list should be only '0's, already sorted
                     target_list = index_list[i][:]
                     ################################ stack action for grouping
-            # for the host robot has status of '1'
+            # for the host robot having status of '1'
             elif robots[i].status == 1:
-                # status of '1' is already a progress and needs to be constantly checked
-                
+                # status of '1' needs to checked and maintained constantly
+                # check if the important group neighbors are still in range
+                neighbors_secured = True
+                for j in robots[i].group_neighbors:
+                    if j not in index_list[i]:
+                        neighbors_secured = False
+                        break
+                if neighbors_secured == False:
+                    ################################ stack action changing '1' to '0'
+                else:
+                    # all the neighbors are in good position
+                    # check if any neighbor transition needs to be done
+                    if robots[i].status_1 == 0:
+                        # host robot is in the initial forming phase
+                        # check if the neighbor robot is in appropriate distance
+                        if abs(dist_table[i][robots[i].group_neighbors[0]] -
+                               comm_range) < space_err:
+                            ################################ stack action changing '1' to '2'
+                    elif robots[i].status_1 == 1:
+                        # host robot is in the climbing phase
+                        # check
 
 
     pygame.display.update()
