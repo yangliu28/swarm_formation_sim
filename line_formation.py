@@ -207,7 +207,7 @@ while not sim_exit:
                 # status of '1' needs to checked and maintained constantly
                 # check if the important group neighbors are still in range
                 neighbors_secured = True
-                for j in robots[i].group_neighbors:
+                for j in robots[i].key_neighbors:
                     if j not in index_list[i]:
                         neighbors_secured = False
                         break
@@ -219,12 +219,13 @@ while not sim_exit:
                     if robots[i].status_1 == 0:
                         # host robot is in the initial forming phase
                         # check if the neighbor robot is in appropriate distance
-                        if abs(dist_table[i][robots[i].group_neighbors[0]] -
+                        if abs(dist_table[i][robots[i].key_neighbors[0]] -
                                comm_range) < space_err:
                             ################################ stack action changing '1' to '2'
                     elif robots[i].status_1 == 1:
                         # host robot is in the climbing phase
-                        # check
+                        # check if need to switch grab-on robot or climbing is finished
+                        robots[i].
 
 
     pygame.display.update()
