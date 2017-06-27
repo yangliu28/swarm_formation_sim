@@ -20,7 +20,7 @@ class LFRobot:  # LF stands for line formation
         self.state_1_1 = -1  # sub state for the climbing robot, state '1_1'
             # '0' for climbing toward the small index end
             # '1' for climbing toward the large index end
-        self.state_2_index = -1  # sequence along the line for state '2' robot
+        self.state_2_sequence = -1  # sequence along the line for state '2' robot
         self.state_2_end = 0  # sub state deciding if robot is at the end of line
             # '0' for not at the end of line
             # '1' for at the end of line

@@ -3,7 +3,6 @@
 import pygame
 import math, random
 from line_formation_robot import LFRobot
-from line_formation_group import LFGroup
 from line_formation_functions import *
 
 pygame.init()  # initialize pygame
@@ -46,7 +45,12 @@ for i in range(robot_quantity):
     object_temp = LFRobot(pos_temp, vel_temp, ori_temp)
     robots.append(object_temp)
 # instantiate the group object
-groups = []  # container for all groups
+groups = {}  # dictionary container for groups
+    # key is the group id, so two groups won't share same id
+    # value is a list
+        # first element: the group size
+        # second element: a list of robots on the line in adjacent order, status '2'
+        # third element: a list of robots off the line, status '1'
 
 # instantiate a distance table for every pair of robots
 # will calculate once for symmetric data
@@ -225,7 +229,7 @@ while not sim_exit:
                     elif robots[i].status_1 == 1:
                         # host robot is in the climbing phase
                         # check if need to switch grab-on robot or climbing is finished
-                        robots[i].
+                        robots[robots[i].key_neighbors[0]].status_2_sequence
 
 
     pygame.display.update()
