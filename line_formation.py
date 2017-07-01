@@ -218,7 +218,12 @@ while not sim_exit:
                 if neighbors_secured == False:
                     ################################ stack action changing '1' to '0'
                 else:
-                    # all the neighbors are in good position
+                    # all the key neighbors are in good position
+                    # disassemble check, get group attribution of all '1'  and '2'
+
+                    # pop out the '0' first
+
+
                     # check if any neighbor transition needs to be done
                     if robots[i].status_1 == 0:
                         # host robot is in the initial forming phase
@@ -228,12 +233,27 @@ while not sim_exit:
                             ################################ stack action changing '1' to '2'
                     elif robots[i].status_1 == 1:
                         # host robot is in the climbing phase
-                        # check if need to switch grab-on robot or climbing is finished
-                        if robots[i].status_1_1 == 0:
-                            # climbing toward the small end
-                            if robots[robots[i].key_neighbors[0]].status_2_sequence == 0:
-                                
-                        groups[]
+                        # check if the grab-on robot is at the begining or end of the line
+                        if robots[robots[i].key_neighbors[0]].status_2_sequence == 0 or
+                           robots[robots[i].key_neighbors[0]].status_2_end == True:
+                           # check if reaching the destination coordinates
+                            pos_temp = (robots[i].pos[0]-robots[i].status_1_1_des[0],
+                                        robots[i].pos[1]-robots[i].status_1_1_des[1])
+                            dist_temp = math.sqrt(pos_temp[0]*pos_temp[0] +
+                                                  pos_temp[1]*pos_temp[1])
+                            if dist_temp < space_err:
+                                ################################ stack action changing '1' to '2'
+                        else:
+                            # grab-on robot is not at the ends of the line yet, still climbing
+                            id_temp = -1
+                            if robots[i].status_1_1 == 0:
+                                id_temp = groups[robots[i].group_id][1][robots[i].status_2_sequence-1]
+                            else:
+                                id_temp = groups[robots[i].group_id][1][robots[i].status_2_sequence+1]
+                            if id_temp in index_list[i]:
+                                ################################ stack action switching grab-on robot
+
+
 
     pygame.display.update()
 
