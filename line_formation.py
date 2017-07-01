@@ -229,8 +229,11 @@ while not sim_exit:
                     elif robots[i].status_1 == 1:
                         # host robot is in the climbing phase
                         # check if need to switch grab-on robot or climbing is finished
-                        robots[robots[i].key_neighbors[0]].status_2_sequence
-
+                        if robots[i].status_1_1 == 0:
+                            # climbing toward the small end
+                            if robots[robots[i].key_neighbors[0]].status_2_sequence == 0:
+                                
+                        groups[]
 
     pygame.display.update()
 
