@@ -26,8 +26,8 @@ class LFRobot:  # LF stands for line formation
         self.state_2_sequence = -1  # sequence along the line for state '2' robot
             # index starts from 0
         self.state_2_end = False  # sub state deciding if robot is at the end of line
-            # False for not at the end of line
-            # True for at the end of line
+            # False: not at the end of line
+            # True: at the end of line
         self.key_neighbors = []  # key neighbors to secure the group formation
             # for '1_0' robot, neighbor is the other initial forming robot
             # for '1_1' robot, neighbor is the line traveling robot

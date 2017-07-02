@@ -35,7 +35,7 @@ line_space = comm_range * 0.7  # a little more than half the communication range
 space_err = line_space * 0.1  # the error to determine the space is good
 
 # instantiate the robot swarm
-robots = []  # container for all robots, index is also the IDs
+robots = []  # container for all robots, index is also the identification
 for i in range(robot_quantity):
     # random position, away from the window edges
     pos_temp = (((random.random()-0.5)*distrib_coef+0.5) * world_size[0],
@@ -44,8 +44,8 @@ for i in range(robot_quantity):
     ori_temp = random.random() * 2*math.pi  # random in (0, 2*pi)
     object_temp = LFRobot(pos_temp, vel_temp, ori_temp)
     robots.append(object_temp)
-# instantiate the group object
-groups = {}  # dictionary container for groups
+# instantiate the group variable as dictionary
+groups = {}
     # key is the group id, so two groups won't share same id
     # value is a list
         # 0.first element: the group size
@@ -126,6 +126,17 @@ while not sim_exit:
             for j in index_list[i]:
                 status_list[i].append(robots[j].status)
 
+        # instantiate the status transition variables, prepare for status check
+        # the priority to process them is in the following order
+        s_grab_on = {}  # robot '0' grabs on robot '2'
+        s_init_form = {}  # robot '0' forms a group with another robot '0'
+        s_form_done = []  # robot '1' finishes climbing, becoming '2'
+        s_lost = []  # robot '1' gets lost while climbing
+        s_disassemble = []  # disassembling trigger by robot '1' or '2'
+        # other state transition needs to be regularly checked are:
+            # natural expiration of a group
+            # robot '-1' back in game after random delay, becoming '0'
+
         # check if any status change needs to be scheduled, and process in next step
         for i in range(robot_quantity):
             # check if this robot has valid neighbors at all
@@ -185,8 +196,9 @@ while not sim_exit:
                                 dist_min = dist_table[i][j]
                                 robot_min = j
                         target_robot = robot_min
-                    # target_robot located
-                    ################################ stack action to grab on '2'
+                    # target_robot located, prepare to grab on it
+                    # state transition scheduled, '0' to '1'
+                    s_grab_on[i] = target_robot
                 # process neighbors with status '1', second priority
                 elif 1 in status_list[i]:
                     # find the closest '1' and get bounced away by it
@@ -210,7 +222,8 @@ while not sim_exit:
                     # to be checked later if grouping is possible
                     # this list should be only '0's, already sorted
                     target_list = index_list[i][:]
-                    ################################ stack action for grouping
+                    # state transition scheduled, '0' forming intial group with '0'
+                    s_init_form[i] = target_list
             # for the host robot having status of '1'
             elif robots[i].status == 1:
                 # status of '1' needs to checked and maintained constantly
@@ -221,7 +234,8 @@ while not sim_exit:
                         neighbors_secured = False
                         break
                 if neighbors_secured == False:
-                    ################################ stack action changing '1' to '-1'
+                    # state transition scheduled, robot '1' gets lost, becoming '-1'
+                    s_lost.append(i)
                 else:
                     # all the key neighbors are in good position
                     # 2.dissemble check, get group attribution of all '1' and '2'
@@ -244,15 +258,17 @@ while not sim_exit:
                             group_temp[current_group] = [j]
                     # check if there are multiple groups detected
                     if len(group_temp.keys()) > 1:
-                        # schedule a disassemble action
-                        ################################ stack action to dissemble
+                        # state transition scheduled, to disassemble groups
+                        s_disassemble.append([group_temp.keys()])
+                        # may produce duplicates in s_disassemble, not big problem
                     # 3.check if any neighbor transition needs to be done
                     if robots[i].status_1 == 0:
                         # host robot is in the initial forming phase
                         # check if the neighbor robot is in appropriate distance
                         if abs(dist_table[i][robots[i].key_neighbors[0]] -
                                comm_range) < space_err:
-                            ################################ stack action changing '1' to '2'
+                            # state transition scheduled, finish intial forming, '1' to '2'
+                            s_form_done.append(i)
                     elif robots[i].status_1 == 1:
                         # host robot is in the climbing phase
                         # check if the grab-on robot is at the begining or end of the line
@@ -264,7 +280,8 @@ while not sim_exit:
                             dist_temp = math.sqrt(pos_temp[0]*pos_temp[0] +
                                                   pos_temp[1]*pos_temp[1])
                             if dist_temp < space_err:
-                                ################################ stack action changing '1' to '2'
+                                # state transition scheduled, finish climbing, '1' to '2'
+                                s_form_done.append(i)
                         else:
                             # grab-on robot is not at the ends of the line yet, still climbing
                             id_temp = -1
@@ -274,6 +291,10 @@ while not sim_exit:
                                 id_temp = groups[robots[i].group_id][2][robots[i].status_2_sequence+1]
                             if id_temp in index_list[i]:
                                 ################################ stack action switching grab-on robot
+                                # 
+
+
+
             # for the host robot having status of '2'
             elif robots[i].status == 2:
                 # it's ok to check if key neighbors are still in range
@@ -297,8 +318,8 @@ while not sim_exit:
                         group_temp[current_group] = [j]
                 # check if there are multiple groups detected
                 if len(group_temp.keys()) > 1:
-                    # schedule a disassemble action
-                    ################################ stack action to dissemble
+                    # state transition scheduled, to disassemble groups
+                    s_disassemble.append([group_temp.keys()])
             # for the host robot having status of '-1'
             else:
                 # do nothing
