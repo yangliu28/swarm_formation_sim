@@ -48,9 +48,10 @@ for i in range(robot_quantity):
 groups = {}  # dictionary container for groups
     # key is the group id, so two groups won't share same id
     # value is a list
-        # first element: the group size
-        # second element: a list of robots on the line in adjacent order, status '2'
-        # third element: a list of robots off the line, status '1'
+        # 0.first element: the group size
+        # 1.second element: life time remaining
+        # 2.third element: a list of robots on the line in adjacent order, status '2'
+        # 3.forth element: a list of robots off the line, status '1'
 
 # instantiate a distance table for every pair of robots
 # will calculate once for symmetric data
@@ -125,7 +126,7 @@ while not sim_exit:
             for j in index_list[i]:
                 status_list[i].append(robots[j].status)
 
-        # check the status change with control rules for the line formation
+        # check if any status change needs to be scheduled, and process in next step
         for i in range(robot_quantity):
             # check if this robot has valid neighbors at all
             if len(index_list[i]) == 0:
@@ -198,7 +199,11 @@ while not sim_exit:
                             dist_min = dist_table[i][index_list[i][j]]
                             robot_min = index_list[i][j]
                     # target robot located, the robot_min
-                    ################################ stack action to be bounced away by '1'
+                    # get bounced away from this robot, update the moving direction
+                    vec_temp = (robots[i].pos[0] - robots[robot_min].pos[0],
+                                robots[i].pos[1] - robots[robot_min].pos[1])
+                    # orientation is pointing from robot_min to host
+                    robots[i].ori = math.atan2(vec_temp[1], vec_temp[0])
                 # process neighbors with status '0', least priority
                 else:
                     # establish a list of all '0', in order of increasing distance
@@ -216,10 +221,10 @@ while not sim_exit:
                         neighbors_secured = False
                         break
                 if neighbors_secured == False:
-                    ################################ stack action changing '1' to '0'
+                    ################################ stack action changing '1' to '-1'
                 else:
                     # all the key neighbors are in good position
-                    # 2.dissemble check, get group attribution of all '1'  and '2'
+                    # 2.dissemble check, get group attribution of all '1' and '2'
                     status_list_temp = status_list[i][:]
                     index_list_temp = index_list[i][:]
                     # pop out the '0' first
@@ -264,9 +269,9 @@ while not sim_exit:
                             # grab-on robot is not at the ends of the line yet, still climbing
                             id_temp = -1
                             if robots[i].status_1_1 == 0:
-                                id_temp = groups[robots[i].group_id][1][robots[i].status_2_sequence-1]
+                                id_temp = groups[robots[i].group_id][2][robots[i].status_2_sequence-1]
                             else:
-                                id_temp = groups[robots[i].group_id][1][robots[i].status_2_sequence+1]
+                                id_temp = groups[robots[i].group_id][2][robots[i].status_2_sequence+1]
                             if id_temp in index_list[i]:
                                 ################################ stack action switching grab-on robot
             # for the host robot having status of '2'
@@ -297,6 +302,12 @@ while not sim_exit:
             # for the host robot having status of '-1'
             else:
                 # do nothing
+
+        # process the scheduled status change
+
+
+        # update the position, and wall bouncing
+
 
     pygame.display.update()
 

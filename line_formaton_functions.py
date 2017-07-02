@@ -2,11 +2,11 @@
 
 import math
 
-# reset radian angle to [0, 2*pi)
+# reset radian angle to [-pi, pi)
 def lf_reset_radian(radian):
-    while radian >= 2*math.pi:
+    while radian >= math.pi:
         radian = radian - 2*math.pi
-    while radian < 0:
+    while radian < -math.pi:
         radian = radian + 2*math.pi
     return radian
 
