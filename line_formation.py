@@ -209,7 +209,7 @@ while not sim_exit:
             # for the host robot having status of '1'
             elif robots[i].status == 1:
                 # status of '1' needs to checked and maintained constantly
-                # check if the important group neighbors are still in range
+                # 1.check if the important group neighbors are still in range
                 neighbors_secured = True
                 for j in robots[i].key_neighbors:
                     if j not in index_list[i]:
@@ -219,12 +219,29 @@ while not sim_exit:
                     ################################ stack action changing '1' to '0'
                 else:
                     # all the key neighbors are in good position
-                    # disassemble check, get group attribution of all '1'  and '2'
-
+                    # 2.dissemble check, get group attribution of all '1'  and '2'
+                    status_list_temp = status_list[i][:]
+                    index_list_temp = index_list[i][:]
                     # pop out the '0' first
-
-
-                    # check if any neighbor transition needs to be done
+                    while 0 in status_list_temp:
+                        index_temp = status_list_temp.index(0)
+                        status_list_temp.pop(index_temp)
+                        index_list_temp.pop(index_temp)
+                    # start the group attribution dictionary with first robot
+                    group_temp = {robots[index_list_temp[0]].group_id: [index_list_temp[0]]}
+                    for j in index_list_temp[1:]:  # then iterating from the second one
+                        current_group = robots[j].group_id
+                        if current_group in group_temp.keys():
+                            # append this robot in same group
+                            group_temp[current_group].append(j)
+                        else:
+                            # add new key in the group_temp dictionary
+                            group_temp[current_group] = [j]
+                    # check if there are multiple groups detected
+                    if len(group_temp.keys()) > 1:
+                        # schedule a disassemble action
+                        ################################ stack action to dissemble
+                    # 3.check if any neighbor transition needs to be done
                     if robots[i].status_1 == 0:
                         # host robot is in the initial forming phase
                         # check if the neighbor robot is in appropriate distance
@@ -252,8 +269,34 @@ while not sim_exit:
                                 id_temp = groups[robots[i].group_id][1][robots[i].status_2_sequence+1]
                             if id_temp in index_list[i]:
                                 ################################ stack action switching grab-on robot
-
-
+            # for the host robot having status of '2'
+            elif robots[i].status == 2:
+                # it's ok to check if key neighbors are still in range
+                # but key neighbors of '2' are also '2', all of them are static
+                # so skip this step
+                # 1.dissemble check, from all the '1' and '2'
+                status_list_temp = status_list[i][:]
+                index_list_temp = index_list[i][:]
+                # pop out the '0' first
+                while 0 in status_list_temp:
+                    index_temp = status_list_temp.index(0)
+                    status_list_temp.pop(index_temp)
+                    index_list_temp.pop(index_temp)
+                # start the group attribution dictionary with first robot
+                group_temp = {robots[index_list_temp[0]].group_id: [index_list_temp[0]]}
+                for j in index_list_temp[1:]:  # then iterating from the second one
+                    current_group = robots[j].group_id
+                    if current_group in group_temp:
+                        group_temp[current_group].append(j)
+                    else:
+                        group_temp[current_group] = [j]
+                # check if there are multiple groups detected
+                if len(group_temp.keys()) > 1:
+                    # schedule a disassemble action
+                    ################################ stack action to dissemble
+            # for the host robot having status of '-1'
+            else:
+                # do nothing
 
     pygame.display.update()
 
