@@ -33,6 +33,7 @@ frame_period = 100  # updating period of the simulation and graphics, in ms
 comm_range = 7  # communication range, the radius
 line_space = comm_range * 0.7  # a little more than half the communication range
 space_err = line_space * 0.1  # the error to determine the space is good
+climb_space = line_space * 0.5  # climbing is half the line space along the line
 
 # instantiate the robot swarm
 robots = []  # container for all robots, index is also the identification
@@ -290,9 +291,9 @@ while not sim_exit:
                             else:
                                 id_temp = groups[robots[i].group_id][2][robots[i].status_2_sequence+1]
                             if id_temp in index_list[i]:
-                                ################################ stack action switching grab-on robot
-                                # 
-
+                                # update new grab on robot and new destination for the climbing
+                                robots[i].key_neighbors = [id_temp]
+                                if 
 
 
             # for the host robot having status of '2'
