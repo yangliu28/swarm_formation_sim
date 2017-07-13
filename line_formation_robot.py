@@ -14,18 +14,20 @@ class LFRobot:  # LF stands for line formation
             # '-1' for being single, and ignoring all connections
         self.group_id = -1  # random integer to uniquely identify the group
         self.group_size = -1  # number of robots in the group
-        self.state_1 = -1  # sub state for state '1' robot
+        self.status_1 = -1  # sub state for state '1' robot
             # '0' for initial forming
             # '1' for climbing
-        self.state_1_1 = -1  # sub state for the climbing robot, state '1_1'
+        self.status_1_1 = -1  # sub state for the climbing robot, state '1_1'
             # '0' for climbing toward the small index end
             # '1' for climbing toward the large index end
-        self.state_1_0_dir = 0  # moving direction for the initial forming robots
-        self.state_1_1_des = [0,0]  # destination coordiantes for the climbign robots
+        self.status_1_0_dir = 0  # moving direction for the initial forming robots
+        self.status_1_1_des = [0,0]  # destination coordiantes for the climbign robots
             # decided by the current grab-on robot
-        self.state_2_sequence = -1  # sequence along the line for state '2' robot
+        self.status_1_1_side = 0  # left or right side along the moving direction
+            # '0' for left, '1' for right
+        self.status_2_sequence = -1  # sequence along the line for state '2' robot
             # index starts from 0
-        self.state_2_end = False  # sub state deciding if robot is at the end of line
+        self.status_2_end = False  # sub state deciding if robot is at the end of line
             # False: not at the end of line
             # True: at the end of line
         self.key_neighbors = []  # key neighbors to secure the group formation

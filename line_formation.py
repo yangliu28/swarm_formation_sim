@@ -52,7 +52,7 @@ groups = {}
         # 0.first element: the group size
         # 1.second element: life time remaining
         # 2.third element: a list of robots on the line in adjacent order, status '2'
-        # 3.forth element: a list of robots off the line, status '1'
+        # 3.forth element: a list of robots off the line, not in order, status '1'
 
 # instantiate a distance table for every pair of robots
 # will calculate once for symmetric data
@@ -134,7 +134,7 @@ while not sim_exit:
         s_form_done = []  # robot '1' finishes climbing, becoming '2'
         s_lost = []  # robot '1' gets lost while climbing
         s_disassemble = []  # disassembling trigger by robot '1' or '2'
-        # other state transition needs to be regularly checked are:
+        # other status transition needs to be regularly checked are:
             # natural expiration of a group
             # robot '-1' back in game after random delay, becoming '0'
 
@@ -198,7 +198,7 @@ while not sim_exit:
                                 robot_min = j
                         target_robot = robot_min
                     # target_robot located, prepare to grab on it
-                    # state transition scheduled, '0' to '1'
+                    # status transition scheduled, '0' to '1'
                     s_grab_on[i] = target_robot
                 # process neighbors with status '1', second priority
                 elif 1 in status_list[i]:
@@ -223,7 +223,7 @@ while not sim_exit:
                     # to be checked later if grouping is possible
                     # this list should be only '0's, already sorted
                     target_list = index_list[i][:]
-                    # state transition scheduled, '0' forming intial group with '0'
+                    # status transition scheduled, '0' forming intial group with '0'
                     s_init_form[i] = target_list
             # for the host robot having status of '1'
             elif robots[i].status == 1:
@@ -235,7 +235,7 @@ while not sim_exit:
                         neighbors_secured = False
                         break
                 if neighbors_secured == False:
-                    # state transition scheduled, robot '1' gets lost, becoming '-1'
+                    # status transition scheduled, robot '1' gets lost, becoming '-1'
                     s_lost.append(i)
                 else:
                     # all the key neighbors are in good position
@@ -259,7 +259,7 @@ while not sim_exit:
                             group_temp[current_group] = [j]
                     # check if there are multiple groups detected
                     if len(group_temp.keys()) > 1:
-                        # state transition scheduled, to disassemble groups
+                        # status transition scheduled, to disassemble groups
                         s_disassemble.append([group_temp.keys()])
                         # may produce duplicates in s_disassemble, not big problem
                     # 3.check if any neighbor transition needs to be done
@@ -268,7 +268,7 @@ while not sim_exit:
                         # check if the neighbor robot is in appropriate distance
                         if abs(dist_table[i][robots[i].key_neighbors[0]] -
                                comm_range) < space_err:
-                            # state transition scheduled, finish intial forming, '1' to '2'
+                            # status transition scheduled, finish intial forming, '1' to '2'
                             s_form_done.append(i)
                     elif robots[i].status_1 == 1:
                         # host robot is in the climbing phase
@@ -281,7 +281,7 @@ while not sim_exit:
                             dist_temp = math.sqrt(pos_temp[0]*pos_temp[0] +
                                                   pos_temp[1]*pos_temp[1])
                             if dist_temp < space_err:
-                                # state transition scheduled, finish climbing, '1' to '2'
+                                # status transition scheduled, finish climbing, '1' to '2'
                                 s_form_done.append(i)
                         else:
                             # grab-on robot is not at the ends of the line yet, still climbing
@@ -293,7 +293,7 @@ while not sim_exit:
                             if id_temp in index_list[i]:
                                 # update new grab on robot and new destination for the climbing
                                 robots[i].key_neighbors = [id_temp]
-                                if 
+                                if robots[id_temp].status_2_sequence == 0 or robots[id_temp].
 
 
             # for the host robot having status of '2'
@@ -319,7 +319,7 @@ while not sim_exit:
                         group_temp[current_group] = [j]
                 # check if there are multiple groups detected
                 if len(group_temp.keys()) > 1:
-                    # state transition scheduled, to disassemble groups
+                    # status transition scheduled, to disassemble groups
                     s_disassemble.append([group_temp.keys()])
             # for the host robot having status of '-1'
             else:
