@@ -263,14 +263,14 @@ while not sim_exit:
                         s_disassemble.append([group_temp.keys()])
                         # may produce duplicates in s_disassemble, not big problem
                     # 3.check if any neighbor transition needs to be done
-                    if robots[i].status_1 == 0:
+                    if robots[i].status_1_sub == 0:
                         # host robot is in the initial forming phase
                         # check if the neighbor robot is in appropriate distance
                         if abs(dist_table[i][robots[i].key_neighbors[0]] -
                                comm_range) < space_err:
                             # status transition scheduled, finish intial forming, '1' to '2'
                             s_form_done.append(i)
-                    elif robots[i].status_1 == 1:
+                    elif robots[i].status_1_sub == 1:
                         # host robot is in the climbing phase
                         # check if the grab-on robot is at the begining or end of the line
                         if robots[robots[i].key_neighbors[0]].status_2_sequence == 0 or
@@ -286,14 +286,33 @@ while not sim_exit:
                         else:
                             # grab-on robot is not at the ends of the line yet, still climbing
                             id_temp = -1
-                            if robots[i].status_1_1 == 0:
-                                id_temp = groups[robots[i].group_id][2][robots[i].status_2_sequence-1]
+                            if robots[i].status_1_1_dir == 0:
+                                id_temp = groups[robots[i].group_id][2][robots[i].status_2_sequence - 1]
                             else:
-                                id_temp = groups[robots[i].group_id][2][robots[i].status_2_sequence+1]
+                                id_temp = groups[robots[i].group_id][2][robots[i].status_2_sequence + 1]
                             if id_temp in index_list[i]:
-                                # update new grab on robot and new destination for the climbing
+                                # update new grab-on robot as the only key neighbor
                                 robots[i].key_neighbors = [id_temp]
-                                if robots[id_temp].status_2_sequence == 0 or robots[id_temp].
+                                it0 = robots[i].key_neighbors[0]  # 'it' stands for index temp
+                                # calculate new destination for the climbing
+                                if robots[robots[i].key_neighbors[0]].status_2_sequence == 0:
+                                    # if new grab-on robot is at the begining of the line
+                                    it1 = groups[robots[i].group_id][2][1]  # second one in the line
+                                    robots[i].status_1_1_des = [2*robots[it0].pos[0] - robots[it1].pos[0],
+                                                                2*robots[it0].pos[1] - robots[it1].pos[1]]
+                                elif robots[robots[i].key_neighbors[0]].status_2_end == True:
+                                    # if new grab-on robot is at the end of the line
+                                    it1 = groups[robots[i].group_id][2][-2]  # second inversely in the line
+                                    robots[i].status_1_1_des = [2*robots[it0].pos[0] - robots[it1].pos[0],
+                                                                2*robots[it0].pos[1] - robots[it1].pos[1]]
+                                else:  # new grab-on robot is not at any end
+                                    it1 = 0  # index temp
+                                    if robots[i].status_1_1_dir == 0:
+                                        it1 = groups[robots[i].group_id][2][robots[robots[i].key_neighbors[0]].status_2_sequence - 1]
+                                    else:
+                                        it1 = groups[robots[i].group_id][2][robots[robots[i].key_neighbors[0]].status_2_sequence + 1]
+                                    
+
 
 
             # for the host robot having status of '2'
