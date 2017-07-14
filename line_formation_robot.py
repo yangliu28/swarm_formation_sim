@@ -13,7 +13,6 @@ class LFRobot:  # LF stands for line formation
             # '2' for in a group, and in correct position for the line
             # '-1' for being single, and ignoring all connections
         self.group_id = -1  # random integer to uniquely identify the group
-        self.group_size = -1  # number of robots in the group
         self.status_1_sub = -1  # sub state for state '1' robot
             # '0' for initial forming
             # '1' for climbing

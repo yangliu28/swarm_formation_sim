@@ -34,8 +34,9 @@ comm_range = 7  # communication range, the radius
 line_space = comm_range * 0.7  # a little more than half the communication range
 space_err = line_space * 0.1  # the error to determine the space is good
 climb_space = line_space * 0.5  # climbing is half the line space along the line
+life_incre = 10  # each new member add these seconds to the life of the group
 
-# instantiate the robot swarm
+# instantiate the robot swarm as list
 robots = []  # container for all robots, index is also the identification
 for i in range(robot_quantity):
     # random position, away from the window edges
@@ -129,11 +130,11 @@ while not sim_exit:
 
         # instantiate the status transition variables, prepare for status check
         # the priority to process them is in the following order
-        s_grab_on = {}  # robot '0' grabs on robot '2'
-        s_init_form = {}  # robot '0' forms a group with another robot '0'
-        s_form_done = []  # robot '1' finishes climbing, becoming '2'
-        s_lost = []  # robot '1' gets lost while climbing
-        s_disassemble = []  # disassembling trigger by robot '1' or '2'
+        s_grab_on = {}  # robot '0' grabs on robot '2', becoming '1'
+        s_init_form = {}  # robot '0' initial forms with another '0', becoming '1'
+        s_form_done = []  # robot '1' finishes initial forming or climbing, becoming '2'
+        s_lost = []  # robot '1' gets lost while initial forming or climbing
+        s_disassemble = []  # disassemble triggerred by robot '1' or '2'
         # other status transition needs to be regularly checked are:
             # natural expiration of a group
             # robot '-1' back in game after random delay, becoming '0'
@@ -285,25 +286,26 @@ while not sim_exit:
                                 # status transition scheduled, finish climbing, '1' to '2'
                                 s_form_done.append(i)
                         else:
-                            # grab-on robot is not at the ends of the line yet, still climbing
+                            # grab-on robot is not at any end of the line yet, still climbing
                             # check if new key neighbor appears, if yes, update new key neighbor
                             # and update the new destination address
-                            id_temp = -1
+                            it0 = robots[i].key_neighbors[0]  # initialize with the old key neighbor
+                                # 'it' stands for index temp
                             if robots[i].status_1_1_dir == 0:
-                                id_temp = groups[robots[i].group_id][2][robots[i].status_2_sequence - 1]
+                                # assign the new key neighbor
+                                it0 = groups[robots[i].group_id][2][robots[it0].status_2_sequence - 1]
                             else:
-                                id_temp = groups[robots[i].group_id][2][robots[i].status_2_sequence + 1]
-                            if id_temp in index_list[i]:
+                                it0 = groups[robots[i].group_id][2][robots[it0].status_2_sequence + 1]
+                            if it0 in index_list[i]:
                                 # update new grab-on robot as the only key neighbor
-                                robots[i].key_neighbors = [id_temp]
-                                it0 = robots[i].key_neighbors[0]  # 'it' stands for index temp
+                                robots[i].key_neighbors = [it0]
                                 # calculate new destination for the climbing
-                                if robots[robots[i].key_neighbors[0]].status_2_sequence == 0:
+                                if robots[it0].status_2_sequence == 0:
                                     # if new grab-on robot is at the begining of the line
                                     it1 = groups[robots[i].group_id][2][1]  # second one in the line
                                     robots[i].status_1_1_des = [2*robots[it0].pos[0] - robots[it1].pos[0],
                                                                 2*robots[it0].pos[1] - robots[it1].pos[1]]
-                                elif robots[robots[i].key_neighbors[0]].status_2_end == True:
+                                elif robots[it0].status_2_end == True:
                                     # if new grab-on robot is at the end of the line
                                     it1 = groups[robots[i].group_id][2][-2]  # second inversely in the line
                                     robots[i].status_1_1_des = [2*robots[it0].pos[0] - robots[it1].pos[0],
@@ -311,10 +313,10 @@ while not sim_exit:
                                 else:  # new grab-on robot is not at any end
                                     it1 = 0  # index of the next promising key neighbor
                                     if robots[i].status_1_1_dir == 0:
-                                        it1 = groups[robots[i].group_id][2][robots[robots[i].key_neighbors[0]].status_2_sequence - 1]
+                                        it1 = groups[robots[i].group_id][2][robots[it0].status_2_sequence - 1]
                                     else:
-                                        it1 = groups[robots[i].group_id][2][robots[robots[i].key_neighbors[0]].status_2_sequence + 1]
-                                    # direction from current key neighbor to next promising key neighbor
+                                        it1 = groups[robots[i].group_id][2][robots[it0].status_2_sequence + 1]
+                                    # direction from current key neighbor(it0) to next promising key neighbor(it1)
                                     dir_temp = math.atan2((robots[it1].pos[1]-robots[it0].pos[1]),
                                                           (robots[it1].pos[0]-robots[it0].pos[0]))
                                     # direction from next promising key neighbor to new destination
@@ -331,7 +333,7 @@ while not sim_exit:
                 # it's ok to check if key neighbors are still in range
                 # but key neighbors of '2' are also '2', all of them are static
                 # so skip this step
-                # 1.dissemble check, from all the '1' and '2'
+                # dissemble check, for all the '1' and '2'
                 status_list_temp = status_list[i][:]
                 index_list_temp = index_list[i][:]
                 # pop out the '0' first
@@ -351,14 +353,95 @@ while not sim_exit:
                 if len(group_temp.keys()) > 1:
                     # status transition scheduled, to disassemble groups
                     s_disassemble.append([group_temp.keys()])
-            # for the host robot having status of '-1'
+            # for the host robot having status of '-1', do nothing
+
+        # process the scheduled status change, in the order of the priority
+        # 1.s_grab_on, robot '0' grabs on robot '2', becoming '1'
+        for i in s_grab_on.keys():
+            # update the 'robots' variable
+            robots[i].status = 1  # status becoming '1'
+            it0 = s_grab_on[i]  # for the grab on robot, new key neighbor
+            robots[i].key_neighbors = [it0]  # update the key neighbor
+            g_id_t = robots[it0].group_id  # for the new group id
+            robots[i].group_id = g_id_t  # update group id
+            robots[i].status_1_sub = 1  # sub status '1' for climbing
+            # update the 'groups' variable
+            groups[g_id_t][0] = groups[g_id_t][0] + 1  # increase group size by 1
+            groups[g_id_t][1] = groups[g_id_t][1] + life_incre  # increase life time
+            groups[g_id_t][3].append(i)
+            # 1.deciding the climbing direction
+            if robots[it0].status_2_sequence >= float(len(groups[g_id_t][2])-1)/2:
+                robots[i].status_1_1_dir = 1
             else:
-                # do nothing
+                robots[i].status_1_1_dir = 0
+            # 2.deciding which side the robot is climbing at
+            if robots[i].status_1_1_dir == 0:  # search backward for the next robot
+                it1 = groups[g_id_t][2][robots[it0].status_2_sequence + 1]
+            else:
+                it1 = groups[g_id_t][2][robots[it0].status_2_sequence - 1]
+            # by calculating the determinant of vectors 'it1->i' and 'it1->it0'
+            if ((robots[it0].pos[0]-robots[it1].pos[0])*(robots[i].pos[1]-robots[it1].pos[1]) -
+                (robots[it0].pos[1]-robots[it1].pos[1])*(robots[i].pos[0]-robots[it1].pos[0])) >= 0:
+                # it's rare that the above determinant equals to 0
+                robots[i].status_1_1_side = 0  # at left side
+            else:
+                robots[i].status_1_1_side = 1
+            # 3.calculate the initial destination
+            if robots[it0].status_2_sequence == 0:
+                it1 = groups[g_id_t][2][1]  # adjacent robot id
+                robots[i].status_1_1_des = [2*robots[it0].pos[0] - robots[it1].pos[0],
+                                            2*robots[it0].pos[1] - robots[it1].pos[1]]
+            elif robots[it0].status_2_end == True:
+                it1 = groups[g_id_t][2][-2]  # adjacent robot id
+                robots[i].status_1_1_des = [2*robots[it0].pos[0] - robots[it1].pos[0],
+                                            2*robots[it0].pos[1] - robots[it1].pos[1]]
+            else:
+                # robot it0 is not at the begining or end of the line
+                it1 = 0
+                if robots[i].status_1_1_dir == 0:
+                    it1 = groups[robots[i].group_id][2][robots[it0].status_2_sequence - 1]
+                else:
+                    it1 = groups[robots[i].group_id][2][robots[it0].status_2_sequence + 1]
+                # direction from current key neighbor(it0) to next promising key neighbor(it1)
+                dir_temp = math.atan2((robots[it1].pos[1]-robots[it0].pos[1]),
+                                      (robots[it1].pos[0]-robots[it0].pos[0]))
+                # direction from next promising key neighbor to new destination
+                if robots[i].status_1_1_side == 0:
+                    # climbing at the left of the line, rotate ccw of pi/2
+                    dir_temp = dir_temp + math.pi/2
+                else:
+                    dir_temp = dir_temp - math.pi/2  # rotate cw of pi/2
+                # calculate new destination address
+                robots[i].status_1_1_des = [robots[it1].pos[0]+climb_space*math.cos(dir_temp),
+                                            robots[it1].pos[1]+climb_space*math.sin(dir_temp)]
+            # update the moving orientation
+            robots[i].ori = math.atan2(robots[i].status_1_1_des[1]-robots[i].pos[1],
+                                       robots[i].status_1_1_des[0]-robots[i].pos[0])
+        # 2.s_initial_form, robot '0' initial forms with another '0', becoming '1'
+        s_pair = []  # the container for finalized initial forming pairs
+        while len(s_initial_form.keys()) != 0:  # there are still robots to be processed
+            for i in s_initial_form.keys():
+                it = s_initial_form[i][0]  # index temp
+                if it in s_initial_form.keys():
+                    if s_initial_form[it][0] == i:  # robot 'it' also recognizes 'i' as closest
+                        s_pair.append([i, it])
+                        s_initial_form.pop(i)  # pop out both 'i' and 'it'
+                        s_initial_form.pop(it)
+                        break
+                    # have not consider the situation that 'i' in 'it' but not first one
+                    elif i not in s_initial_form[it]:
+                        s_initial_form[i].remove(it)
+                        if len(s_initial_form[i]) == 0:
+                            s_initial_form.pop(i)
+                        break
+                else:
+                    s_initial_form[i].remove(it)
+                    if len(s_initial_form[i]) == 0:
+                        s_initial_form.pop(i)
+                    break
 
-        # process the scheduled status change
 
-
-        # update the position, and wall bouncing
+        # update the physics(pos, vel and ori), and wall bouncing
 
 
     pygame.display.update()
