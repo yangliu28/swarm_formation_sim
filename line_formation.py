@@ -273,6 +273,7 @@ while not sim_exit:
                     elif robots[i].status_1_sub == 1:
                         # host robot is in the climbing phase
                         # check if the grab-on robot is at the begining or end of the line
+                        # if yes, no need to search new key neighbor, only check destination
                         if robots[robots[i].key_neighbors[0]].status_2_sequence == 0 or
                            robots[robots[i].key_neighbors[0]].status_2_end == True:
                            # check if reaching the destination coordinates
@@ -285,6 +286,8 @@ while not sim_exit:
                                 s_form_done.append(i)
                         else:
                             # grab-on robot is not at the ends of the line yet, still climbing
+                            # check if new key neighbor appears, if yes, update new key neighbor
+                            # and update the new destination address
                             id_temp = -1
                             if robots[i].status_1_1_dir == 0:
                                 id_temp = groups[robots[i].group_id][2][robots[i].status_2_sequence - 1]
@@ -306,15 +309,23 @@ while not sim_exit:
                                     robots[i].status_1_1_des = [2*robots[it0].pos[0] - robots[it1].pos[0],
                                                                 2*robots[it0].pos[1] - robots[it1].pos[1]]
                                 else:  # new grab-on robot is not at any end
-                                    it1 = 0  # index temp
+                                    it1 = 0  # index of the next promising key neighbor
                                     if robots[i].status_1_1_dir == 0:
                                         it1 = groups[robots[i].group_id][2][robots[robots[i].key_neighbors[0]].status_2_sequence - 1]
                                     else:
                                         it1 = groups[robots[i].group_id][2][robots[robots[i].key_neighbors[0]].status_2_sequence + 1]
-                                    
-
-
-
+                                    # direction from current key neighbor to next promising key neighbor
+                                    dir_temp = math.atan2((robots[it1].pos[1]-robots[it0].pos[1]),
+                                                          (robots[it1].pos[0]-robots[it0].pos[0]))
+                                    # direction from next promising key neighbor to new destination
+                                    if robots[i].status_1_1_side == 0:
+                                        # climbing at the left of the line, rotate ccw of pi/2
+                                        dir_temp = dir_temp + math.pi/2
+                                    else:
+                                        dir_temp = dir_temp - math.pi/2  # rotate cw of pi/2
+                                    # calculate new destination address
+                                    robots[i].status_1_1_des = [robots[it1].pos[0]+climb_space*math.cos(dir_temp),
+                                                                robots[it1].pos[1]+climb_space*math.sin(dir_temp)]
             # for the host robot having status of '2'
             elif robots[i].status == 2:
                 # it's ok to check if key neighbors are still in range
