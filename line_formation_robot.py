@@ -16,8 +16,6 @@ class LFRobot:  # LF stands for line formation
         self.status_1_sub = -1  # sub state for state '1' robot
             # '0' for initial forming
             # '1' for climbing
-        self.status_1_0_dir = 0  # moving direction for the initial forming robots
-            # an angle indicating the absolute moving direction
         self.status_1_1_dir = 0  # movind direction for the climbing robot
             # '0' for climbing toward the small index end
             # '1' for climbing toward the large index end
