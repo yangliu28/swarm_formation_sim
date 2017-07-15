@@ -104,7 +104,7 @@ while not sim_exit:
                     dist_table[j][i] = -1.0
         # sort the distance in another table, record the index here
         index_list = [[] for i in range(robot_quantity)]  # index of neighbors in range
-        # find all non-zero distances
+        # find all robots with non-zero distance
         for i in range(robot_quantity):
             for j in range(robot_quantity):
                 if j == i: continue  # skip the self, not necessary
@@ -132,9 +132,20 @@ while not sim_exit:
         # instantiate the status transition variables, prepare for status check
         # the priority to process them is in the following order
         s_grab_on = {}  # robot '0' grabs on robot '2', becoming '1'
+            # key is id of robot '0', value is id of robot '2'
         s_init_form = {}  # robot '0' initial forms with another '0', becoming '1'
-        s_form_done = []  # robot '1' finishes initial forming or climbing, becoming '2'
-        s_lost = []  # robot '1' gets lost while initial forming or climbing
+            # key is id of robot '0' that discovers other robot '0' in range
+            # value is a list of robot '0's that are in range, in order of increasing distance
+        s_form_done = {}  # robot '1' finishes initial forming, becoming '2'
+            # key is group id
+            # value is a list of id of robot '1's that have finished initial forming
+        s_climb_done = {}  # robot '1' finishes climbing, becoming '2'
+            # key is group id
+            # value is a list of id of robot '1's that have finished climbing
+        s_form_lost = []  # robot '1' gets lost during initial forming
+            # list of group id for the initial forming robots
+        s_climb_lost = []  # robot '1' gets lost during climbing
+            # list of robot id for the climbing robots
         s_disassemble = []  # disassemble triggerred by robot '1' or '2'
         # other status transition needs to be regularly checked are:
             # natural expiration of a group
@@ -238,7 +249,11 @@ while not sim_exit:
                         break
                 if neighbors_secured == False:
                     # status transition scheduled, robot '1' gets lost, becoming '-1'
-                    s_lost.append(i)
+                    if robots[i].status_1_sub == 0:
+                        # append the group id, disassemble the entire group
+                        s_form_lost.append(robots[i].group_id)
+                    else:
+                        s_climb_lost.append(i)  # append the robot id
                 else:
                     # all the key neighbors are in good position
                     # 2.dissemble check, get group attribution of all '1' and '2'
@@ -262,7 +277,7 @@ while not sim_exit:
                     # check if there are multiple groups detected
                     if len(group_temp.keys()) > 1:
                         # status transition scheduled, to disassemble groups
-                        s_disassemble.append([group_temp.keys()])
+                        s_disassemble.append(group_temp.keys())
                         # may produce duplicates in s_disassemble, not big problem
                     # 3.check if any neighbor transition needs to be done
                     if robots[i].status_1_sub == 0:
@@ -271,7 +286,11 @@ while not sim_exit:
                         if abs(dist_table[i][robots[i].key_neighbors[0]] -
                                comm_range) < space_err:
                             # status transition scheduled, finish intial forming, '1' to '2'
-                            s_form_done.append(i)
+                            g_it = robots[i].group_id
+                            if g_it in s_form_done.keys():
+                                s_form_done[g_it].append(i)
+                            else:
+                                s_form_done[g_it] = [i]
                     elif robots[i].status_1_sub == 1:
                         # host robot is in the climbing phase
                         # check if the grab-on robot is at the begining or end of the line
@@ -279,13 +298,17 @@ while not sim_exit:
                         if robots[robots[i].key_neighbors[0]].status_2_sequence == 0 or
                            robots[robots[i].key_neighbors[0]].status_2_end == True:
                            # check if reaching the destination coordinates
-                            pos_temp = (robots[i].pos[0]-robots[i].status_1_1_des[0],
+                            vect_temp = (robots[i].pos[0]-robots[i].status_1_1_des[0],
                                         robots[i].pos[1]-robots[i].status_1_1_des[1])
-                            dist_temp = math.sqrt(pos_temp[0]*pos_temp[0] +
-                                                  pos_temp[1]*pos_temp[1])
+                            dist_temp = math.sqrt(vect_temp[0]*vect_temp[0] +
+                                                  vect_temp[1]*vect_temp[1])
                             if dist_temp < space_err:
                                 # status transition scheduled, finish climbing, '1' to '2'
-                                s_form_done.append(i)
+                                g_it = robots[i].group_id
+                                if g_it in s_climb_done.keys():
+                                    s_climb_done[g_it].append(i)
+                                else:
+                                    s_climb_done[g_it] = [i]
                         else:
                             # grab-on robot is not at any end of the line yet, still climbing
                             # check if new key neighbor appears, if yes, update new key neighbor
@@ -353,7 +376,7 @@ while not sim_exit:
                 # check if there are multiple groups detected
                 if len(group_temp.keys()) > 1:
                     # status transition scheduled, to disassemble groups
-                    s_disassemble.append([group_temp.keys()])
+                    s_disassemble.append(group_temp.keys())
             # for the host robot having status of '-1', do nothing
 
         # process the scheduled status change, in the order of the priority
@@ -463,9 +486,8 @@ while not sim_exit:
             # deciding moving direction for the initial forming robots
             vect_temp = (robots[it1].pos[0]-robots[it0].pos[0],
                          robots[it1].pos[1]-robots[it0].pos[1])  # pointing from it0 to it1
-            dist_temp = math.sqrt(vect_temp[0]*vect_temp[0] + vect_temp[1]*vect_temp[1])
             ori_temp = math.atan2(vect_temp[1], vect_temp[0])
-            if dist_temp > line_space:
+            if dist_table[it0][it1] > line_space:  # equally dist_table[it1][it0]
                 # attracting each other
                 robots[it0].ori = ori_temp
                 robots[it1].ori = lf_reset_radian(ori_temp + math.pi)
@@ -475,42 +497,75 @@ while not sim_exit:
                 robots[it1].ori = ori_temp
             # no need to check if they are already within the space error of line space
             # this will be done in the next round of status change check
-        # 3.s_form_done, robot '1' finishes intial forming or climbing, becoming '2'
-        while len(s_form_done) != 0:
-            it0 = s_form_done[0]  # get the first element
-            if robots[it0].status_1_sub == 0:
-                # initial forming is done, check if key neighbor is also in s_form_done
-                it1 = robots[it0].key_neighbors[0]
-                if it1 in s_form_done:
-                    # remove  both indices from s_from_done
-                    s_form_done.remove(it0)
-                    s_form_done.remove(it1)
-                    # update 'robots' variable for 'it0' and 'it1'
-                    robots[it0].status = 2
-                    robots[it1].status = 2
-                    # randomly deciding which is begining and end of the line, random choice
-                    if random.random() > 0.5:  # half chance
-                        # swap 'ito' and 'it1', 'it0' as begining, 'it1' as end
-                        temp = it0
-                        it0 = it1
-                        it1 = temp
-                    # update the 'robots' variable
-                    robots[it0].status_2_sequence = 0
-                    robots[it1].status_2_sequence = 1
-                    robots[it1].status_2_end = True
-                    robots[it0].key_neighbors = it1
-                    robots[it1].key_neighbors = it0
-                    # update the 'groups' variable
-                    g_it = robots[it0].group_id
-                    groups[g_it][2] = [it0, it1]  # add the robots already in the line
-                    groups[g_it][3].remove(it0)  # remove from the forming pool
-                    groups[g_it][3].remove(it1)
+        # 3.s_form_done, robot '1' finishes intial forming, becoming '2'
+        for g_it in s_form_done.keys():
+            if len(s_form_done[g_it]) == 2:  # double check both thinks forming is done
+                it0 = s_form_done[g_it][0]
+                it1 = s_form_done[g_it][1]
+                # update 'robots' variable for 'it0' and 'it1'
+                robots[it0].status = 2
+                robots[it1].status = 2
+                # randomly deciding which is begining and end of the line, random choice
+                if random.random() > 0.5:  # half chance
+                    # swap 'ito' and 'it1', 'it0' as begining, 'it1' as end
+                    temp = it0
+                    it0 = it1
+                    it1 = temp
+                # update the 'robots' variable
+                robots[it0].status_2_sequence = 0
+                robots[it1].status_2_sequence = 1
+                robots[it1].status_2_end = True
+                robots[it0].key_neighbors = [it1]  # can skip this
+                robots[it1].key_neighbors = [it0]
+                # update the 'groups' variable
+                g_it = robots[it0].group_id
+                groups[g_it][2] = [it0, it1]  # add the robots already in the line
+                groups[g_it][3].remove(it0)  # remove from the forming pool
+                groups[g_it][3].remove(it1)
+        # 4.s_climb_done, robot '1' finishes climbing, becoming '2'
+        for g_it in s_climb_done.keys():
+            start_pool = []  # for robots finish at the begining
+            end_pool = []  # for robots finish at the end
+            for i in s_climb_done[g_it]:
+                if robots[i].status_1_1_dir == 0:
+                    start_pool.append(i)
                 else:
-                    # should not get here, key neighbor doesn't think initial forming is done
-                    # remove the first index
-                    s_form_done.remove(it0)
-            else:
-                # climbing is done
+                    end_pool.append(i)
+            if len(start_pool) > 0:
+                # most likely there is only one robot in the pool
+                # randomly choose one just in case, may not be the best way
+                it0 = random.choice(start_pool)
+                # upate the 'robots' variable
+                robots[it0].status = 2
+                robots[it0].status_2_sequence = 0  # make it begining of the line
+                robots[it0].status_2_end = False
+                robots[it0].key_neighbors = [groups[g_it][2][0]]
+                robots[groups[g_it][2][0]].key_neighbors.append(it0)  # add a new key neighbor
+                # update the 'groups' variable
+                groups[g_it][3].remove(it0)  # remove from the climbing pool
+                groups[g_it][2].insert(0, it0)  # insert new index at the begining
+                # increase the status_2_sequence of other robots on the line by 1
+                for i in groups[g_it][2][1:]:
+                    robots[i].status_2_sequence = robots[i].status_2_sequence + 1
+            if len(end_pool) > 0:
+                it0 = random.choice(end_pool)
+                # update the 'robots' variable
+                robots[it0].status = 2
+                robots[it0].status_2_sequence = len(groups[g_it][2])
+                robots[it0].status_2_end = True
+                it1 = groups[g_it][2][-1]  # the old end of the line
+                robots[it1].status_2_end = False
+                robots[it0].key_neighbors = [it1]
+                robots[it1].key_neighbors.append(it0)
+                # update the 'groups' variable
+                groups[g_it][3].remove(it0)  # remove from the climbing pool
+                groups[g_it][2].append(it0)  # append 'it0' at the end of the line
+        # 5.s_form_lost, robot '1' gets lost during initial forming
+        for g_it in s_form_lost:
+            # can disassemble the group here, but may as well do it together in s_disassemble
+            s_disassemble.append([g_it])
+        # 6.s_climb_lost, robot '1' gets lost during climbing
+        
 
         # update the physics(pos, vel and ori), and wall bouncing
 
