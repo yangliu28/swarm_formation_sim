@@ -618,13 +618,33 @@ while not sim_exit:
         for i in range(robot_quantity):
             if robots[i].status == 2:
                 continue  # every robot moves except '2'
+            # check if out of boundaries, algorithms revised from 'experiment_3_automaton'
+            # change only direction of velocity
+            if robots[i].pos[0] >= world_size[0]:  # out of right boundary
+                if math.cos(robots[i].ori) > 0:  # velocity on x is pointing right
+                    robots[i].ori = lf_reset_radian(2*(math.pi/2) - robots[i].ori)
+            elif robots[i].pos[0] <= 0:  # out of left boundary
+                if math.cos(robots[i].ori) < 0:  # velocity on x is pointing left
+                    robots[i].ori = lf_reset_radian(2*(math.pi/2) - robots[i].ori)
+            if robots[i].pos[1] >= world_size[1]:  # out of top boundary
+                if math.sin(robots[i].ori) > 0:  # velocity on y is pointing up
+                    robots[i].ori = lf_reset_radian(2*(0) - robots[i].ori)
+            elif robots[i].pos[1] <= 0:  # out of bottom boundary
+                if math.sin(robots[i].ori) < 0:  # velocity on y is pointing down
+                    robots[i].ori = lf_reset_radian(2*(0) - robots[i].ori)
+            # update one step of distance
             travel_dist = robots[i].vel * frame_period/1000
             robots[i].pos[0] = robots[i].pos[0] + travel_dist*math.cos(robots[i].ori)
             robots[i].pos[1] = robots[i].pos[1] + travel_dist*math.sin(robots[i].ori)
-            # check rebound by the boundaries
-            
-            if (robots[i].pos[0] >= world_size[0] or )
-            # also update vel for robot '1'
+            # update direction of velocity for robot '1',  conflict with boundary check?
+            if robots[i].status == 1:
+                if robots[i].status_1_sub == 0:
+                    it0 = robots[i].key_neighbors[0]
+                    robots[i].ori = math.atan2(robots[it0].pos[1]-robots[i].pos[1],
+                                               robots[it0].pos[0]-robots[i].pos[0])
+                else:
+                    robots[i].ori = math.atan2(robots[i].status_1_1_des[1]-robots[i].pos[1],
+                                               robots[i].status_1_1_des[0]-robots[i].pos[0])
 
         # graphics update
 
