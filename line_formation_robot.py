@@ -33,5 +33,6 @@ class LFRobot:  # LF stands for line formation
             # for '1_1' robot, neighbor is the line traveling robot
             # for '2' robot, neighbors are two robots adjacent on the line
                 # one robot if the '2' is at the begining or end
+        self.status_n1_life = 0  # life time of status '-1', randomly generated
 
 
