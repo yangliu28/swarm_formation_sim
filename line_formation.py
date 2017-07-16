@@ -28,9 +28,9 @@ world_size = (100.0, 100.0 * screen_size[1]/screen_size[0])
 robot_quantity = 30
 # coefficient to resize the robot distribution, but always keep close to center
 distrib_coef = 0.5
-const_vel = 2  # all moving robots are moving at a constant speed
+const_vel = 2.0  # all moving robots are moving at a constant speed
 frame_period = 100  # updating period of the simulation and graphics, in ms
-comm_range = 7  # communication range, the radius
+comm_range = 7.0  # communication range, the radius
 line_space = comm_range * 0.7  # a little more than half the communication range
 space_err = line_space * 0.1  # the error to determine the space is good
 climb_space = line_space * 0.5  # climbing is half the line space along the line
@@ -44,7 +44,7 @@ for i in range(robot_quantity):
     pos_temp = (((random.random()-0.5)*distrib_coef+0.5) * world_size[0],
                 ((random.random()-0.5)*distrib_coef+0.5) * world_size[1])
     vel_temp = const_vel
-    ori_temp = random.random() * 2*math.pi  # random in (0, 2*pi)
+    ori_temp = random.random() * 2*math.pi - math.pi  # random in (-pi, pi)
     object_temp = LFRobot(pos_temp, vel_temp, ori_temp)
     robots.append(object_temp)
 # instantiate the group variable as dictionary
@@ -82,6 +82,7 @@ while not sim_exit:
     # update the physics, control rules and graphics at the same time
     timer_now = pygame.time.get_ticks()
     if (timer_now - timer_last) > frame_period:
+        timer_last = timer_now  # reset timer
         # prepare the distance data for every pair of robots
         for i in range(robot_quantity):
             for j in range(i+1, robot_quantity):
@@ -147,6 +148,7 @@ while not sim_exit:
         s_climb_lost = []  # robot '1' gets lost during climbing
             # list of robot id for the climbing robots
         s_disassemble = []  # disassemble triggerred by robot '1' or '2'
+            # list of lists of group id to be compared for disassembling
         # other status transition needs to be regularly checked are:
             # natural expiration of a group
             # robot '-1' back in game after random delay, becoming '0'
@@ -488,7 +490,7 @@ while not sim_exit:
                          robots[it1].pos[1]-robots[it0].pos[1])  # pointing from it0 to it1
             ori_temp = math.atan2(vect_temp[1], vect_temp[0])
             if dist_table[it0][it1] > line_space:  # equally dist_table[it1][it0]
-                # attracting each other
+                # attracting each other, most likely this happens
                 robots[it0].ori = ori_temp
                 robots[it1].ori = lf_reset_radian(ori_temp + math.pi)
             else:
@@ -564,13 +566,69 @@ while not sim_exit:
         for g_it in s_form_lost:
             # can disassemble the group here, but may as well do it together in s_disassemble
             s_disassemble.append([g_it])
-        # 6.s_climb_lost, robot '1' gets lost during climbing
-        
+        # 6.s_climb_lost, robot '1' gets lost during climbing, becoming '-1'
+        for i in s_climb_lost:
+            # update the 'robots' variable
+            robots[i].status = -1
+            # update the 'groups' variable
+            g_it = robots[i].group_id
+            groups[g_it][0] = groups[g_it][0] - 1  # reduce group size by 1
+            # life time of a group doesn't decrease due to member lost
+            groups[g_it][3].remove(i)  # remove the robot from the pool list
+            # update a new random moving orientation
+            robots[i].ori = random.random() * 2*math.pi - math.pi
+        # 7.check any natural life expiration of the groups
+        for g_it in groups.keys():
+            if groups[g_it][1] < 0:
+                s_disassemble.append([g_it])  # leave it to s_disassemble
+        # 8.s_disassemble, triggered by robot '1' or '2'
+        s_dis_list = []  # list of group id that has been finalized
+        # compare number of members to decide which groups to disassemble
+        for gs_it in s_disassemble:
+            if len(gs_it) == 1:
+                # from the s_form_lost
+                if gs_it[0] not in s_dis_list:
+                    s_dis_list.append(gs_it[0])
+            else:
+                # compare which group has the most members, and disassemble the rest
+                g_temp = gs_it[:]
+                member_max = 0  # number of members in the group
+                group_max = -1  # corresponding group id with most members
+                for i in g_temp:
+                    if groups[i][0] > member_max:
+                        member_max = groups[i][0]
+                        group_max = i
+                g_temp.remove(group_max)  # remove the group with the most members
+                for i in g_temp:
+                    if i not in s_dis_list:  # avoid multiple occurrence
+                        s_dis_list.append(i)
+        # start disassembling
+        for g_it in s_dis_list:
+            # update the 'robots' variable
+            for i in groups[g_it][2]:
+                robots[i].status = -1
+                robots[i].ori = random.random() * 2*math.pi - math.pi
+            for i in groups[g_it][3]:
+                robots[i].status = -1
+                robots[i].ori = random.random() * 2*math.pi - math.pi
+            # pop out the group in 'groups'
+            groups.pop(g_it)
 
-        # update the physics(pos, vel and ori), and wall bouncing
+        # update the physics(pos and ori), and wall bouncing, life decrease
+        for i in range(robot_quantity):
+            if robots[i].status == 2:
+                continue  # every robot moves except '2'
+            travel_dist = robots[i].vel * frame_period/1000
+            robots[i].pos[0] = robots[i].pos[0] + travel_dist*math.cos(robots[i].ori)
+            robots[i].pos[1] = robots[i].pos[1] + travel_dist*math.sin(robots[i].ori)
+            # check rebound by the boundaries
+            
+            if (robots[i].pos[0] >= world_size[0] or )
+            # also update vel for robot '1'
 
+        # graphics update
 
-    pygame.display.update()
+        pygame.display.update()
 
 pygame.quit()
 
