@@ -40,7 +40,7 @@ climb_space = line_space * 0.5  # climbing is half the line space along the line
 life_incre = 10  # each new member add these seconds to the life of the group
 group_id_upper_limit = 1000  # random integer as group id from 0 to this limit
 n1_life_lower = 5  # lower limit of life time of being status '-1'
-n1_life_upper 15  # upper limit of life time of being status '-1'
+n1_life_upper = 15  # upper limit of life time of being status '-1'
 
 # instantiate the robot swarm as list
 robots = []  # container for all robots, index is also the identification
@@ -56,7 +56,7 @@ for i in range(robot_quantity):
 groups = {}
     # key is the group id, so two groups won't share same id
     # value is a list
-        # 0.first element: the group size
+        # 0.first element: the group size, including both status '2' and '1'
         # 1.second element: life time remaining
         # 2.third element: a list of robots on the line in adjacent order, status '2'
         # 3.forth element: a list of robots off the line, not in order, status '1'
@@ -124,8 +124,8 @@ while not sim_exit:
                 # bubble sort
                 for j in range(len_temp-1):
                     for k in range(len_temp-1-j):
-                        if dist_table[i][index_list[i][k]] >
-                           dist_table[i][index_list[i][k+1]]:
+                        if (dist_table[i][index_list[i][k]] >
+                            dist_table[i][index_list[i][k+1]]):
                            # swap the position of the two index
                            index_temp = index_list[i][k]
                            index_list[i][k] = index_list[i][k+1]
@@ -162,11 +162,10 @@ while not sim_exit:
 
         # check in 'robots' for any status change, and schedule and process in next step
         for i in range(robot_quantity):
-            # check if this robot has valid neighbors at all
-            if len(index_list[i]) == 0:
-                continue;  # skip the neighbor check
             # for the host robot having status of '0'
             if robots[i].status == 0:
+                # check if this robot has valid neighbors at all
+                if len(index_list[i]) == 0: continue;  # skip the neighbor check
                 # process neighbors with stauts '2', highest priority
                 if 2 in status_list[i]:
                     # check the group attribution of all the '2'
@@ -174,7 +173,7 @@ while not sim_exit:
                     current_index = status_list[i].index(2)
                     current_robot = index_list[i][current_index]
                     current_group = robots[current_robot].group_id
-                    group_temp = {current_group:[current_robot]}
+                    groups_temp = {current_group:[current_robot]}
                     # check if there is still '2' in the list
                     while 2 in status_list[i][current_index+1:]:
                         # indexing the next '2' from current_index+1
@@ -182,21 +181,21 @@ while not sim_exit:
                         current_index = status_list[i].index(2, current_index+1)
                         current_robot = index_list[i][current_index]
                         current_group = robots[current_robot].group_id
-                        # update group_temp
-                        if current_group in group_temp.keys():
+                        # update groups_temp
+                        if current_group in groups_temp.keys():
                             # append this robot in the existing group
-                            group_temp[current_group].append(current_robot)
+                            groups_temp[current_group].append(current_robot)
                         else:
-                            # add new group id in group_temp and add this robot
-                            group_temp[current_group] = [current_robot]
+                            # add new group id in groups_temp and add this robot
+                            groups_temp[current_group] = [current_robot]
                     # check if there are multiple groups detected from the '2'
                     target_robot = -1  # the target robot to grab on
-                    if len(group_temp.keys()) == 1:
+                    if len(groups_temp.keys()) == 1:
                         # there is only one group detected
                         dist_min = 2*comm_range  # start with a large dist
                         robot_min = -1  # corresponding robot with min distance
                         # search the closest '2'
-                        for j in group_temp.values()[0]:
+                        for j in groups_temp.values()[0]:
                             if dist_table[i][j] < dist_min:
                                 dist_min = dist_table[i][j]
                                 robot_min = j
@@ -207,14 +206,14 @@ while not sim_exit:
                         # compare which group has the most members in it
                         member_max = 0  # start with 0 number of members
                         group_max = -1  # corresponding group id with most members
-                        for j in group_temp.keys():
-                            if len(group_temp[j]) > member_max:
-                                member_max = len(group_temp[j])
+                        for j in groups_temp.keys():
+                            if len(groups_temp[j]) > member_max:
+                                member_max = len(groups_temp[j])
                                 group_max = j
                         # search the closeat '2' inside that group
                         dist_min = 2*comm_range
                         robot_min = -1
-                        for j in group_temp[group_max]:
+                        for j in groups_temp[group_max]:
                             if dist_table[i][j] < dist_min:
                                 dist_min = dist_table[i][j]
                                 robot_min = j
@@ -273,21 +272,24 @@ while not sim_exit:
                         index_temp = status_list_temp.index(0)
                         status_list_temp.pop(index_temp)
                         index_list_temp.pop(index_temp)
-                    # start the group attribution dictionary with first robot
-                    group_temp = {robots[index_list_temp[0]].group_id: [index_list_temp[0]]}
-                    for j in index_list_temp[1:]:  # then iterating from the second one
-                        current_group = robots[j].group_id
-                        if current_group in group_temp.keys():
-                            # append this robot in same group
-                            group_temp[current_group].append(j)
-                        else:
-                            # add new key in the group_temp dictionary
-                            group_temp[current_group] = [j]
-                    # check if there are multiple groups detected
-                    if len(group_temp.keys()) > 1:
-                        # status transition scheduled, to disassemble groups
-                        s_disassemble.append(group_temp.keys())
-                        # may produce duplicates in s_disassemble, not big problem
+                    if len(index_list_temp) > 0:  # ensure there are in-group robots around
+                        # start the group attribution dictionary with first robot
+                        groups_temp = {robots[index_list_temp[0]].group_id: [index_list_temp[0]]}
+                        for j in index_list_temp[1:]:  # then iterating from the second one
+                            current_group = robots[j].group_id
+                            if current_group in groups_temp.keys():
+                                # append this robot in same group
+                                groups_temp[current_group].append(j)
+                            else:
+                                # add new key in the groups_temp dictionary
+                                groups_temp[current_group] = [j]
+                        print("groups_temp:")
+                        print(groups_temp)
+                        # check if there are multiple groups detected
+                        if len(groups_temp.keys()) > 1:
+                            # status transition scheduled, to disassemble groups
+                            s_disassemble.append(groups_temp.keys())
+                            # may produce duplicates in s_disassemble, not big problem
                     # 3.check if any neighbor transition needs to be done
                     if robots[i].status_1_sub == 0:
                         # host robot is in the initial forming phase
@@ -304,11 +306,11 @@ while not sim_exit:
                         # host robot is in the climbing phase
                         # check if the grab-on robot is at the begining or end of the line
                         # if yes, no need to search new key neighbor, only check destination
-                        if robots[robots[i].key_neighbors[0]].status_2_sequence == 0 or
-                           robots[robots[i].key_neighbors[0]].status_2_end == True:
-                           # check if reaching the destination coordinates
+                        if (robots[robots[i].key_neighbors[0]].status_2_sequence == 0 or
+                            robots[robots[i].key_neighbors[0]].status_2_end == True):
+                            # check if reaching the destination coordinates
                             vect_temp = (robots[i].pos[0]-robots[i].status_1_1_des[0],
-                                        robots[i].pos[1]-robots[i].status_1_1_des[1])
+                                         robots[i].pos[1]-robots[i].status_1_1_des[1])
                             dist_temp = math.sqrt(vect_temp[0]*vect_temp[0] +
                                                   vect_temp[1]*vect_temp[1])
                             if dist_temp < space_err:
@@ -375,20 +377,21 @@ while not sim_exit:
                     status_list_temp.pop(index_temp)
                     index_list_temp.pop(index_temp)
                 # start the group attribution dictionary with first robot
-                group_temp = {robots[index_list_temp[0]].group_id: [index_list_temp[0]]}
-                for j in index_list_temp[1:]:  # then iterating from the second one
-                    current_group = robots[j].group_id
-                    if current_group in group_temp:
-                        group_temp[current_group].append(j)
-                    else:
-                        group_temp[current_group] = [j]
-                # check if there are multiple groups detected
-                if len(group_temp.keys()) > 1:
-                    # status transition scheduled, to disassemble groups
-                    s_disassemble.append(group_temp.keys())
+                if len(index_list_temp) > 0:  # ensure there are in-group robots around
+                    groups_temp = {robots[index_list_temp[0]].group_id: [index_list_temp[0]]}
+                    for j in index_list_temp[1:]:  # then iterating from the second one
+                        current_group = robots[j].group_id
+                        if current_group in groups_temp:
+                            groups_temp[current_group].append(j)
+                        else:
+                            groups_temp[current_group] = [j]
+                    # check if there are multiple groups detected
+                    if len(groups_temp.keys()) > 1:
+                        # status transition scheduled, to disassemble groups
+                        s_disassemble.append(groups_temp.keys())
             # for the host robot having status of '-1'
             elif robots[i].status == -1:
-                # check if life time expires, and get back to '0'
+                # check if life time expires, and get status back to '0'
                 if robots[i].status_n1_life < 0:
                     s_back_0.append(i)
 
@@ -464,29 +467,29 @@ while not sim_exit:
             # update the moving orientation
             robots[i].ori = math.atan2(robots[i].status_1_1_des[1]-robots[i].pos[1],
                                        robots[i].status_1_1_des[0]-robots[i].pos[0])
-        # 2.s_initial_form, robot '0' initial forms with another '0', becoming '1'
+        # 2.s_init_form, robot '0' initial forms with another '0', becoming '1'
         s_pair = []  # the container for finalized initial forming pairs
-        while len(s_initial_form.keys()) != 0:  # there are still robots to be processed
-            for i in s_initial_form.keys():
-                it = s_initial_form[i][0]  # index temp
-                if it in s_initial_form.keys():
-                    if s_initial_form[it][0] == i:  # robot 'it' also recognizes 'i' as closest
+        while len(s_init_form.keys()) != 0:  # there are still robots to be processed
+            for i in s_init_form.keys():
+                it = s_init_form[i][0]  # index temp
+                if it in s_init_form.keys():
+                    if s_init_form[it][0] == i:  # robot 'it' also recognizes 'i' as closest
                         s_pair.append([i, it])
-                        s_initial_form.pop(i)  # pop out both 'i' and 'it'
-                        s_initial_form.pop(it)
+                        s_init_form.pop(i)  # pop out both 'i' and 'it'
+                        s_init_form.pop(it)
                         break
-                    elif i not in s_initial_form[it]:
+                    elif i not in s_init_form[it]:
                         # usually should not be here unless robots have different sensing range
-                        s_initial_form[i].remove(it)
-                        if len(s_initial_form[i]) == 0:
-                            s_initial_form.pop(i)
+                        s_init_form[i].remove(it)
+                        if len(s_init_form[i]) == 0:
+                            s_init_form.pop(i)
                         break
                     # have not consider the situation that 'i' in 'it' but not first one
                 else:
                     # will be here if robot 'it' chooses to be bounced away by '1', or grab on '2'
-                    s_initial_form[i].remove(it)
-                    if len(s_initial_form[i]) == 0:
-                        s_initial_form.pop(i)
+                    s_init_form[i].remove(it)
+                    if len(s_init_form[i]) == 0:
+                        s_init_form.pop(i)
                     break
         # process the finalized pairs
         for pair in s_pair:
@@ -604,8 +607,10 @@ while not sim_exit:
         for g_it in s_group_exp:
             s_disassemble.append([g_it])  # leave it to s_disassemble
         # 8.s_disassemble, triggered by robot '1' or '2'
-        s_dis_list = []  # list of group id that has been finalized
+        s_dis_list = []  # list of group id that has been finalized for disassembling
         # compare number of members to decide which groups to disassemble
+        print("s_disassemble:")
+        print(s_disassemble)
         for gs_it in s_disassemble:
             if len(gs_it) == 1:
                 # from the s_form_lost
@@ -616,14 +621,17 @@ while not sim_exit:
                 g_temp = gs_it[:]
                 member_max = 0  # number of members in the group
                 group_max = -1  # corresponding group id with most members
-                for i in g_temp:
-                    if groups[i][0] > member_max:
-                        member_max = groups[i][0]
-                        group_max = i
+                for g_it in g_temp:
+                    print(g_it)
+                    if groups[g_it][0] > member_max:
+                        member_max = groups[g_it][0]
+                        group_max = g_it
                 g_temp.remove(group_max)  # remove the group with the most members
-                for i in g_temp:
-                    if i not in s_dis_list:  # avoid multiple occurrence
-                        s_dis_list.append(i)
+                for g_it in g_temp:
+                    if g_it not in s_dis_list:  # avoid multiple occurrence
+                        s_dis_list.append(g_it)
+        print(s_dis_list)
+        print("")
         # start disassembling
         for g_it in s_dis_list:
             # update the 'robots' variable
@@ -635,7 +643,7 @@ while not sim_exit:
                 robots[i].status = -1
                 robots[i].ori = random.random() * 2*math.pi - math.pi
                 robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
-            # pop out the group in 'groups'
+            # pop out this group in 'groups'
             groups.pop(g_it)
         # 9.s_back_0, life time of robot '-1' expires, becoming '0'
         for i in s_back_0:
