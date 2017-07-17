@@ -1,4 +1,39 @@
-# line formation simulation
+# line formation simulation of swarm robots
+
+# comments for research purpose:
+# My previous line formation simulation in ROS utilize the relative positions of nearby
+# neighbors, and linear fit a line and move to the desired position. It only works when
+# there are many robots within range or robot has a large sensing range, and preferrably
+# the swarm is aggregated. No communication is required though.
+# In this simulation, I extended the initial situation such that robots are in random
+# positions in a bounded area. They can move around and communicate with robot in range.
+# If not in a bounded area, they might just run too far away without knowing it. All
+# communications are single hops, each robot only gives the other robot information about
+# itself, not information it gets from a third robot. That means all information is first
+# hand. The idea is that, start initial wondering, each robot is trying to form the first
+# line segment, or find a line it can contribute to, depends on which comes first. There
+# will be more than one line being formed. To control which line should survice, each line
+# is given a time of life, it decreases by time and increases when a new member join the
+# line. The line disassembles when it runs out of life time, and never expire if the number
+# of members exceed half of the total number of robots in the simulation, and becomes the
+# dominant group. Another way a line disassembles itself is, when a line detects the exist
+# of another line, the line with less members will be disassembled.
+
+# comments for programming purpose:
+# Four statuses have been designed to serve different stages of the robot in the simulation:
+    # '0': free, wondering around, not in group, available to form a group or join one
+    # '1': forming an initial line segment, or found a line and trying to climbing to ends
+        # '1_0': initial an line segment, '0' found another '0' and formed a group
+        # '1_1': join a line, climbing to the closer end
+    # '2': already in a line, remain in position
+    # '-1': free, wondering around, no interaction with nearby robots
+# Only allowed status transitions are:
+    # forward: '-1'->'0', '0'->'1', '1'->'2'
+    # backward: '1'->'-1', '2'->'-1'
+# Purpose of '-1' is, when a line is disassembled, if '1' and '2' becomes '0', they will
+# immediately form the old line because they are already in position. So '-1' which has no
+# interaction with nearly robots, acts as a transition to status '0'.
+
 
 import pygame
 import math, random
@@ -13,7 +48,7 @@ background_color = (0, 0, 0)  # black background
 robot_0_color = (0, 255, 0)  # for robot status '0', green
 robot_1_color = (255, 153, 153)  # for robot status '1', pink
 robot_2_color = (255, 51, 0)  # for robot status '2', red
-robot_n1_colro = (0, 51, 204)  # for robot status '-1', blue
+robot_n1_color = (0, 51, 204)  # for robot status '-1', blue
 robot_size = 5  # robot modeled as dot, number of pixels in radius
 
 # set up the simulation window and surface object
@@ -706,7 +741,7 @@ while not sim_exit:
             elif robots[i].status == 2:
                 color_temp = robot_2_color
             elif robots[i].status == -1:
-                color_temp = robot_n1_colro
+                color_temp = robot_n1_color
             # draw the robot as a small solid circle
             pygame.draw.circle(screen, color_temp, display_pos, robot_size, 0)  # fill the circle
         pygame.display.update()
