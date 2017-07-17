@@ -34,6 +34,14 @@
 # immediately form the old line because they are already in position. So '-1' which has no
 # interaction with nearly robots, acts as a transition to status '0'.
 
+# line formation runs out of boundary:
+# It's possible that a line is trying to continue out of the boundary. This is no good way
+# to solve it, if keeping the proposed control algorithm. But reducing the occurrence can
+# be done, by enabling a relatively large wall detection range. Robot will be running away
+# before it really hits the wall, so it's like smaller virtual boundaries inside the window.
+# But this virtual boundaries only work on robot '0', such that robot '1' or '2' wants to
+# form a line out of virtual boundaries, it can.
+
 
 import pygame
 import math, random
@@ -43,7 +51,7 @@ from line_formation_functions import *
 pygame.init()  # initialize pygame
 
 # for display, window origin is at left up corner
-screen_size = (1200, 900)  # width and height
+screen_size = (1200, 1000)  # width and height
 background_color = (0, 0, 0)  # black background
 robot_0_color = (0, 255, 0)  # for robot status '0', green
 robot_1_color = (255, 153, 153)  # for robot status '1', pink
@@ -66,9 +74,9 @@ world_size = (100.0, 100.0 * screen_size[1]/screen_size[0])
 robot_quantity = 30
 # coefficient to resize the robot distribution, but always keep close to center
 distrib_coef = 0.5
-const_vel = 2.0  # all moving robots are moving at a constant speed
+const_vel = 3.0  # all moving robots are moving at a constant speed
 frame_period = 100  # updating period of the simulation and graphics, in ms
-comm_range = 7.0  # communication range, the radius
+comm_range = 5.0  # communication range, the radius
 line_space = comm_range * 0.7  # a little more than half the communication range
 space_err = line_space * 0.1  # the error to determine the space is good
 climb_space = line_space * 0.5  # climbing is half the line space along the line
@@ -76,6 +84,8 @@ life_incre = 8  # each new member add these seconds to the life of the group
 group_id_upper_limit = 1000  # random integer as group id from 0 to this limit
 n1_life_lower = 3  # lower limit of life time of being status '-1'
 n1_life_upper = 8  # upper limit of life time of being status '-1'
+vbound_gap_ratio = 0.15  # for the virtual boundaries inside the window
+    # ratio is the gap distance to the world size on that axis
 
 # instantiate the robot swarm as list
 robots = []  # container for all robots, index is also the identification
@@ -101,9 +111,23 @@ groups = {}
 # will calculate once for symmetric data
 dist_table = [[-1.0 for j in range(robot_quantity)] for i in range(robot_quantity)]
 
+# calculate the corner positions of virtual boundaries, for display
+# left bottom corner
+pos_lb = lf_world_to_display([world_size[0]*vbound_gap_ratio,
+                              world_size[1]*vbound_gap_ratio], world_size, screen_size)
+# right bottom corner
+pos_rb = lf_world_to_display([world_size[0]*(1-vbound_gap_ratio),
+                              world_size[1]*vbound_gap_ratio], world_size, screen_size)
+# right top corner
+pos_rt = lf_world_to_display([world_size[0]*(1-vbound_gap_ratio),
+                              world_size[1]*(1-vbound_gap_ratio)], world_size, screen_size)
+# left top corner
+pos_lt = lf_world_to_display([world_size[0]*vbound_gap_ratio,
+                              world_size[1]*(1-vbound_gap_ratio)], world_size, screen_size)
+
 # the loop
 sim_exit = False  # simulation exit flag
-sim_pause = False  # simulation pause flag
+sim_pause = False  # simulation pause flag, pause at begining
 timer_last = pygame.time.get_ticks()  # return number of milliseconds after pygame.init()
 timer_now = timer_last  # initialize it with timer_last
 while not sim_exit:
@@ -677,14 +701,54 @@ while not sim_exit:
         # start disassembling
         for g_it in s_dis_list:
             # update the 'robots' variable
-            for i in groups[g_it][2]:
+            for i in groups[g_it][3]:  # for robots off the line
                 robots[i].status = -1
-                robots[i].ori = random.random() * 2*math.pi - math.pi
+                # give a random (integer) life time in designed range
                 robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
-            for i in groups[g_it][3]:
+                robots[i].ori = random.random() * 2*math.pi - math.pi
+            # give a random moving orientation is still not good enough
+            # a new way for the robots on the line is 'explode' the first half to one side
+            # and 'explode' the second half to the other side.
+            num_online = len(groups[g_it][2])  # number of robots on the line
+            num_1_half = num_online/2  # number of robots for the first half
+            num_2_half = num_online - num_1_half  # number of robots for the second half
+            for i in groups[g_it][2]:  # for robots on the line
                 robots[i].status = -1
-                robots[i].ori = random.random() * 2*math.pi - math.pi
                 robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
+                # robots[i].ori = random.random() * 2*math.pi - math.pi
+                # first deciding the direction of the line, always pointing to the closer end
+                ori_temp = 0
+                seq_temp = robots[i].status_2_sequence  # sequence on the line
+                if robots[i].status_2_sequence == 0:
+                    # then get second one on the line
+                    it0 = groups[robots[i].group_id][2][1]
+                    # orientation points to the small index end
+                    ori_temp = math.atan2(robots[i].pos[1]-robots[it0].pos[1],
+                                          robots[i].pos[0]-robots[it0].pos[0])
+                elif robots[i].status_2_end == True:
+                    # then get inverse second one on the line
+                    it0 = groups[robots[i].group_id][2][-2]
+                    # orientation points to the large index end
+                    ori_temp = math.atan2(robots[i].pos[1]-robots[it0].pos[1],
+                                          robots[i].pos[0]-robots[it0].pos[0])
+                else:
+                    # get both neighbors
+                    it0 = groups[g_it][2][seq_temp - 1]
+                    it1 = groups[g_it][2][seq_temp + 1]
+                    if seq_temp < num_1_half:  # robot in the first half
+                        # orientation points to the small index end
+                        ori_temp = math.atan2(robots[it0].pos[1]-robots[it1].pos[1],
+                                              robots[it0].pos[0]-robots[it1].pos[0])
+                    else:
+                        # orientation points to the large index end
+                        ori_temp = math.atan2(robots[it1].pos[1]-robots[it0].pos[1],
+                                              robots[it1].pos[0]-robots[it0].pos[0])
+                # then calculate the 'explosion' direction
+                if seq_temp < num_1_half:
+                    robots[i].ori = lf_reset_radian(ori_temp + math.pi*(seq_temp+1)/(num_1_half+1))
+                    # always 'explode' to the left side
+                else:
+                    robots[i].ori = lf_reset_radian(ori_temp + math.pi*(num_online-seq_temp)/(num_2_half+1))
             # pop out this group in 'groups'
             groups.pop(g_it)
         # 9.s_back_0, life time of robot '-1' expires, becoming '0'
@@ -698,18 +762,35 @@ while not sim_exit:
                 continue  # every robot moves except '2'
             # check if out of boundaries, algorithms revised from 'experiment_3_automaton'
             # change only direction of velocity
-            if robots[i].pos[0] >= world_size[0]:  # out of right boundary
-                if math.cos(robots[i].ori) > 0:  # velocity on x is pointing right
-                    robots[i].ori = lf_reset_radian(2*(math.pi/2) - robots[i].ori)
-            elif robots[i].pos[0] <= 0:  # out of left boundary
-                if math.cos(robots[i].ori) < 0:  # velocity on x is pointing left
-                    robots[i].ori = lf_reset_radian(2*(math.pi/2) - robots[i].ori)
-            if robots[i].pos[1] >= world_size[1]:  # out of top boundary
-                if math.sin(robots[i].ori) > 0:  # velocity on y is pointing up
-                    robots[i].ori = lf_reset_radian(2*(0) - robots[i].ori)
-            elif robots[i].pos[1] <= 0:  # out of bottom boundary
-                if math.sin(robots[i].ori) < 0:  # velocity on y is pointing down
-                    robots[i].ori = lf_reset_radian(2*(0) - robots[i].ori)
+            if robots[i].status != 0:
+                # for the robots '-1', '1' and '2', bounded by the real boundaries
+                if robots[i].pos[0] >= world_size[0]:  # out of right boundary
+                    if math.cos(robots[i].ori) > 0:  # velocity on x is pointing right
+                        robots[i].ori = lf_reset_radian(2*(math.pi/2) - robots[i].ori)
+                elif robots[i].pos[0] <= 0:  # out of left boundary
+                    if math.cos(robots[i].ori) < 0:  # velocity on x is pointing left
+                        robots[i].ori = lf_reset_radian(2*(math.pi/2) - robots[i].ori)
+                if robots[i].pos[1] >= world_size[1]:  # out of top boundary
+                    if math.sin(robots[i].ori) > 0:  # velocity on y is pointing up
+                        robots[i].ori = lf_reset_radian(2*(0) - robots[i].ori)
+                elif robots[i].pos[1] <= 0:  # out of bottom boundary
+                    if math.sin(robots[i].ori) < 0:  # velocity on y is pointing down
+                        robots[i].ori = lf_reset_radian(2*(0) - robots[i].ori)
+            else:
+                # for robot '0' only, bounded in a smaller area
+                # so more lines will be formed in the center area, and line won't run out
+                if robots[i].pos[0] >= world_size[0]*(1-vbound_gap_ratio):
+                    if math.cos(robots[i].ori) > 0:
+                        robots[i].ori = lf_reset_radian(2*(math.pi/2) - robots[i].ori)
+                elif robots[i].pos[0] <= world_size[0]*vbound_gap_ratio:
+                    if math.cos(robots[i].ori) < 0:
+                        robots[i].ori = lf_reset_radian(2*(math.pi/2) - robots[i].ori)
+                if robots[i].pos[1] >= world_size[1]*(1-vbound_gap_ratio):
+                    if math.sin(robots[i].ori) > 0:
+                        robots[i].ori = lf_reset_radian(2*(0) - robots[i].ori)
+                elif robots[i].pos[1] <= world_size[1]*vbound_gap_ratio:
+                    if math.sin(robots[i].ori) < 0:
+                        robots[i].ori = lf_reset_radian(2*(0) - robots[i].ori)
             # update one step of distance
             travel_dist = robots[i].vel * frame_period/1000.0
             robots[i].pos[0] = robots[i].pos[0] + travel_dist*math.cos(robots[i].ori)
@@ -740,6 +821,8 @@ while not sim_exit:
 
         # graphics update
         screen.fill(background_color)
+        # draw the virtual boundaries
+        pygame.draw.lines(screen, (255, 255, 255), True, [pos_lb, pos_rb, pos_rt, pos_lt], 1)
         # draw the robots
         for i in range(robot_quantity):
             display_pos = lf_world_to_display(robots[i].pos, world_size, screen_size)
