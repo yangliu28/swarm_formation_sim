@@ -72,7 +72,7 @@ comm_range = 7.0  # communication range, the radius
 line_space = comm_range * 0.7  # a little more than half the communication range
 space_err = line_space * 0.1  # the error to determine the space is good
 climb_space = line_space * 0.5  # climbing is half the line space along the line
-life_incre = 10  # each new member add these seconds to the life of the group
+life_incre = 8  # each new member add these seconds to the life of the group
 group_id_upper_limit = 1000  # random integer as group id from 0 to this limit
 n1_life_lower = 3  # lower limit of life time of being status '-1'
 n1_life_upper = 8  # upper limit of life time of being status '-1'
@@ -371,13 +371,24 @@ while not sim_exit:
                                 if robots[it0].status_2_sequence == 0:
                                     # if new grab-on robot is at the begining of the line
                                     it1 = groups[robots[i].group_id][2][1]  # second one in the line
-                                    robots[i].status_1_1_des = [2*robots[it0].pos[0] - robots[it1].pos[0],
-                                                                2*robots[it0].pos[1] - robots[it1].pos[1]]
+                                    # to calculate the new destination, should not just mirror the des
+                                    # from 'it1' with 'it0', it is not precise enough, error will accumulate
+                                    # robots[i].status_1_1_des = [2*robots[it0].pos[0] - robots[it1].pos[0],
+                                    #                             2*robots[it0].pos[1] - robots[it1].pos[1]]
+                                    # ori_temp is pointing from 'it1' to 'it0'
+                                    ori_temp = math.atan2(robots[it0].pos[1]-robots[it1].pos[1],
+                                                          robots[it0].pos[0]-robots[it1].pos[0])
+                                    robots[i].status_1_1_des = [robots[it0].pos[0] + line_space*math.cos(ori_temp),
+                                                                robots[it0].pos[1] + line_space*math.sin(ori_temp)]
                                 elif robots[it0].status_2_end == True:
                                     # if new grab-on robot is at the end of the line
                                     it1 = groups[robots[i].group_id][2][-2]  # second inversely in the line
-                                    robots[i].status_1_1_des = [2*robots[it0].pos[0] - robots[it1].pos[0],
-                                                                2*robots[it0].pos[1] - robots[it1].pos[1]]
+                                    # robots[i].status_1_1_des = [2*robots[it0].pos[0] - robots[it1].pos[0],
+                                    #                             2*robots[it0].pos[1] - robots[it1].pos[1]]
+                                    ori_temp = math.atan2(robots[it0].pos[1]-robots[it1].pos[1],
+                                                          robots[it0].pos[0]-robots[it1].pos[0])
+                                    robots[i].status_1_1_des = [robots[it0].pos[0] + line_space*math.cos(ori_temp),
+                                                                robots[it0].pos[1] + line_space*math.sin(ori_temp)]
                                 else:  # new grab-on robot is not at any end
                                     it1 = 0  # index of the next promising key neighbor
                                     if robots[i].status_1_1_dir == 0:
