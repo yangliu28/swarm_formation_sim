@@ -39,8 +39,8 @@ space_err = line_space * 0.1  # the error to determine the space is good
 climb_space = line_space * 0.5  # climbing is half the line space along the line
 life_incre = 10  # each new member add these seconds to the life of the group
 group_id_upper_limit = 1000  # random integer as group id from 0 to this limit
-n1_life_lower = 5  # lower limit of life time of being status '-1'
-n1_life_upper = 15  # upper limit of life time of being status '-1'
+n1_life_lower = 3  # lower limit of life time of being status '-1'
+n1_life_upper = 8  # upper limit of life time of being status '-1'
 
 # instantiate the robot swarm as list
 robots = []  # container for all robots, index is also the identification
@@ -64,7 +64,7 @@ groups = {}
 
 # instantiate a distance table for every pair of robots
 # will calculate once for symmetric data
-dist_table = [[-1.0 for i in range(robot_quantity)] for j in range(robot_quantity)]
+dist_table = [[-1.0 for j in range(robot_quantity)] for i in range(robot_quantity)]
 
 # the loop
 sim_exit = False  # simulation exit flag
@@ -93,15 +93,15 @@ while not sim_exit:
         for i in range(robot_quantity):
             for j in range(i+1, robot_quantity):
                 # status of '-1' does not involve in any connection, so skip
-                if (i == -1) or (j == -1):
-                    dist_table[i][j] == -1.0
-                    dist_table[j][i] == -1.0
+                if (robots[i].status == -1) or (robots[j].status == -1):
+                    dist_table[i][j] = -1.0
+                    dist_table[j][i] = -1.0
                     continue  # skip the rest
                 # it only covers the upper triangle without the diagonal
-                pos_temp = (robots[i].pos[0]-robots[j].pos[0],
+                vect_temp = (robots[i].pos[0]-robots[j].pos[0],
                             robots[i].pos[1]-robots[j].pos[1])
-                dist_temp = math.sqrt(pos_temp[0]*pos_temp[0] +
-                                      pos_temp[1]*pos_temp[1])
+                dist_temp = math.sqrt(vect_temp[0]*vect_temp[0] +
+                                      vect_temp[1]*vect_temp[1])
                 if dist_temp <= comm_range:
                     # only record distance smaller than communication range
                     dist_table[i][j] = dist_temp
@@ -160,7 +160,7 @@ while not sim_exit:
         s_back_0 = []  # robot '-1' gets  back to '0'
             # list of robot id
 
-        # check in 'robots' for any status change, and schedule and process in next step
+        # check 'robots' for any status change, and schedule and process in next step
         for i in range(robot_quantity):
             # for the host robot having status of '0'
             if robots[i].status == 0:
@@ -283,8 +283,6 @@ while not sim_exit:
                             else:
                                 # add new key in the groups_temp dictionary
                                 groups_temp[current_group] = [j]
-                        print("groups_temp:")
-                        print(groups_temp)
                         # check if there are multiple groups detected
                         if len(groups_temp.keys()) > 1:
                             # status transition scheduled, to disassemble groups
@@ -295,7 +293,7 @@ while not sim_exit:
                         # host robot is in the initial forming phase
                         # check if the neighbor robot is in appropriate distance
                         if abs(dist_table[i][robots[i].key_neighbors[0]] -
-                               comm_range) < space_err:
+                               line_space) < space_err:
                             # status transition scheduled, finish intial forming, '1' to '2'
                             g_it = robots[i].group_id
                             if g_it in s_form_done.keys():
@@ -395,7 +393,7 @@ while not sim_exit:
                 if robots[i].status_n1_life < 0:
                     s_back_0.append(i)
 
-        # check in 'groups' for any status change
+        # check 'groups' for any status change
         for g_it in groups.keys():
             if groups[g_it][4]: continue  # already being dominant
             if groups[g_it][0] > robot_quantity/2:
@@ -403,14 +401,16 @@ while not sim_exit:
                 groups[g_it][4] = True  # becoming dominant
                 groups[g_it][1] = 100.0  # a random large number
             if groups[g_it][1] < 0:  # life time of a group expires
-                s_group_exp.append(group_id)
+                # schedule operation to disassemble this group
+                s_group_exp.append(g_it)
 
         # process the scheduled status change, in the order of the priority
         # 1.s_grab_on, robot '0' grabs on robot '2', becoming '1'
         for i in s_grab_on.keys():
             # 1.update the 'robots' variable
             robots[i].status = 1  # status becoming '1'
-            it0 = s_grab_on[i]  # for the grab on robot, new key neighbor, index temp
+            it0 = s_grab_on[i]  # for the robot being grabed on, new key neighbor
+                # ie., robot 'i' grabs on robot 'it0'
             robots[i].key_neighbors = [it0]  # update the key neighbor
             g_it = robots[it0].group_id  # for the new group id, group index temp
             robots[i].group_id = g_it  # update group id
@@ -420,7 +420,7 @@ while not sim_exit:
             groups[g_it][1] = groups[g_it][1] + life_incre  # increase life time
             groups[g_it][3].append(i)
             # 3.deciding the climbing direction
-            if robots[it0].status_2_sequence >= float(len(groups[g_it][2])-1)/2:
+            if robots[it0].status_2_sequence > (len(groups[g_it][2])-1)/2:
                 robots[i].status_1_1_dir = 1
             else:
                 robots[i].status_1_1_dir = 0
@@ -432,7 +432,7 @@ while not sim_exit:
             # by calculating the determinant of vectors 'it1->i' and 'it1->it0'
             if ((robots[it0].pos[0]-robots[it1].pos[0])*(robots[i].pos[1]-robots[it1].pos[1]) -
                 (robots[it0].pos[1]-robots[it1].pos[1])*(robots[i].pos[0]-robots[it1].pos[0])) >= 0:
-                # it's rare that the above determinant equals to 0
+                # it's rare that the above determinant should equal to 0
                 robots[i].status_1_1_side = 0  # at left side
             else:
                 robots[i].status_1_1_side = 1
@@ -525,7 +525,7 @@ while not sim_exit:
             # this will be done in the next round of status change check
         # 3.s_form_done, robot '1' finishes intial forming, becoming '2'
         for g_it in s_form_done.keys():
-            if len(s_form_done[g_it]) == 2:  # double check both thinks forming is done
+            if len(s_form_done[g_it]) == 2:  # double check, both robots agree forming is done
                 it0 = s_form_done[g_it][0]
                 it1 = s_form_done[g_it][1]
                 # update 'robots' variable for 'it0' and 'it1'
@@ -540,14 +540,14 @@ while not sim_exit:
                 # update the 'robots' variable
                 robots[it0].status_2_sequence = 0
                 robots[it1].status_2_sequence = 1
+                robots[it0].status_2_end = False
                 robots[it1].status_2_end = True
                 robots[it0].key_neighbors = [it1]  # can skip this
                 robots[it1].key_neighbors = [it0]
                 # update the 'groups' variable
                 g_it = robots[it0].group_id
-                groups[g_it][2] = [it0, it1]  # add the robots already in the line
-                groups[g_it][3].remove(it0)  # remove from the forming pool
-                groups[g_it][3].remove(it1)
+                groups[g_it][2] = [it0, it1]  # add the robots for the line
+                groups[g_it][3] = []  # empty the forming & climbing pool
         # 4.s_climb_done, robot '1' finishes climbing, becoming '2'
         for g_it in s_climb_done.keys():
             start_pool = []  # for robots finish at the begining
@@ -557,10 +557,11 @@ while not sim_exit:
                     start_pool.append(i)
                 else:
                     end_pool.append(i)
-            if len(start_pool) > 0:
+            if len(start_pool) > 0:  # start pool not empty
                 # most likely there is only one robot in the pool
                 # randomly choose one just in case, may not be the best way
                 it0 = random.choice(start_pool)
+                # no need to care the not selected, they will continue climbing
                 # upate the 'robots' variable
                 robots[it0].status = 2
                 robots[it0].status_2_sequence = 0  # make it begining of the line
@@ -573,7 +574,7 @@ while not sim_exit:
                 # increase the status_2_sequence of other robots on the line by 1
                 for i in groups[g_it][2][1:]:
                     robots[i].status_2_sequence = robots[i].status_2_sequence + 1
-            if len(end_pool) > 0:
+            if len(end_pool) > 0:  # end pool not empty
                 it0 = random.choice(end_pool)
                 # update the 'robots' variable
                 robots[it0].status = 2
@@ -609,8 +610,6 @@ while not sim_exit:
         # 8.s_disassemble, triggered by robot '1' or '2'
         s_dis_list = []  # list of group id that has been finalized for disassembling
         # compare number of members to decide which groups to disassemble
-        print("s_disassemble:")
-        print(s_disassemble)
         for gs_it in s_disassemble:
             if len(gs_it) == 1:
                 # from the s_form_lost
@@ -622,7 +621,6 @@ while not sim_exit:
                 member_max = 0  # number of members in the group
                 group_max = -1  # corresponding group id with most members
                 for g_it in g_temp:
-                    print(g_it)
                     if groups[g_it][0] > member_max:
                         member_max = groups[g_it][0]
                         group_max = g_it
@@ -630,8 +628,6 @@ while not sim_exit:
                 for g_it in g_temp:
                     if g_it not in s_dis_list:  # avoid multiple occurrence
                         s_dis_list.append(g_it)
-        print(s_dis_list)
-        print("")
         # start disassembling
         for g_it in s_dis_list:
             # update the 'robots' variable
@@ -676,8 +672,15 @@ while not sim_exit:
             if robots[i].status == 1:
                 if robots[i].status_1_sub == 0:
                     it0 = robots[i].key_neighbors[0]
-                    robots[i].ori = math.atan2(robots[it0].pos[1]-robots[i].pos[1],
-                                               robots[it0].pos[0]-robots[i].pos[0])
+                    vect_temp = (robots[it0].pos[0]-robots[i].pos[0],
+                                 robots[it0].pos[1]-robots[i].pos[1])  # pointing from i to it0
+                    ori_temp = math.atan2(vect_temp[1], vect_temp[0])
+                    if dist_table[i][it0] > line_space:  # it's ok to use the out dated dist_table
+                        # pointing toward the neighbor
+                        robots[i].ori = ori_temp
+                    else:
+                        # pointing opposite the neighbor
+                        robots[i].ori = lf_reset_radian(ori_temp + math.pi)
                 else:
                     robots[i].ori = math.atan2(robots[i].status_1_1_des[1]-robots[i].pos[1],
                                                robots[i].status_1_1_des[0]-robots[i].pos[0])
