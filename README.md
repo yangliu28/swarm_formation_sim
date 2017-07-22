@@ -5,5 +5,5 @@ Line formation simulation uses climbing method and competing mechanism, The requ
 
 Run the line formation simulation:
 
-'python line_formation.py'
+`python line_formation.py`
 
