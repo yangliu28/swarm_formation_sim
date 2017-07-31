@@ -60,7 +60,7 @@ robot_n1_color = (0, 51, 204)  # for robot status '-1', blue
 robot_size = 5  # robot modeled as dot, number of pixels in radius
 
 # set up the simulation window and surface object
-icon = pygame.image.load('geometry_art.jpg')
+icon = pygame.image.load('icon_geometry_art.jpg')
 pygame.display.set_icon(icon)
 screen = pygame.display.set_mode(screen_size)
 pygame.display.set_caption('Line Formation Simulation')
