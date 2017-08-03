@@ -1,7 +1,7 @@
 # line formation simulation of swarm robots
 
 # comments for research purpose:
-# My previous line formation simulation in ROS utilize the relative positions of nearby
+# My previous line formation simulations in ROS utilize the relative positions of nearby
 # neighbors, and linear fit a line and move to the desired position. It only works when
 # there are many robots within range or robot has a large sensing range, and preferrably
 # the swarm is aggregated. No communication is required though.
