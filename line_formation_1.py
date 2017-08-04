@@ -1,4 +1,4 @@
-# line formation simulation of swarm robots
+# first line formation simulation of swarm robots, using climbing method to form the line
 
 # comments for research purpose:
 # My previous line formation simulations in ROS utilize the relative positions of nearby
@@ -45,8 +45,8 @@
 
 import pygame
 import math, random
-from line_formation_robot import LFRobot
-from line_formation_functions import *
+from line_formation_1_robot import LFRobot
+from line_formation_1_functions import *
 
 pygame.init()  # initialize pygame
 
