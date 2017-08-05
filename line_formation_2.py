@@ -41,7 +41,29 @@ robot_size = 5  # robot modeled as dot, number of pixels in radius
 icon = pygame.image.load('icon_geometry_art.jpg')
 pygame.display.set_icon(icon)
 screen = pygame.display.set_mode(screen_size)
-pygame.display.set_caption('Line Formation 1 Simulation')
+pygame.display.set_caption('Line Formation 2 Simulation')
 
+# for physics, continuous world, origin is at left bottom corner, starting (0, 0),
+# with x axis pointing right, y axis pointing up.
+# It's more natural to compute the physics in right hand coordiante system.
+world_size = (100.0, 100.0 * screen_size[1]/screen_size[0])
+
+# varialbes to configure the simulation
+robot_quantity = 30
+# coefficient to resize the robot distribution, to keep initial positions to center
+distrib_coef = 0.5
+const_vel_1 = 3.0  # all robots except '2' are moving at this faster constant speed
+const_vel_2 = 1.0  # robot '2' are moving at this speed to maintain the line
+frame_period = 100  # updating period of the simulation and graphics, in ms
+comm_range = 5.0  # sensing and communication range, the radius
+line_space = comm_range * 0.7  # line space, between half of and whole communication range
+space_error = line_space * 0.1  # the error to determine the space is good
+life_incre = 8  # number of seconds a new member adds to a group
+group_id_upper_limit = 1000  # upper limit of random integer for group id
+n1_life_lower = 3  # lower limit of life time for status '-1'
+n1_life_upper = 8  # upper limit of life time for status '-1'
+
+# instantiate the robot swarm as list
+robots = []  # container for all robots, index is its identification
 
 

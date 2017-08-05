@@ -1,4 +1,4 @@
-# robot class for line formation simulation
+# robot class for line formation 1 simulation
 
 class LFRobot:  # LF stands for line formation
     def __init__(self, pos, vel, ori):

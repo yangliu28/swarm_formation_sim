@@ -1,4 +1,4 @@
-# functions for the line formation simulation
+# functions for the line formation 1 simulation
 
 import math
 
