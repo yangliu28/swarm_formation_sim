@@ -21,9 +21,12 @@
     # forward: '-1'->'0', '0'->'1', '1'->'2'
     # backward: '1'->'-1', '2'->'-1'
 
+# just find sys.exit() can be useful to exit from not-in-the-plan errors
+# will be used in this and future programs
+
 
 import pygame
-import math, random
+import math, random, sys
 
 
 pygame.init()
@@ -65,5 +68,69 @@ n1_life_upper = 8  # upper limit of life time for status '-1'
 
 # instantiate the robot swarm as list
 robots = []  # container for all robots, index is its identification
+for i in range(robot_quantity):
+    # random position, away from the window's edges
+    pos_temp = (((random.random()-0.5)*distrib_coef+0.5) * world_size[0],
+                ((random.random()-0.5)*distrib_coef+0.5) * world_size[1])
+    vel_temp = const_vel_1
+    ori_temp = random.random() * 2*math.pi - math.pi  # random in (-pi, pi)
+    object_temp = LFRobot(pos_temp, vel_temp, ori_temp)
+    robots.append(object_temp)
+# instantiate the group variable as dictionary
+groups = {}
+    # key is the group id
+    # value is a list
+        # 0.first element: the group size, member includes both '2' and '1'
+        # 1.second element: remaining life time
+        # 2.third element: a list of robots on the line in adjacent order, status '2'
+        # 3.fourth element: a list of robots off the line, not in order, status '1'
+        # 4.fifth element: true or false, being the domianant group
+# instantiate a distance table for every pair of robots
+# make sure all data in table is being written when updating
+dist_table = [[0 for j in range(robot_quantity)] for i in range(robot_quantity)]
+
+# the loop
+sim_exit = False  # simulation exit flag
+sim_pause = False  # simulation pause flag
+timer_last = pygame.time.get_ticks()  # return number of milliseconds after pygame.init()
+timer_now = timer_last  # initialize it with timer_last
+while not sim_exit:
+    # exit the program
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sim_exit = True  # exit with the close window button
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE:
+                sim_pause = not sim_pause  # reverse the pause flag
+            if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
+                sim_exit = True  # exit with ESC key or Q key
+
+    # skip the rest of the loop if paused
+    if sim_pause: continue
+
+    # update the physics, control rules and graphics at the same time
+    timer_now = pygame.time.get_ticks()
+    if (timer_now - timer_last) > frame_period:
+        timer_last = timer_now  # reset timer
+        # prepare the distance data for every pair of robots
+        for i in range(robot_quantity):
+            for j in range(i+1, robot_quantity):
+                # status of '-1' does not involve in any connection, so skip
+                if (robots[i].status == -1) or (robots[j].status == -1):
+                    dist_table[i][j] = -1.0
+                    dist_table[j][i] = -1.0
+                    continue  # skip the rest
+                # it only covers the upper triangle without the diagonal
+                vect_temp = (robots[i].pos[0]-robots[j].pos[0],
+                            robots[i].pos[1]-robots[j].pos[1])
+                dist_temp = math.sqrt(vect_temp[0]*vect_temp[0] +
+                                      vect_temp[1]*vect_temp[1])
+                if dist_temp <= comm_range:
+                    # only record distance smaller than communication range
+                    dist_table[i][j] = dist_temp
+                    dist_table[j][i] = dist_temp
+                else:  # ignore the neighbors too far away
+                    dist_table[i][j] = -1.0
+                    dist_table[j][i] = -1.0
 
 
