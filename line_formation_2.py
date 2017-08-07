@@ -178,6 +178,8 @@ while not sim_exit:
             # list of group id for the initial forming robots
         s_merge_lost = []  # robot '1' gets lost during merging
             # list of robot id for the merging robots
+        s_line_lost = []  # robot '2' gets lost during adjusting pos
+            # list of group id for the robots get lost in that group
         s_group_exp = []  # life time of a group naturally expires
             # life of group id
         s_disassemble = []  # disassemble triggerred by robot '1' or '2'
@@ -281,7 +283,119 @@ while not sim_exit:
             elif robot[i].status == 1:
                 # status of '1' needs to be checked and maintained constantly
                 # 1.check if the important group neighbors are still in range
-                
+                neighbors_secured = True
+                for j in robots[i].key_neighbors:
+                    if j not in index_list[i]:
+                        neighbors_secured = False
+                        break
+                if neighbors_secured == False:
+                    # status transition scheduled, robot '1' gets lost, becoming '-1'
+                    if robots[i].status_1_sub == 0:
+                        # append the group id, disassemble the entire group
+                        s_form_lost.append(robots[i].group_id)
+                    else:
+                        s_merge_lost.append(i)  # append the robot id
+                else:
+                    # all key neighbors are in good position
+                    # 2.disassemble check, get group attribution of all '1' and '2'
+                    status_list_temp = status_list[i][:]
+                    index_list_temp = index_list[i][:]
+                    # pop out the '0' first
+                    while 0 in status_list_temp:
+                        index_temp = status_list_temp.index(0)
+                        status_list_temp.pop(index_temp)
+                        index_list_temp.pop(index_temp)
+                    if len(index_list_temp) > 0:  # ensure at least one in-group robot around
+                        # start the group attribution dictionary with first robot
+                        groups_temp = {robots[index_list_temp[0]].group_id: [index_list_temp[0]]}
+                        for j in index_list_temp[1:]:  # iterating from the second one
+                            current_group = robots[j].group_id
+                            if current_group in groups_temp.keys():
+                                # append this robot in same group
+                                groups_temp[current_group].append(j)
+                            else:
+                                # add new key in the groups_temp dictionary
+                                groups_temp[current_group] = [j]
+                        # check if there are multiple groups detected
+                        if len(groups_temp.keys()) > 1:
+                            # status transition scheduled, to disassemble groups
+                            s_disassemble.append(groups_temp.keys())
+                            # may produce duplicates in s_disassemble, not serious problem
+                    # 3.check if any neighbor needs to be done
+                    if robots[i].status_1_sub == 0:
+                        # host robot is in the initial forming phase
+                        # check if the neighbor robot is in appropriate distance
+                        if abs(dist_table[i][robots[i].key_neighbors[0]] -
+                               line_space) < space_error:
+                            # status transition scheduled, finish initial forming, '1' to '2'
+                            g_it = robots[i].group_id
+                            if g_it in s_form_done.keys():
+                                s_form_done[g_it].append(i)
+                            else:
+                                s_form_done[g_it] = [i]
+                    elif robots[i].status_1_sub == 1:
+                        # host robot is in the merging phase
+                        # check if next key neighbor appears or not
+                        if len(robots[i].status_1_1_next) != 0:
+                            # the next key neighbor list should contains one member at most
+                            next_neighbor = robots[i].status_1_1_next[0]
+                            if next_neighbor in index_list[i]:
+                                # the next expected neighbor appears
+                                robots[i].status_1_1_next.pop(0)
+                                robots[i].key_neighbors.append(next_neighbor)
+                        # check if the merging robot reaches the destination
+                        vect_temp = (robots[i].pos[0] - robots[i].status_1_1_des[0],
+                                     robots[i].pos[1] - robots[i].status_1_1_des[1])
+                        dist_temp = math.sqrt(vect_temp[0]*vect_temp[0] +
+                                              vect_temp[1]*vect_temp[1])
+                        if dist_temp < space_error:
+                            # status transition scheduled, finish merging, '1' to '2'
+                            g_it = robots[i].group_id
+                            if g_it in s_merge_done.keys():
+                                s_merge_done[g_it].append(i)
+                            else:
+                                s_merge_done[g_it] = [i]
+            # for the host robot having status of '2'
+            elif robots[i].status == 2:
+                # check if all key neighbors are still in range
+                neighbors_secured = True
+                for j in robots[i].key_neighbors:
+                    if j not in index_list[i]:
+                        neighbors_secured = False
+                        break
+                if neighbors_secured == False:
+                    # status transition scheduled, robot '2' gets lost, disassemble the group
+                    s_line_lost.append(robots[i].group_id)
+                else:
+                    # all the key neighbors are in goood position
+                    # disassemble check, for all the '1' and '2'
+                    status_list_temp = status_list[i][:]
+                    index_list_temp = index_list[i][:]
+                    # pop out the '0' first
+                    while 0 in status_list_temp:
+                        index_temp = status_list_temp.index(0)
+                        status_list_temp.pop(index_temp)
+                        index_list_temp.pop(index_temp)
+                    # start the group attribution dictionary with first robot
+                    if len(index_list_temp) > 0:
+                        groups_temp = {robots[index_list_temp[0]].group_id: [index_list_temp[0]]}
+                        for j in index_list_temp[1:]:
+                            current_group = robots[j].group_id
+                            if current_group in groups_temp.keys():
+                                groups_temp[current_group].append(j)
+                            else:
+                                groups_temp[current_group] = [j]
+                        # check if there are multiple groups detected
+                        if len(groups_temp.keys()) > 1:
+                            # status transition scheduled, to disassemble groups
+                            s_disassemble.append(groups_temp.keys())
+            elif robots[i].status == -1:
+                # check if life time expires, and get status back to '0'
+                if robots[i].status_n1_life < 0:
+                    s_back_0.append(i)
+
+        # check 'groups' for any status change
+        
 
 
 
