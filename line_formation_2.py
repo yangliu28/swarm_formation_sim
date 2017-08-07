@@ -1,4 +1,5 @@
 # second line formation simulation, using merging method instead of climbing
+# this program shares a lot of code from first line formation sim program
 
 # merging method analysis(compared to climbing):
 # The line may not be as straight as in first simulation, and it would take time to stretch
@@ -27,7 +28,8 @@
 
 import pygame
 import math, random, sys
-
+from line_formation_2_robot import LFRobot
+from line_formation_2_functions import *
 
 pygame.init()
 
@@ -132,5 +134,155 @@ while not sim_exit:
                 else:  # ignore the neighbors too far away
                     dist_table[i][j] = -1.0
                     dist_table[j][i] = -1.0
+        # sort the distance in another table, record the index here
+        index_list = [[] for i in range(robot_quantity)]  # index of neighbors in range
+        # find all robots with non-zero distance
+        for i in range(robot_quantity):
+            for j in range(robot_quantity):
+                if j == i: continue  # skip the self, not necessary
+                if dist_table[i][j] > 0: index_list[i].append(j)
+        # sort the index_list in the order of increasing distance
+        for i in range(robot_quantity):
+            len_temp = len(index_list[i])  # number of neighbors
+            if (len_temp < 2): continue  # no need to sort
+            else:
+                # bubble sort
+                for j in range(len_temp-1):
+                    for k in range(len_temp-1-j):
+                        if (dist_table[i][index_list[i][k]] >
+                            dist_table[i][index_list[i][k+1]]):
+                           # swap the position of the two index
+                           index_temp = index_list[i][k]
+                           index_list[i][k] = index_list[i][k+1]
+                           index_list[i][k+1] = index_temp
+        # get the status list corresponds to the sorted index_list
+        status_list = [[] for i in range(robot_quantity)]
+        for i in range(robot_quantity):
+            for j in index_list[i]:
+                status_list[i].append(robots[j].status)
+
+        # instantiate the status transition variables, for the status check process
+        # the priority to process them is in the following order
+        s_grab_on = {}  # robot '0' grabs on robot '2', becoming '1'
+            # key is id of robot '0', value is id of robot '2'
+        s_init_form = {}  # robot '0' initial forms with another '0', becoming '1'
+            # key is id of robot '0' that discovers other robot '0' in range
+            # value is a list of robot '0's that are in range, in order of increasing distance
+        s_form_done = {}  # robot '1' finishes initial forming, becoming '2'
+            # key is group id
+            # value is a list of id of robot '1's that have finished initial forming
+        s_merge_done = {}  # robot '1' finishes merging, becoming '2'
+            # key is group id
+            # value is a list of id of robot '1's that have finished climbing
+        s_form_lost = []  # robot '1' gets lost during initial forming
+            # list of group id for the initial forming robots
+        s_merge_lost = []  # robot '1' gets lost during merging
+            # list of robot id for the merging robots
+        s_group_exp = []  # life time of a group naturally expires
+            # life of group id
+        s_disassemble = []  # disassemble triggerred by robot '1' or '2'
+            # list of lists of group id to be compared for disassembling
+        s_back_0 = []  # robot '-1' gets  back to '0'
+            # list of robot id
+
+        # check 'robots' for any status change, schedule them for processing in next step
+        for i in range(robot_quantity):
+            # for the host robot having status of '0'
+            if robots[i].status == 0:
+                # check if this robot has valid neighbors at all
+                if len(index_list[i]) == 0: continue  # skip the neighbor check
+                # process neighbors with status '2', highest priority
+                if 2 in status_list[i]:
+                    # check the group attribution of all the '2'
+                    # get the robot id and group id of the first '2'
+                    current_index = status_list[i].index(2)
+                    current_robot = index_list[i][current_index]
+                    current_group = robots[current_robot].group_id
+                    groups_temp = {current_group: [current_robot]}
+                    # check if there is still '2' in the list
+                    while 2 in status_list[i][current_index+1:]:
+                        # indexing the next '2' from current_index+1
+                        # update the current_index, current_robot, current_group
+                        current_index = status_list[i].index(2, current_index+1)
+                        current_robot = index_list[i][current_index]
+                        current_group = robots[current_robot].group_id
+                        # update groups_temp
+                        if current_group in groups_temp.keys():
+                            # append this robot in the existing group
+                            groups_temp[current_group].append(current_robot)
+                        else:
+                            # add new group id in groups_temp and add this robot
+                            groups_tmep[current_group] = [current_robot]
+                    # check if there are multiple groups detected from the '2'
+                    target_robot = 0  # the target robot to grab on
+                    if len(groups_temp.keys()) == 1:
+                        # there is only one group detected
+                        dist_min = 2*comm_range  # smallest distance, start with large one
+                        robot_min = -1  # corresponding robot with min distance
+                        # search the closest '2'
+                        for j in groups_temp.values()[0]:
+                            if dist_table[i][j] < dist_min:
+                                if (True in robots[j].status_2_avail):
+                                    # there is at least one side is available
+                                    dist_min = dist_table[i][j]
+                                    robot_min = j
+                        target_robot = robot_min
+                    else:
+                        # there is more than one group detected
+                        # it is designed that no disassembling trigger from robot '0'
+                        # compare which group has the most members in it
+                        member_max = 0  # start with 0 number of members in group
+                        group_max = 0  # corresponding group id with most members
+                        for j in groups_temp.keys():
+                            ## 'line_formation_1.py' did wrong in the following line
+                            # didn't fix it, not serious problem, program rarely goes here
+                            if groups[j][0] > member_max:
+                                member_max = groups[j][0]
+                                group_max = j
+                        # search the closest '2' inside that group
+                        dist_min = 2*comm_range
+                        robot_min = -1
+                        for j in groups_temp[group_max]:
+                            if dist_table[i][j] < dist_min:
+                                if (True in robots[j].status_2_avail):
+                                    dist_min = dist_table[i][j]
+                                    robot_min = j
+                        target_robot = robot_min
+                    # check if target robot has been acquired, prepare to grab on it
+                    if target_robot != -1:
+                        # the target robot should have at least one spot availbe to be merged
+                        s_grab_on[i] = target_robot
+                # process neighbors with status '1', second priority
+                elif 1 in status_list[i]:
+                    # find the closest '1' and get bounced away by it
+                    # still no trigger for disassembling if multiple groups exist in the '1's
+                    dist_min = 2*comm_range
+                    robot_min = -1
+                    for j in range(len(status_list[i])):
+                        if status_list[i][j] != 1: continue
+                        if dist_table[i][index_list[i][j]] < dist_min:
+                            dist_min = dist_table[i][index_list[i][j]]
+                            robot_min = index_list[i][j]
+                    # target robot located, the robot_min, should not still be -1 here
+                    # get bounced away from this robot, update the moving direction
+                    vect_temp = (robots[i].pos[0] - robots[robot_min].pos[0],
+                                 robots[i].pos[1] - robots[robot_min].pos[1])
+                    # orientation is pointing from robot_min to host
+                    robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
+                # process neighbors with status '0', least priority
+                else:
+                    # establish a list of all '0', in order of increasing distance
+                    # to be checked later if grouping is possible and no conflict
+                    # this list should be only '0's, already sorted
+                    target_list = index_list[i][:]
+                    # status transition scheduled, '0' forming initial group with '0'
+                    s_init_form[i] = target_list[:]
+            # for the host robot having status of '1'
+            elif robot[i].status == 1:
+                # status of '1' needs to be checked and maintained constantly
+                # 1.check if the important group neighbors are still in range
+                
+
+
 
 
