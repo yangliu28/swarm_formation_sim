@@ -224,8 +224,10 @@ while not sim_exit:
                         # search the closest '2'
                         for j in groups_temp.values()[0]:
                             if dist_table[i][j] < dist_min:
-                                if (True in robots[j].status_2_avail):
-                                    # there is at least one side is available
+                                if ((robots[j].status_2_avail1[0] & robots[j].status_2_avail2[0]) |
+                                    (robots[j].status_2_avail1[1] & robots[j].status_2_avail2[1])):
+                                    # check both avail1 and avail2 for both side
+                                    # there is at least one side is available to be merged
                                     dist_min = dist_table[i][j]
                                     robot_min = j
                         target_robot = robot_min
@@ -246,12 +248,13 @@ while not sim_exit:
                         robot_min = -1
                         for j in groups_temp[group_max]:
                             if dist_table[i][j] < dist_min:
-                                if (True in robots[j].status_2_avail):
+                                if ((robots[j].status_2_avail1[0] & robots[j].status_2_avail2[0]) |
+                                    (robots[j].status_2_avail1[1] & robots[j].status_2_avail2[1])):
                                     dist_min = dist_table[i][j]
                                     robot_min = j
                         target_robot = robot_min
-                    # check if target robot has been acquired, prepare to grab on it
-                    if target_robot != -1:
+                    # check if target robot has been located, prepare to grab on it
+                    if target_robot != -1:  # not the initial value of robot_min
                         # the target robot should have at least one spot availbe to be merged
                         s_grab_on[i] = target_robot
                 # process neighbors with status '1', second priority
@@ -395,7 +398,33 @@ while not sim_exit:
                     s_back_0.append(i)
 
         # check 'groups' for any status change
-        
+        for g_it in groups.keys():
+            if groups[g_it][4]: continue  # already becoming dominant
+            if groups[g_it][0] > robot_quantity/2:
+                # the group has more than half the totoal number of robots
+                groups[g_it][4] = True  # becoming dominant
+                groups[g_it][1] = 100.0  # a large number
+            if groups[g_it][1] < 0:  # life time of a group expires
+                # schedule operation to disassemble this group
+                s_group_exp.append(g_it)
+
+        # process the scheduled status change, in the order of the priority
+        # 1.s_grab_on, robot '0' grabs on robot '2', becoming '1'
+        for i in s_grab_on.keys():
+            # 1.update the 'robots' variable
+            robots[i].status = 1  # status becoming '1'
+            it0 = s_grab_on[i]  # robot 'i' tries to grab on robot 'it0'
+            # it0 was available when added to s_grab_on, but check again if occupied by others
+            # merge availability of small index side
+            avail_side0 = robots[j].status_2_avail1[0] & robots[j].status_2_avail2[0]
+            side0_dist = -1
+            if avail_side0:
+                # calculate the merge destination
+                # if this side is beyond two ends of the line, it can only be the small end
+                if robots[it0].status_2_sequence == 0:
+                    
+            # merge availability of large index side
+            avail_side1 = robots[j].status_2_avail1[1] & robots[j].status_2_avail2[1]
 
 
 

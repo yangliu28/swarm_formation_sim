@@ -27,8 +27,12 @@ class LFRobot:  # LF for line formation
         self.status_2_end = False  # sub status deciding if robot is at larger index end
             # False: not at the larger index end of the line
             # True: at the larger index end, index should be N-1
-        self.status_2_avail = [False,False]  # availility of the two sides to be merged
+        self.status_2_avail1 = [True,True]  # first availability for two sides to be merged
+            # first availability indicates if the distance is large enough for merging
             # first value for small index side, second for large side
+        self.status_2_avail2 = [True,True]  # second availability for two sides to be merged
+            # second availability indicates if a robot '1' is merging at that side
+            # first value for the small index side, second for large side
         self.key_neighbors = []  # key neighbors to secure the group formation
             # for '1_0' robot, key neighbor is the other initial forming robot
             # for '1_1' robot, key neighbors are the two new neighbors when merged
