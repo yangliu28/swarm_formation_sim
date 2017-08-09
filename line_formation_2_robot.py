@@ -34,7 +34,8 @@ class LFRobot:  # LF for line formation
             # second availability indicates if a robot '1' is allowed to merge
             # first value for the small index side, second for large side
         self.key_neighbors = [-1, -1]  # key neighbors to secure the group formation
-            # two member list for all in-group robot, including '1' and '2'
+            # one member list for '1_0' robot, the other initial forming neighbor
+            # two member list for '1_1' and '2' robots
             # first member is the robot on the smaller index side of the line
             # second member is the robot on the larger index side of the line
             # if no neighbor at one side, use -1 as a flag
