@@ -31,7 +31,7 @@ class LFRobot:  # LF for line formation
             # first availability indicates if the distance is large enough for merging
             # first value for small index side, second for large side
         self.status_2_avail2 = [True,True]  # second availability for two sides to be merged
-            # second availability indicates if a robot '1' is merging at that side
+            # second availability indicates if a robot '1' is allowed to merge
             # first value for the small index side, second for large side
         self.key_neighbors = []  # key neighbors to secure the group formation
             # for '1_0' robot, key neighbor is the other initial forming robot
