@@ -345,6 +345,14 @@ while not sim_exit:
                                 # the next expected neighbor appears
                                 robots[i].status_1_1_next.pop(0)
                                 robots[i].key_neighbors.append(next_neighbor)
+                                # sort the key neighbors in ascending order
+                                it0 = robots[i].key_neighbors[0]
+                                it1 = robots[i].key_neighbors[1]
+                                seq0 = robots[it0].status_2_sequence
+                                seq1 = robots[it1].status_2_sequence
+                                if seq0 > seq1:  # reverse the order
+                                    robots[i].key_neighbors[0] = it1
+                                    robots[i].key_neighbors[1] = it0
                         # check if the merging robot reaches the destination
                         vect_temp = (robots[i].pos[0] - robots[i].status_1_1_des[0],
                                      robots[i].pos[1] - robots[i].status_1_1_des[1])
@@ -408,8 +416,8 @@ while not sim_exit:
         # 1.s_grab_on, robot '0' grabs on robot '2', becoming '1'
         # (this part of code is kind of redundant, needs to make it nicer)
         for i in s_grab_on.keys():
-            # discuss the merging availability of robot 'i'
             it0 = s_grab_on[i]  # 'it0' is the robot that robot 'i' tries to grab on
+            # discuss the merging availability of robot 'it0'
             g_it = robots[it0].group_id  # group id of 'it0'
             # it0 was available when added to s_grab_on, but check again if occupied by others
             # merge availability of smaller index side
@@ -470,7 +478,7 @@ while not sim_exit:
                 robots[i].status = 1  # status becoming '1'
                 robots[i].group_id = g_it  # assign the group id
                 robots[i].status_1_sub = 1
-                robots[i].key_neighbors = [it0]
+                robots[i].key_neighbors = [-1, -1]  # initialize with '-1's
                 groups[g_it][0] = groups[g_it][0] + 1  # increase the group size by 1
                 groups[g_it][1] = groups[g_it][1] + life_incre # increase life time
                 groups[g_it][3].append(i)
@@ -629,10 +637,6 @@ while not sim_exit:
                 if abs(seq0 - seq1) == 1:
                     if robots[it0].group_id == robots[it1].group_id:
                         merge_check = 1  # allow to merge between the two key neighbors
-                        if seq0 > seq1:
-                            # make sure they are in ascending order
-                            robots[i].key_neighbors[0] = it1
-                            robots[i].key_neighbors[1] = it0
             # perform the merge operations
             if merge_check != -1:
                 # robot 'i' has passed the merge check
@@ -685,8 +689,28 @@ while not sim_exit:
                 print "robot {} did not pass the merge check".format(i)
                 # pass  # should do something here
         # 5.s_form_lost, robot '1' gets lost during initial forming
-        for 
+        for g_it in s_form_lost:
+            # disassemble the group together in s_disassemble
+            s_disassemble.append[g_it]
+        # 6.s_merge_lost, robot '1' gets lost during merging, becoming '-1'
+        for i in s_merge_lost:
+            robots[i].status = -1
+            robots[i].ori = random.random() * 2*math.pi - math.pi
+            robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
+            # the key neighbors
+            if len(robots[i].key_neighbors) == 1:
+                # deciding this key neighbor is at which end
+                it0 = robots[i].key_neighbors[0]
+                if robots[it0].status_2_sequence == 0:
 
+            it0 = robots[i].key_neighbors[0]
+            it1 = robots[i].key_neighbors[1]
+            robots[it0].status_2_avail2[1] = True  # large index side of small index neighbor
+            robots[it1].status_2_avail2[0] = True  # small index side of large index neighbor
+            g_it = robots[i].group_id
+            groups[g_it][0] = groups[g_it][0] - 1  # decrease group size by 1
+            # do not decrease group's life time due to member lost
+            groups[g_it][3].remove(i)
 
 
 

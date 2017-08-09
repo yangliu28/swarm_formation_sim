@@ -33,10 +33,11 @@ class LFRobot:  # LF for line formation
         self.status_2_avail2 = [True,True]  # second availability for two sides to be merged
             # second availability indicates if a robot '1' is allowed to merge
             # first value for the small index side, second for large side
-        self.key_neighbors = []  # key neighbors to secure the group formation
-            # for '1_0' robot, key neighbor is the other initial forming robot
-            # for '1_1' robot, key neighbors are the two new neighbors when merged
-            # for '2' robot, key neighbors are the two adjacent neighbors along the line
+        self.key_neighbors = [-1, -1]  # key neighbors to secure the group formation
+            # two member list for all in-group robot, including '1' and '2'
+            # first member is the robot on the smaller index side of the line
+            # second member is the robot on the larger index side of the line
+            # if no neighbor at one side, use -1 as a flag
         self.status_n1_life = 0  # life time of status '-1', randomly generated
 
 
