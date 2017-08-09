@@ -633,14 +633,59 @@ while not sim_exit:
                             # make sure they are in ascending order
                             robots[i].key_neighbors[0] = it1
                             robots[i].key_neighbors[1] = it0
-            # process the merge operations
+            # perform the merge operations
             if merge_check != -1:
                 # robot 'i' has passed the merge check
-                
+                robots[i].status = 2
+                robots[i].status_2_avail2 = [True, True]  # both sides have no merging robot
+                # no need to change key neighbors of robot 'i'
+                g_it = robots[i].group_id
+                groups[g_it][3].remove(i)  # remove from the merging pool
+                if merge_check == 0:  # merge into small index end
+                    robots[i].status_2_sequence = 0
+                    robots[i].status_2_end = False
+                    groups[g_it][2].insert(0, i)  # insert robot 'i' as first one
+                    # shift sequence of robots starting from the second one
+                    for j in groups[g_it][2][1:]:
+                        robots[j].status_2_sequence = robots[j].status_2_sequence + 1
+                    # update attributes of the second robot on the line
+                    it0 = robots[i].key_neighbors[0]
+                    robots[i].status_2_avail2 = [True, True]  # start with all true
+                    robots[it0].status_2_avail2[0] = True  # becomes available again
+                    robots[it0].key_neighbors.append(i)
+                elif merge_check == 2:  # merge into large index end
+                    it0 = robots[i].key_neighbors[0]
+                    robots[i].status_2_sequence = robots[it0].status_2_sequence + 1
+                    # no need to shift sequence of other robots on the line
+                    robots[i].status_2_end = True
+                    robots[i].status_2_avail2 = [True, True]  # start with all true
+                    robots[it0].status_2_end = False
+                    robots[it0].key_neighbors.append(i)
+                    groups[g_it][2].append(i)
+                elif merge_check == 1:  # merge in the middle of two robots
+                    # it0 is in small sequence, it1 is in large sequence
+                    it0 = robots[i].key_neighbors[0]
+                    it1 = robots[i].key_neighbors[1]
+                    seq_new = robots[it1].status_2_sequence  # 'i' will replace seq of 'it1'
+                    robots[i].status_2_sequence = new_seq
+                    robots[i].status_2_end = False
+                    robots[i].status_2_avail2 = [True, True]
+                    groups[g_it][2].insert(new_seq, i)
+                    # shift sequence of robots starting form 'it1'
+                    for j in groups[g_it][2][new_seq+1:]:
+                        robots[j].status_2_sequence = robots[j].status_2_sequence + 1
+                    # update attribution of it0 and it1
+                    robots[it0].status_2_avail2[1] = True  # large side of small index robot
+                    robots[it0].key_neighbors.remove(it1)  # remove old neighbor
+                    robots[it0].key_neighbors.append(i)  # add new neighbor
+                    robots[it1].status_2_avail2[0] = True  # similar for large index robot
+                    robots[it1].key_neighbors.remove(it0)
+                    robots[it1].key_neighbors.append(i)
             else:
                 print "robot {} did not pass the merge check".format(i)
                 # pass  # should do something here
-
+        # 5.s_form_lost, robot '1' gets lost during initial forming
+        for 
 
 
 
