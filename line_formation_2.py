@@ -411,20 +411,73 @@ while not sim_exit:
         # process the scheduled status change, in the order of the priority
         # 1.s_grab_on, robot '0' grabs on robot '2', becoming '1'
         for i in s_grab_on.keys():
-            # 1.update the 'robots' variable
-            robots[i].status = 1  # status becoming '1'
-            it0 = s_grab_on[i]  # robot 'i' tries to grab on robot 'it0'
+            # discuss the merging availability of robot 'i'
+            it0 = s_grab_on[i]  # 'it0' is the robot that robot 'i' tries to grab on
             # it0 was available when added to s_grab_on, but check again if occupied by others
-            # merge availability of small index side
-            avail_side0 = robots[j].status_2_avail1[0] & robots[j].status_2_avail2[0]
-            side0_dist = -1
-            if avail_side0:
-                # calculate the merge destination
+            # merge availability of smaller index side
+            side0_avail = robots[j].status_2_avail1[0] & robots[j].status_2_avail2[0]
+            side0_des = [-1,-1]  # destination if merging at small index end
+            side0_hang = False  # indicate if destination at side 0 is hanging
+            side0_next = -1  # next key neighbor expected to meet at this side
+            if side0_avail:
+                # calculate the merging destination
                 # if this side is beyond two ends of the line, it can only be the small end
                 if robots[it0].status_2_sequence == 0:
-                    
-            # merge availability of large index side
-            avail_side1 = robots[j].status_2_avail1[1] & robots[j].status_2_avail2[1]
+                    # the grab on robot is the robot of index 0 on the line
+                    # get its only neighbor to calculate the line direction
+                    it1 = groups[robots[it0].group_id][2][1]  # second robot on the line
+                    vect_temp = (robots[it0].pos[0] - robots[it1].pos[0],
+                                 robots[it0].pos[1] - robots[it1].pos[1])  # from it1 to it0
+                    ori_temp = math.atan2(vect_temp[1], vect_temp[0])
+                    side0_des = [robots[it0].pos[0] + line_space*math.cos(ori_temp),
+                                 robots[it0].pos[1] + line_space*math.sin(ori_temp)]
+                    side0_hang = True
+                else:
+                    # the grab on robot is not at the start of the line
+                    # get its smaller index neighbor
+                    it1 = groups[robots[it0].group_id][2][robots[it0].status_2_sequence - 1]
+                    side0_next = it1
+                    # the destination is the middle position of it0 and it1
+                    side0_des = [(robots[it0].pos[0]+robots[it1].pos[0])/2,
+                                 (robots[it0].pos[1]+robots[it1].pos[1])/2]
+            # merge availability of larger index side
+            side1_avail = robots[j].status_2_avail1[1] & robots[j].status_2_avail2[1]
+            side1_des = [-1,-1]
+            side1_hang = False  # indicate if destination at side 1 is hanging
+            side1_next = -1  # next key neighbor expected to meet at this side
+            if side1_avail:
+                # calculate the merging destination
+                # if this side is beyond two ends of the line, it can only the large end
+                if robots[it0].status_2_end:
+                    # the grab on robot is at the larger index end
+                    # get its only neighbor to calculate the line direction
+                    it1 = groups[robots[it0].group_id][2][robots[it0].status_2_sequence - 1]
+                    vect_temp = (robots[it0].pos[0] - robots[it1].pos[0],
+                                 robots[it0].pos[1] - robots[it1].pos[1])  # from it1 to it0
+                    ori_temp = math.atan2(vect_temp[1], vect_temp[0])
+                    side1_des = [robots[it0].pos[0] + line_space*math.cos(ori_temp),
+                                 robots[it0].pos[1] + line_space*math.sin(ori_temp)]
+                    side1_hang = True
+                else:
+                    # the grab on robot is not at the larger index end
+                    # get its larger index neighbor
+                    it1 = groups[robots[it0].group_id][2][robots[it0].status_2_sequence + 1]
+                    side1_next = it1
+                    # the destination is the middle position of it0 and it1
+                    side1_des = [(robots[it0].pos[0]+robots[it1].pos[0])/2,
+                                 (robots[it0].pos[1]+robots[it1].pos[1])/2]
+            # check if there is at least one side is available
+            if side0_avail or side1_avail:
+                # perform operations regardless of which side to merge
+                robots[i].status = 1  # status becoming '1'
+                g_it = robots[it0].group_id
+                robots[i].group_id = g_it
+                robots[i].status_1_sub = 1
+                robots[i].key_neighbors = [it0]
+                # perform operations regarding which side to merge
+                if side0_avail and (not side1_avail):
+                    # only small index side is available, perform corresponding operations
+
 
 
 

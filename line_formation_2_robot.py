@@ -37,7 +37,7 @@ class LFRobot:  # LF for line formation
             # for '1_0' robot, key neighbor is the other initial forming robot
             # for '1_1' robot, key neighbors are the two new neighbors when merged
             # for '2' robot, key neighbors are the two adjacent neighbors along the line
-        self.sttus_n1_life = 0  # life time of status '-1', randomly generated
+        self.status_n1_life = 0  # life time of status '-1', randomly generated
 
 
 
