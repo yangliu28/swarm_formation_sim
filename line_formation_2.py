@@ -62,7 +62,8 @@ const_vel_2 = 1.0  # robot '2' are moving at this speed to maintain the line
 frame_period = 100  # updating period of the simulation and graphics, in ms
 comm_range = 5.0  # sensing and communication range, the radius
 line_space = comm_range * 0.7  # line space, between half of and whole communication range
-space_error = line_space * 0.1  # the error to determine the space is good
+space_err = line_space * 0.1  # error to determine the space is good when robot arrives
+line_adjust_err = line_space * 0.05  # finer error for robots on the line to adjust space
 life_incre = 8  # number of seconds a new member adds to a group
 group_id_upper_limit = 1000  # upper limit of random integer for group id
 n1_life_lower = 3  # lower limit of life time for status '-1'
@@ -328,7 +329,7 @@ while not sim_exit:
                         # host robot is in the initial forming phase
                         # check if the neighbor robot is in appropriate distance
                         if abs(dist_table[i][robots[i].key_neighbors[0]] -
-                               line_space) < space_error:
+                               line_space) < space_err:
                             # status transition scheduled, finish initial forming, '1' to '2'
                             g_it = robots[i].group_id
                             if g_it in s_form_done.keys():
@@ -354,7 +355,7 @@ while not sim_exit:
                                      robots[i].pos[1] - robots[i].status_1_1_des[1])
                         dist_temp = math.sqrt(vect_temp[0]*vect_temp[0] +
                                               vect_temp[1]*vect_temp[1])
-                        if dist_temp < space_error:
+                        if dist_temp < space_err:
                             # status transition scheduled, finish merging, '1' to '2'
                             s_merge_done.append(i)
             # for the host robot having status of '2'
@@ -598,6 +599,8 @@ while not sim_exit:
                     it0 = it1
                     it1 = temp
                 # update the 'robots' variable
+                robots[it0].vel = const_vel_2  # give the small speed for adjusting on the line
+                robots[it1].vel = const_vel_2
                 robots[it0].status_2_sequence = 0
                 robots[it1].status_2_sequence = 1
                 robots[it0].status_2_end = False
@@ -633,6 +636,7 @@ while not sim_exit:
                     # both neighbors are present, merge in between
                     merge_check = 1
             # perform the merge operations
+            robots[i].vel = const_vel_2  # give the small speed for adjusting on the line
             robots[i].status = 2
             robots[i].status_2_avail2 = [True, True]  # both sides have no merging robot
             # no need to change key neighbors of robot 'i'
@@ -683,6 +687,7 @@ while not sim_exit:
         # 6.s_merge_lost, robot '1' gets lost during merging, becoming '-1'
         for i in s_merge_lost:
             robots[i].status = -1
+            robots[i].vel = const_vel_1  # restore the faster speed
             robots[i].ori = random.random() * 2*math.pi - math.pi
             robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
             # update the key neighbors' status
@@ -698,6 +703,158 @@ while not sim_exit:
             groups[g_it][0] = groups[g_it][0] - 1  # decrease group size by 1
             # do not decrease group's life time due to member lost
             groups[g_it][3].remove(i)
+        # 7.s_group_exp, natural life expiration of the groups
+        for g_it in s_group_exp:
+            s_disassemble.append([g_it])  # leave the work to s_disassemble
+        # 8.s_disassemble, mostly triggered by robot '1' or '2'
+        s_dis_list = []  # list of groups that have been finalized for disassembling
+        # compare number of members to decide which groups to disassemble
+        for gs_it in s_disassemble:
+            if len(gs_it) == 1:
+                # disassemble trigger from other sources
+                if gs_it[0] not in s_dis_list:
+                    s_dis_list.append(gs_it[0])
+            else:
+                # compare which group has the most members, and disassemble the rest
+                g_temp = gs_it[:]
+                member_max = 0  # number of members in the group
+                group_max = -1  # corresponding group id with most members
+                for g_it in g_temp:
+                    if groups[g_it][0] > member_max:
+                        member_max = groups[g_it][0]
+                        group_max = g_it
+                g_temp.remove(group_max)  # remove the group with the most members
+                for g_it in g_temp:
+                    if g_it not in s_dis_list:
+                        s_dis_list.append(g_it)
+        # start disassembling
+        for g_it in s_dis_list:
+            # update the 'robots' variable
+            for i in groups[g_it][3]:  # for robots off the line
+                robots[i].vel = const_vel_1  # restore the faster speed
+                robots[i].status = -1
+                robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
+                robots[i].ori = random.random() * 2*math.pi - math.pi
+            # same way of exploding the robots on the line
+            num_online = len(groups[g_it][2])  # number of robots on the line
+            num_1_half = num_online/2  # number of robots for the first half
+            num_2_half = num_online - num_1_half  # for the second half
+            for i in groups[g_it][2]:  # for robots on the line
+                robots[i].vel = const_vel_1  # restore the faster speed
+                robots[i].status = -1
+                robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
+                ori_temp = 0  # orientation of the line, calculate individually
+                seq_temp = robots[i].status_2_sequence  # sequence on the line
+                if robots[i].status_2_sequence == 0:
+                    # then get second one on the line
+                    it0 = groups[robots[i].group_id][2][1]
+                    # orientation points to the small index end
+                    ori_temp = math.atan2(robots[i].pos[1]-robots[it0].pos[1],
+                                          robots[i].pos[0]-robots[it0].pos[0])
+                elif robots[i].status_2_end == True:
+                    # then get inverse second one on the line
+                    it0 = groups[robots[i].group_id][2][-2]
+                    # orientation points to the large index end
+                    ori_temp = math.atan2(robots[i].pos[1]-robots[it0].pos[1],
+                                          robots[i].pos[0]-robots[it0].pos[0])
+                else:
+                    # get both neighbors
+                    it0 = groups[g_it][2][seq_temp - 1]
+                    it1 = groups[g_it][2][seq_temp + 1]
+                    if seq_temp < num_1_half:  # robot in the first half
+                        # orientation points to the small index end
+                        ori_temp = math.atan2(robots[it0].pos[1]-robots[it1].pos[1],
+                                              robots[it0].pos[0]-robots[it1].pos[0])
+                    else:
+                        # orientation points to the large index end
+                        ori_temp = math.atan2(robots[it1].pos[1]-robots[it0].pos[1],
+                                              robots[it1].pos[0]-robots[it0].pos[0])
+                # then calculate the 'explosion' direction
+                if seq_temp < num_1_half:
+                    robots[i].ori = lf_reset_radian(ori_temp + math.pi*(seq_temp+1)/(num_1_half+1))
+                    # always 'explode' to the left side
+                else:
+                    robots[i].ori = lf_reset_radian(ori_temp + math.pi*(num_online-seq_temp)/(num_2_half+1))
+            # pop out this group from 'groups'
+            groups.pop(g_it)
+        # 9.s_back_0, life time of robot '-1' expires, becoming '0'
+        for i in s_back_0:
+            # still maintaining the old moving direction and velocity
+            robots[i].status = 0
+
+        # update the physics(pos, vel and ori), and wall bouncing, life decrese of '-1'
+        for i in range(robot_quantity):
+            # check if out of boundaries, same algorithm from previous line formation program
+            # change only direction of velocity
+            if robots[i].pos[0] >= world_size[0]:  # out of right boundary
+                if math.cos(robots[i].ori) > 0:  # velocity on x is pointing right
+                    robots[i].ori = lf_reset_radian(2*(math.pi/2) - robots[i].ori)
+            elif robots[i].pos[0] <= 0:  # out of left boundary
+                if math.cos(robots[i].ori) < 0:  # velocity on x is pointing left
+                    robots[i].ori = lf_reset_radian(2*(math.pi/2) - robots[i].ori)
+            if robots[i].pos[1] >= world_size[1]:  # out of top boundary
+                if math.sin(robots[i].ori) > 0:  # velocity on y is pointing up
+                    robots[i].ori = lf_reset_radian(2*(0) - robots[i].ori)
+            elif robots[i].pos[1] <= 0:  # out of bottom boundary
+                if math.sin(robots[i].ori) < 0:  # velocity on y is pointing down
+                    robots[i].ori = lf_reset_radian(2*(0) - robots[i].ori)
+            # update one step of distance
+            travel_dist = robots[i].vel * frame_period/1000.0
+            robots[i].pos[0] = robots[i].pos[0] + travel_dist*math.cos(robots[i].ori)
+            robots[i].pos[1] = robots[i].pos[1] + travel_dist*math.sin(robots[i].ori)
+            # update moving direciton and destination of robot '1'
+            # the merging destination should be updated because robots '2' are also adjusting
+            if robots[i].status == 1:
+                if (robots[i].key_neighbors[0] == -1 or
+                    robots[i].key_neighbors[1] == -1):
+                    # robot 'i' is merging at starting or end of the line
+                    it0 = 0  # represent the robot at the end
+                    it1 = 0  # represent the robot inward of it0
+                    if robots[i].key_neighbors[0] == -1:
+                        it0 = robots[i].key_neighbors[1]
+                        it1 = robots[it0].key_neighbors[1]
+                    else:
+                        it0 = robots[i].key_neighbors[0]
+                        it1 = robots[it0].key_neighbors[0]
+                    # calculate the new destination and new orientation to the destination
+                    vect_temp = (robots[it0].pos[0]-robots[it1].pos[0],
+                                 robots[it0].pos[1]-robots[it1].pos[1])  # from it1 to it0
+                    ori_temp = math.atan2(vect_temp[1], vect_temp[0])
+                    des_new = [robots[it0].pos[0] + line_space*math.cos(ori_temp),
+                                  robots[it0].pos[1] + line_space*math.sin(ori_temp)]
+                    # update the new destination
+                    robots[i].status_1_1_des = des_new[:]
+                    vect_temp = (des_new[0]-robots[i].pos[0],
+                                 des_new[1]-robots[i].pos[1])  # from robot 'i' to des
+                    # update the new orientation
+                    robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
+                else:
+                    # robot 'i' is merging in between
+                    it0 = robots[i].key_neighbors[0]
+                    it1 = robots[i].key_neighbors[1]
+                    des_new = [(robots[it0].pos[0]+robots[it1].pos[0])/2 ,
+                               (robots[it0].pos[1]+robots[it1].pos[1])/2]
+                    robots[i].status_1_1_des = des_new[:]
+                    vect_temp = (des_new[0]-robots[i].pos[0],
+                                 des_new[1]-robots[i].pos[1])  # from robot 'i' to des
+                    # update the new orientation
+                    robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
+            # update moving direction and velocity of robot '2'
+            if robots[i].status == 2:
+                if robots[i].status_2_sequence == 0:
+                    it1 = robots[i].key_neighbors[1]
+                    if abs(dist_table[i][it1] - line_space) < line_adjust_err:
+                        # line space is good, no need to adjust
+                        robots[i].vel = 0
+                    else:
+                        robots[i].vel = const_vel_2  # slower speed for adjusting the line
+                        # if adjusting, just moving closer or farther to it1
+                        vect_temp = [robots[i].pos[0]-robots[it1].pos[0] ,
+                                     robots[i].pos[1]-robots[it1].pos[1]]  # from it1 to i
+                        if dist_table[i][it0] > line_space:
+                            # too far away, move closer to it1
+                            robots[i].ori
+        # life decrease of the groups
 
 
 
