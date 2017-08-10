@@ -421,7 +421,7 @@ while not sim_exit:
             g_it = robots[it0].group_id  # group id of 'it0'
             # it0 was available when added to s_grab_on, but check again if occupied by others
             # merge availability of smaller index side
-            side0_avail = robots[j].status_2_avail1[0] & robots[j].status_2_avail2[0]
+            side0_avail = robots[it0].status_2_avail1[0] & robots[it0].status_2_avail2[0]
             side0_des = [-1,-1]  # destination if merging at small index end
             side0_hang = False  # indicate if destination at side 0 is hanging
             side0_next = -1  # next key neighbor expected to meet at this side
@@ -431,7 +431,7 @@ while not sim_exit:
                 if robots[it0].status_2_sequence == 0:
                     # the grab on robot is the robot of index 0 on the line
                     # get its only neighbor to calculate the line direction
-                    it1 = groups[g_it][2][1]  # second robot on the line
+                    it1 = robots[it0].key_neighbors[1]  # second robot on the line
                     vect_temp = (robots[it0].pos[0] - robots[it1].pos[0],
                                  robots[it0].pos[1] - robots[it1].pos[1])  # from it1 to it0
                     ori_temp = math.atan2(vect_temp[1], vect_temp[0])
@@ -441,13 +441,13 @@ while not sim_exit:
                 else:
                     # the grab on robot is not at the start of the line
                     # get its smaller index neighbor
-                    it1 = groups[g_it][2][robots[it0].status_2_sequence - 1]
+                    it1 = robots[it0].key_neighbors[0]
                     side0_next = it1
                     # the destination is the middle position of it0 and it1
                     side0_des = [(robots[it0].pos[0]+robots[it1].pos[0])/2,
                                  (robots[it0].pos[1]+robots[it1].pos[1])/2]
             # merge availability of larger index side
-            side1_avail = robots[j].status_2_avail1[1] & robots[j].status_2_avail2[1]
+            side1_avail = robots[it0].status_2_avail1[1] & robots[it0].status_2_avail2[1]
             side1_des = [-1,-1]
             side1_hang = False  # indicate if destination at side 1 is hanging
             side1_next = -1  # next key neighbor expected to meet at this side
@@ -457,7 +457,7 @@ while not sim_exit:
                 if robots[it0].status_2_end:
                     # the grab on robot is at the larger index end
                     # get its only neighbor to calculate the line direction
-                    it1 = groups[g_it][2][robots[it0].status_2_sequence - 1]
+                    it1 = robots[it0].key_neighbors[0]  # the inverse second on the line
                     vect_temp = (robots[it0].pos[0] - robots[it1].pos[0],
                                  robots[it0].pos[1] - robots[it1].pos[1])  # from it1 to it0
                     ori_temp = math.atan2(vect_temp[1], vect_temp[0])
@@ -467,7 +467,7 @@ while not sim_exit:
                 else:
                     # the grab on robot is not at the larger index end
                     # get its larger index neighbor
-                    it1 = groups[g_it][2][robots[it0].status_2_sequence + 1]
+                    it1 = robots[it0].key_neighbors[1]
                     side1_next = it1
                     # the destination is the middle position of it0 and it1
                     side1_des = [(robots[it0].pos[0]+robots[it1].pos[0])/2,
@@ -639,13 +639,14 @@ while not sim_exit:
                     # both neighbors are present, merge in between
                     merge_check = 1
             # perform the merge operations
-            robots[i].vel = const_vel_2  # give the small speed for adjusting on the line
             robots[i].status = 2
+            robots[i].vel = const_vel_2  # give the small speed for adjusting on the line
             robots[i].status_2_avail2 = [True, True]  # both sides have no merging robot
             # no need to change key neighbors of robot 'i'
             g_it = robots[i].group_id
             groups[g_it][3].remove(i)  # remove from the merging pool
             if merge_check == 0:  # merge into small index end of the line
+                it0 = robots[i].key_neighbors[1]  # the old small index end
                 robots[i].status_2_sequence = 0
                 robots[i].status_2_end = False
                 groups[g_it][2].insert(0, i)  # insert robot 'i' as first one
@@ -653,8 +654,6 @@ while not sim_exit:
                 for j in groups[g_it][2][1:]:
                     robots[j].status_2_sequence = robots[j].status_2_sequence + 1
                 # update attributes of the second robot on the line
-                it0 = robots[i].key_neighbors[1]  # the old small index end
-                robots[i].status_2_avail2 = [True, True]  # start with all true
                 robots[it0].status_2_avail2[0] = True  # becomes available again
                 robots[it0].key_neighbors[0] = i  # add key neighbor at small index side
             elif merge_check == 2:  # merge into large index end of the line
@@ -662,8 +661,8 @@ while not sim_exit:
                 robots[i].status_2_sequence = robots[it0].status_2_sequence + 1
                 # no need to shift sequence of other robots on the line
                 robots[i].status_2_end = True
-                robots[i].status_2_avail2 = [True, True]  # start with all true
                 robots[it0].status_2_end = False  # no longer the end of the line
+                robots[it0].status_2_avail2[1] = True
                 robots[it0].key_neighbors[1] = i  # add key neighbor at large index side
                 groups[g_it][2].append(i)  # append at the end of the list
             elif merge_check == 1:  # merge in the middle of two robots
@@ -673,7 +672,6 @@ while not sim_exit:
                 seq_new = robots[it1].status_2_sequence  # 'i' will replace seq of 'it1'
                 robots[i].status_2_sequence = seq_new
                 robots[i].status_2_end = False
-                robots[i].status_2_avail2 = [True, True]
                 groups[g_it][2].insert(seq_new, i)
                 # shift sequence of robots starting form 'it1'
                 for j in groups[g_it][2][seq_new+1:]:
@@ -838,7 +836,7 @@ while not sim_exit:
                                      robots[it0].pos[1]-robots[it1].pos[1])  # from it1 to it0
                         ori_temp = math.atan2(vect_temp[1], vect_temp[0])
                         des_new = [robots[it0].pos[0] + line_space*math.cos(ori_temp),
-                                      robots[it0].pos[1] + line_space*math.sin(ori_temp)]
+                                   robots[it0].pos[1] + line_space*math.sin(ori_temp)]
                         # update the new destination
                         robots[i].status_1_1_des = des_new[:]
                         vect_temp = (des_new[0]-robots[i].pos[0],

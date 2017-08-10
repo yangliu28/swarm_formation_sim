@@ -17,11 +17,6 @@ class LFRobot:  # LF for line formation
             # '0' for forming the initial line segment
             # '1' for merging into the line
         self.status_1_1_des = [0,0]  # destination for the merging robot
-        self.status_1_1_next = []  # next key neighbor expected to acquire
-            # when '1' first starts to merge, it may sense a single '2' robot
-            # most cases when '1' merges into the middle of two robots, it expects to
-            # meet another '2', and add it to the key neighbor list.
-            # This variable should contain one variable at most.
         self.status_2_sequence = 0  # sequence along the line for status '2' robot
             # index ranges from 0 to N-1
         self.status_2_end = False  # sub status deciding if robot is at larger index end
