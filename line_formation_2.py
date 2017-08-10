@@ -840,9 +840,10 @@ while not sim_exit:
                     # update the new orientation
                     robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
             # update moving direction and velocity of robot '2'
-            if robots[i].status == 2:
+            elif robots[i].status == 2:
                 if robots[i].status_2_sequence == 0:
-                    it1 = robots[i].key_neighbors[1]
+                    # robot 'i' is at the small index end
+                    it1 = robots[i].key_neighbors[1]  # use it1 because on the large side
                     if abs(dist_table[i][it1] - line_space) < line_adjust_err:
                         # line space is good, no need to adjust
                         robots[i].vel = 0
@@ -851,11 +852,73 @@ while not sim_exit:
                         # if adjusting, just moving closer or farther to it1
                         vect_temp = [robots[i].pos[0]-robots[it1].pos[0] ,
                                      robots[i].pos[1]-robots[it1].pos[1]]  # from it1 to i
-                        if dist_table[i][it0] > line_space:
+                        ori_temp = math.atan2(vect_temp[1], vect_temp[0])
+                        if dist_table[i][it1] > line_space:
                             # too far away, move closer to it1
-                            robots[i].ori
-        # life decrease of the groups
+                            robots[i].ori = lf_reset_radian(ori_temp + math.pi/2)
+                        else:
+                            # too close, move farther away from it1
+                            robots[i].ori = ori_temp
+                elif robots[i].status_2_end:
+                    # robot 'i' is at the large index end
+                    it0 = robots[i].key_neighbors[0]
+                    if abs(dist_table[i][it0] - line_space) < line_adjust_err:
+                        # line space is good, no need to adjust
+                        robots[i].vel = 0
+                    else:
+                        robots[i].vel = const_vel_2  # slower speed for adjusting the line
+                        # if adjusting, just moving closer or farther to it0
+                        vect_temp = [robots[i].pos[0]-robots[it0].pos[0] ,
+                                     robots[i].pos[1]-robots[it0].pos[1]]  # from it0 to i
+                        ori_temp = math.atan2(vect_temp[1], vect_temp[0])
+                        if dist_table[i][it0] > line_space:
+                            # too far away, move closer to it0
+                            robots[i].ori = lf_reset_radian(ori_temp + math.pi/2)
+                        else:
+                            # too close, move farther away from it0
+                            robots[i].ori = ori_temp
+                else:
+                    # robot 'i' is at no end
+                    it0 = robots[i].key_neighbors[0]
+                    it1 = robots[i].key_neighbors[1]
+                    des_new = [(robots[it0].pos[0]+robots[it1].pos[0])/2 ,
+                               (robots[it0].pos[1]+robots[it1].pos[1])/2]
+                    vect_temp = (des_new[0]-robots[i].pos[0],
+                                 des_new[1]-robots[i].pos[1])  # from robot 'i' to des
+                    dist_temp = math.sqrt(vect_temp[0]*vect_temp[0] +
+                                          vect_temp[1]*vect_temp[1])
+                    if dist_temp < line_adjust_err:
+                        robots[i].vel = 0
+                    else:
+                        robots[i].vel = const_vel_2
+                        robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
+            # decrease life time of robot '-1'
+            elif robots[i].status == -1:
+                robots[i].status_n1_life = robots[i].status_n1_life - frame_period/1000.0
+        # life time decrease of the groups
+        for g_it in groups.keys():
+            if groups[g_it][4]: continue  # not decrease life of the dominant
+            groups[g_it][1] = groups[g_it][1] - frame_period/1000.0
 
+        # graphics update
+        screen.fill(background_color)
+        # draw the robots
+        for i in range(robot_quantity):
+            display_pos = lf_world_to_display(robots[i].pos, world_size, screen_size)
+            # get color of the robot
+            color_temp = ()
+            if robots[i].status == 0:
+                color_temp = robot_0_color
+            elif robots[i].status == 1:
+                color_temp = robot_1_color
+            elif robots[i].status == 2:
+                color_temp = robot_2_color
+            elif robots[i].status == -1:
+                color_temp = robot_n1_color
+            # draw the robot as a small solid circle
+            pygame.draw.circle(screen, color_temp, display_pos, robot_size, 0)  # fill the circle
+        pygame.display.update()
 
+pygame.quit()
 
 
