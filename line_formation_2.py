@@ -15,16 +15,18 @@
     # '0': free, wondering around, not in group, available to form a group or join one
     # '1': forming an initial line segment, or found a line and trying to merge into it
         # '1_0': initial an line segment, '0' found another '0' and formed a group
-        # '1_1': join a line, merging into
+        # '1_1': join a line, merging into the closest spot
     # '2': already in a line, dynamically adjust space and straightness
     # '-1': free, wondering around, no interaction with nearby robots
 # Only allowed status transitions are:
     # forward: '-1'->'0', '0'->'1', '1'->'2'
     # backward: '1'->'-1', '2'->'-1'
 
-# just find sys.exit() can be useful to exit from not-in-the-plan errors
-# will be used in this and future programs
-
+# make the line straight and evenly spaced:
+# A somple proportional control method was used here. The robots on the line '2' never stops
+# adjusting, there is no threshold for the distance error. The robot always moves toward
+# its calculated target, and to stablize the tracking, the moving velocity will decrease
+# proportionally to the distance error.
 
 import pygame
 import math, random, sys
@@ -46,7 +48,7 @@ robot_size = 5  # robot modeled as dot, number of pixels in radius
 icon = pygame.image.load('icon_geometry_art.jpg')
 pygame.display.set_icon(icon)
 screen = pygame.display.set_mode(screen_size)
-pygame.display.set_caption('Line Formation 2 Simulation')
+pygame.display.set_caption('Line Formation 2 Simulation - Merging')
 
 # for physics, continuous world, origin is at left bottom corner, starting (0, 0),
 # with x axis pointing right, y axis pointing up.
@@ -57,18 +59,20 @@ world_size = (100.0, 100.0 * screen_size[1]/screen_size[0])
 robot_quantity = 30
 # coefficient to resize the robot distribution, to keep initial positions to center
 distrib_coef = 0.5
-const_vel_1 = 3.0  # all robots except '2' are moving at this faster constant speed
-const_vel_2 = 1.0  # robot '2' are moving at this speed to maintain the line
+const_vel = 3.0  # all robots except '2' are moving at this faster constant speed
 frame_period = 100  # updating period of the simulation and graphics, in ms
 comm_range = 5.0  # sensing and communication range, the radius
 line_space = comm_range * 0.7  # line space, between half of and whole communication range
-space_err = line_space * 0.1  # error to determine the space is good when robot arrives
-line_adjust_err = line_space * 0.05  # finer error for robots on the line to adjust space
 merge_min_dist = line_space * 0.7  # minimum distance between two robots to allow merge
+space_err = line_space * 0.1  # error to determine the space is good when robot arrives
 life_incre = 8  # number of seconds a new member adds to a group
 group_id_upper_limit = 1000  # upper limit of random integer for group id
 n1_life_lower = 3  # lower limit of life time for status '-1'
 n1_life_upper = 8  # upper limit of life time for status '-1'
+# coefficient for calculating velocity of robot on the line for adjust the line
+# the smaller the distance error, the smaller the velocity
+# tune this parameter to adjust the line quickly and stably
+adjust_vel_coef = const_vel/line_space * 2
 
 # instantiate the robot swarm as list
 robots = []  # container for all robots, index is its identification
@@ -76,7 +80,7 @@ for i in range(robot_quantity):
     # random position, away from the window's edges
     pos_temp = (((random.random()-0.5)*distrib_coef+0.5) * world_size[0],
                 ((random.random()-0.5)*distrib_coef+0.5) * world_size[1])
-    vel_temp = const_vel_1
+    vel_temp = const_vel
     ori_temp = random.random() * 2*math.pi - math.pi  # random in (-pi, pi)
     object_temp = LFRobot(pos_temp, vel_temp, ori_temp)
     robots.append(object_temp)
@@ -175,10 +179,10 @@ while not sim_exit:
             # value is a list of id of robot '1's that have finished initial forming
         s_merge_done = []  # robot '1' finishes merging, becoming '2'
             # list of robot '1' that finished merging
-        s_form_lost = []  # robot '1' gets lost during initial forming
-            # list of group id for the initial forming robots
-        s_merge_lost = []  # robot '1' gets lost during merging
-            # list of robot id for the merging robots
+        # s_form_lost = []  # robot '1' gets lost during initial forming
+        #     # list of group id for the initial forming robots
+        # s_merge_lost = []  # robot '1' gets lost during merging
+        #     # list of robot id for the merging robots
         s_line_lost = []  # robot '2' gets lost during adjusting pos
             # list of group id for the robots get lost in that group
         s_group_exp = []  # life time of a group naturally expires
@@ -286,80 +290,55 @@ while not sim_exit:
             # for the host robot having status of '1'
             elif robots[i].status == 1:
                 # status of '1' needs to be checked and maintained constantly
-                # 1.check if the important group neighbors are still in range
-                neighbors_secured = True
-                for j in robots[i].key_neighbors:
-                    if j == -1: continue  # there is no neighbor at that side
-                    if j not in index_list[i]:
-                        neighbors_secured = False
-                        break
-                if neighbors_secured == False:
-                    # status transition scheduled, robot '1' gets lost, becoming '-1'
-                    if robots[i].status_1_sub == 0:
-                        # append the group id, disassemble the entire group
-                        s_form_lost.append(robots[i].group_id)
-                    else:
-                        s_merge_lost.append(i)  # append the robot id
-                else:
-                    # all key neighbors are in good position
-                    # 2.disassemble check, get group attribution of all '1' and '2'
-                    status_list_temp = status_list[i][:]
-                    index_list_temp = index_list[i][:]
-                    # pop out the '0' first
-                    while 0 in status_list_temp:
-                        index_temp = status_list_temp.index(0)
-                        status_list_temp.pop(index_temp)
-                        index_list_temp.pop(index_temp)
-                    if len(index_list_temp) > 0:  # ensure at least one in-group robot around
-                        # start the group attribution dictionary with first robot
-                        groups_temp = {robots[index_list_temp[0]].group_id: [index_list_temp[0]]}
-                        for j in index_list_temp[1:]:  # iterating from the second one
-                            current_group = robots[j].group_id
-                            if current_group in groups_temp.keys():
-                                # append this robot in same group
-                                groups_temp[current_group].append(j)
-                            else:
-                                # add new key in the groups_temp dictionary
-                                groups_temp[current_group] = [j]
-                        # check if there are multiple groups detected
-                        if len(groups_temp.keys()) > 1:
-                            # status transition scheduled, to disassemble groups
-                            s_disassemble.append(groups_temp.keys())
-                            # may produce duplicates in s_disassemble, not serious problem
-                    # 3.check if any status transition needs to be done
-                    if robots[i].status_1_sub == 0:
-                        # host robot is in the initial forming phase
-                        # check if the neighbor robot is in appropriate distance
-                        if abs(dist_table[i][robots[i].key_neighbors[0]] -
-                               line_space) < space_err:
-                            # status transition scheduled, finish initial forming, '1' to '2'
-                            g_it = robots[i].group_id
-                            if g_it in s_form_done.keys():
-                                s_form_done[g_it].append(i)
-                            else:
-                                s_form_done[g_it] = [i]
-                    elif robots[i].status_1_sub == 1:
-                        # host robot is in the merging phase
-                        # check if next key neighbor appears or not
-                        if len(robots[i].status_1_1_next) != 0:
-                            # the next key neighbor list should contains one member at most
-                            next_neighbor = robots[i].status_1_1_next[0]
-                            if next_neighbor in index_list[i]:
-                                # the next expected neighbor appears
-                                robots[i].status_1_1_next.pop(0)
-                                # find the '-1' in the key neighbor list and replace it
-                                if robots[i].key_neighbors[0] == -1:
-                                    robots[i].key_neighbors[0] = next_neighbor
-                                elif robots[i].key_neighbors[1] == -1:
-                                    robots[i].key_neighbors[1] = next_neighbor
-                        # check if the merging robot reaches the destination
-                        vect_temp = (robots[i].pos[0] - robots[i].status_1_1_des[0],
-                                     robots[i].pos[1] - robots[i].status_1_1_des[1])
-                        dist_temp = math.sqrt(vect_temp[0]*vect_temp[0] +
-                                              vect_temp[1]*vect_temp[1])
-                        if dist_temp < space_err:
-                            # status transition scheduled, finish merging, '1' to '2'
-                            s_merge_done.append(i)
+                # 1.check if the important group neighbors are still in range (skiped)
+                # one of key neighbors of robot '1' may appears later when merging,
+                # and key_neighbor variable may has -1 value representing empty
+                # 2.disassemble check, get group attribution of all '1' and '2'
+                status_list_temp = status_list[i][:]
+                index_list_temp = index_list[i][:]
+                # pop out the '0' first
+                while 0 in status_list_temp:
+                    index_temp = status_list_temp.index(0)
+                    status_list_temp.pop(index_temp)
+                    index_list_temp.pop(index_temp)
+                if len(index_list_temp) > 0:  # ensure at least one in-group robot around
+                    # start the group attribution dictionary with first robot
+                    groups_temp = {robots[index_list_temp[0]].group_id: [index_list_temp[0]]}
+                    for j in index_list_temp[1:]:  # iterating from the second one
+                        current_group = robots[j].group_id
+                        if current_group in groups_temp.keys():
+                            # append this robot in same group
+                            groups_temp[current_group].append(j)
+                        else:
+                            # add new key in the groups_temp dictionary
+                            groups_temp[current_group] = [j]
+                    # check if there are multiple groups detected
+                    if len(groups_temp.keys()) > 1:
+                        # status transition scheduled, to disassemble groups
+                        s_disassemble.append(groups_temp.keys())
+                        # may produce duplicates in s_disassemble, not serious problem
+                # 3.check if any status transition needs to be done
+                if robots[i].status_1_sub == 0:
+                    # host robot is in the initial forming phase
+                    # check if the neighbor robot is in appropriate distance
+                    if abs(dist_table[i][robots[i].key_neighbors[0]] -
+                           line_space) < space_err:
+                        # status transition scheduled, finish initial forming, '1' to '2'
+                        g_it = robots[i].group_id
+                        if g_it in s_form_done.keys():
+                            s_form_done[g_it].append(i)
+                        else:
+                            s_form_done[g_it] = [i]
+                elif robots[i].status_1_sub == 1:
+                    # host robot is in the merging phase
+                    # check if the merging robot reaches the destination
+                    vect_temp = (robots[i].status_1_1_des[0] - robots[i].pos[0],
+                                 robots[i].status_1_1_des[1] - robots[i].pos[1])
+                    dist_temp = math.sqrt(vect_temp[0]*vect_temp[0] +
+                                          vect_temp[1]*vect_temp[1])
+                    if dist_temp < space_err:
+                        # status transition scheduled, finish merging, '1' to '2'
+                        s_merge_done.append(i)
             # for the host robot having status of '2'
             elif robots[i].status == 2:
                 # check if all key neighbors are still in range
@@ -511,26 +490,21 @@ while not sim_exit:
                     robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
                     robots[it0].status_2_avail2[0] = False  # reverse flag for small side
                     # robot 'it0' does not take 'i' as key nieghbor, only robots on the line
-                    if side0_hang:
-                        # the grab on robot is the index 0 robot on the line
-                        # this side hangs out of line, no next key neighbor expecting
-                        robots[i].status_1_1_next = []
-                    else:
-                        it1 = robots[it0].key_neighbors[0]  # neighbor at small index side
-                        robots[i].status_1_1_next = [it1]
+                    if not side0_hang:
+                        it1 = side0_next
+                        robots[i].key_neighbors[0] = it1
+                        robots[it1].status_2_avail2[1] = False
                 else:
                     # operations of taking large index side
-                    robots[i].key_neighbors[0] = it1  # has key neighbor at small index side
+                    robots[i].key_neighbors[0] = it0  # has key neighbor at small index side
                     robots[i].status_1_1_des = side1_des
                     vect_temp = (side1_des[0]-robots[i].pos[0], side1_des[1]-robots[i].pos[1])
                     robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
                     robots[it0].status_2_avail2[1] = False  # reverse flag for large side
-                    if side1_hang:
-                        # the grab on robot is at large index end of the line
-                        robots[i].status_1_1_next = []  # no next key neighbor expecting
-                    else:
-                        it1 = robots[it0].key_neighbors[1]  # neighbor at small index side
-                        robots[i].status_1_1_next = [it1]
+                    if not side1_hang:
+                        it1 = side1_next
+                        robots[i].key_neighbors[1] = it1
+                        robots[it1].status_2_avail2[0] = False
         # 2.s_init_form, robot '0' initial forms with another '0', becoming '1'
         s_pair = []  # the container for finalized initial forming pairs
         while len(s_init_form.keys()) != 0:  # there are still robots to be processed
@@ -602,8 +576,8 @@ while not sim_exit:
                     it0 = it1
                     it1 = temp
                 # update the 'robots' variable
-                robots[it0].vel = const_vel_2  # give the small speed for adjusting on the line
-                robots[it1].vel = const_vel_2
+                robots[it0].vel = 0  # give 0 speed temporarily
+                robots[it1].vel = 0
                 robots[it0].status_2_sequence = 0
                 robots[it1].status_2_sequence = 1
                 robots[it0].status_2_end = False
@@ -618,9 +592,6 @@ while not sim_exit:
                 groups[g_it][3] = []  # empty the forming & merging pool
         # 4.s_merge_done, robot '1' finishes merging, becoming '2'
         for i in s_merge_done:
-            if len(robots[i].status_1_1_next) != 0:
-                print "robot {} failed to find other key neighbor before finish merging".format(i)
-                continue
             # finding which side to merge
             merge_check = -1
                 # '0' for merging at small index end of the line
@@ -640,7 +611,7 @@ while not sim_exit:
                     merge_check = 1
             # perform the merge operations
             robots[i].status = 2
-            robots[i].vel = const_vel_2  # give the small speed for adjusting on the line
+            robots[i].vel = 0  # give 0 speed temporarily
             robots[i].status_2_avail2 = [True, True]  # both sides have no merging robot
             # no need to change key neighbors of robot 'i'
             g_it = robots[i].group_id
@@ -681,29 +652,29 @@ while not sim_exit:
                 robots[it0].key_neighbors[1] = i  # replace with new member
                 robots[it1].status_2_avail2[0] = True  # similar for large index robot
                 robots[it1].key_neighbors[0] = i
-        # 5.s_form_lost, robot '1' gets lost during initial forming
-        for g_it in s_form_lost:
-            # disassemble the group together in s_disassemble
-            s_disassemble.append[g_it]
-        # 6.s_merge_lost, robot '1' gets lost during merging, becoming '-1'
-        for i in s_merge_lost:
-            robots[i].status = -1
-            robots[i].vel = const_vel_1  # restore the faster speed
-            robots[i].ori = random.random() * 2*math.pi - math.pi
-            robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
-            # update the key neighbors' status
-            if robots[i].key_neighbors[0] != -1:
-                # robot 'i' has a small index side key neighbor
-                it0 = robots[i].key_neighbors[0]
-                robots[it0].status_2_avail2[1] = True
-            if robots[i].key_neighbors[1] != -1:
-                # robot 'i' has a large index side key neighbor
-                it1 = robots[i].key_neighbors[1]
-                robots[it1].status_2_avail2[0] = True
-            g_it = robots[i].group_id
-            groups[g_it][0] = groups[g_it][0] - 1  # decrease group size by 1
-            # do not decrease group's life time due to member lost
-            groups[g_it][3].remove(i)
+        # # 5.s_form_lost, robot '1' gets lost during initial forming
+        # for g_it in s_form_lost:
+        #     # disassemble the group together in s_disassemble
+        #     s_disassemble.append[g_it]
+        # # 6.s_merge_lost, robot '1' gets lost during merging, becoming '-1'
+        # for i in s_merge_lost:
+        #     robots[i].status = -1
+        #     robots[i].vel = const_vel  # restore the faster speed
+        #     robots[i].ori = random.random() * 2*math.pi - math.pi
+        #     robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
+        #     # update the key neighbors' status
+        #     if robots[i].key_neighbors[0] != -1:
+        #         # robot 'i' has a small index side key neighbor
+        #         it0 = robots[i].key_neighbors[0]
+        #         robots[it0].status_2_avail2[1] = True
+        #     if robots[i].key_neighbors[1] != -1:
+        #         # robot 'i' has a large index side key neighbor
+        #         it1 = robots[i].key_neighbors[1]
+        #         robots[it1].status_2_avail2[0] = True
+        #     g_it = robots[i].group_id
+        #     groups[g_it][0] = groups[g_it][0] - 1  # decrease group size by 1
+        #     # do not decrease group's life time due to member lost
+        #     groups[g_it][3].remove(i)
         # 7.s_line_lost, robot '2' gets lost during adjusting on the line
         for g_it in s_line_lost:
             # disassemble the group together in s_disassemble
@@ -736,7 +707,7 @@ while not sim_exit:
         for g_it in s_dis_list:
             # update the 'robots' variable
             for i in groups[g_it][3]:  # for robots off the line
-                robots[i].vel = const_vel_1  # restore the faster speed
+                robots[i].vel = const_vel  # restore the faster speed
                 robots[i].status = -1
                 robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
                 robots[i].ori = random.random() * 2*math.pi - math.pi
@@ -745,7 +716,7 @@ while not sim_exit:
             num_1_half = num_online/2  # number of robots for the first half
             num_2_half = num_online - num_1_half  # for the second half
             for i in groups[g_it][2]:  # for robots on the line
-                robots[i].vel = const_vel_1  # restore the faster speed
+                robots[i].vel = const_vel  # restore the faster speed
                 robots[i].status = -1
                 robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
                 ori_temp = 0  # orientation of the line, calculate individually
@@ -847,7 +818,7 @@ while not sim_exit:
                         # robot 'i' is merging in between
                         it0 = robots[i].key_neighbors[0]
                         it1 = robots[i].key_neighbors[1]
-                        des_new = [(robots[it0].pos[0]+robots[it1].pos[0])/2 ,
+                        des_new = [(robots[it0].pos[0]+robots[it1].pos[0])/2,
                                    (robots[it0].pos[1]+robots[it1].pos[1])/2]
                         robots[i].status_1_1_des = des_new[:]
                         vect_temp = (des_new[0]-robots[i].pos[0],
@@ -865,21 +836,18 @@ while not sim_exit:
                     else:
                         robots[i].status_2_avail1[1] = False
                     # update the moving direction and velocity
-                    if abs(dist_table[i][it1] - line_space) < line_adjust_err:
-                        # line space is good, no need to adjust
-                        robots[i].vel = 0
+                    # for adjusting on the line, just moving closer or farther to it1
+                    vect_temp = [robots[i].pos[0]-robots[it1].pos[0] ,
+                                 robots[i].pos[1]-robots[it1].pos[1]]  # from it1 to i
+                    ori_temp = math.atan2(vect_temp[1], vect_temp[0])
+                    if dist_table[i][it1] > line_space:
+                        # too far away, move closer to it1
+                        robots[i].ori = lf_reset_radian(ori_temp + math.pi)
+                        robots[i].vel = (dist_table[i][it1] - line_space) * adjust_vel_coef
                     else:
-                        robots[i].vel = const_vel_2  # slower speed for adjusting the line
-                        # if adjusting, just moving closer or farther to it1
-                        vect_temp = [robots[i].pos[0]-robots[it1].pos[0] ,
-                                     robots[i].pos[1]-robots[it1].pos[1]]  # from it1 to i
-                        ori_temp = math.atan2(vect_temp[1], vect_temp[0])
-                        if dist_table[i][it1] > line_space:
-                            # too far away, move closer to it1
-                            robots[i].ori = lf_reset_radian(ori_temp + math.pi)
-                        else:
-                            # too close, move farther away from it1
-                            robots[i].ori = ori_temp
+                        # too close, move farther away from it1
+                        robots[i].ori = ori_temp
+                        robots[i].vel = (line_space - dist_table[i][it1]) * adjust_vel_coef
                 elif robots[i].status_2_end:
                     # robot 'i' is at the large index end
                     it0 = robots[i].key_neighbors[0]
@@ -889,21 +857,17 @@ while not sim_exit:
                     else:
                         robots[i].status_2_avail1[0] = True
                     # update the moving direction and velocity
-                    if abs(dist_table[i][it0] - line_space) < line_adjust_err:
-                        # line space is good, no need to adjust
-                        robots[i].vel = 0
+                    vect_temp = [robots[i].pos[0]-robots[it0].pos[0],
+                                 robots[i].pos[1]-robots[it0].pos[1]]  # from it0 to i
+                    ori_temp = math.atan2(vect_temp[1], vect_temp[0])
+                    if dist_table[i][it0] > line_space:
+                        # too far away, move closer to it0
+                        robots[i].ori = lf_reset_radian(ori_temp + math.pi/2)
+                        robots[i].vel = (dist_table[i][it0] - line_space) * adjust_vel_coef
                     else:
-                        robots[i].vel = const_vel_2  # slower speed for adjusting the line
-                        # if adjusting, just moving closer or farther to it0
-                        vect_temp = [robots[i].pos[0]-robots[it0].pos[0] ,
-                                     robots[i].pos[1]-robots[it0].pos[1]]  # from it0 to i
-                        ori_temp = math.atan2(vect_temp[1], vect_temp[0])
-                        if dist_table[i][it0] > line_space:
-                            # too far away, move closer to it0
-                            robots[i].ori = lf_reset_radian(ori_temp + math.pi/2)
-                        else:
-                            # too close, move farther away from it0
-                            robots[i].ori = ori_temp
+                        # too close, move farther away from it0
+                        robots[i].ori = ori_temp
+                        robots[i].vel = (line_space - dist_table[i][it0]) * adjust_vel_coef
                 else:
                     # robot 'i' is at no end
                     it0 = robots[i].key_neighbors[0]
@@ -918,17 +882,14 @@ while not sim_exit:
                     else:
                         robots[i].status_2_avail1[1] = False
                     # update the moving direction and velocity
-                    des_new = [(robots[it0].pos[0]+robots[it1].pos[0])/2 ,
+                    des_new = [(robots[it0].pos[0]+robots[it1].pos[0])/2,
                                (robots[it0].pos[1]+robots[it1].pos[1])/2]
                     vect_temp = (des_new[0]-robots[i].pos[0],
                                  des_new[1]-robots[i].pos[1])  # from robot 'i' to des
                     dist_temp = math.sqrt(vect_temp[0]*vect_temp[0] +
                                           vect_temp[1]*vect_temp[1])
-                    if dist_temp < line_adjust_err:
-                        robots[i].vel = 0
-                    else:
-                        robots[i].vel = const_vel_2
-                        robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
+                    robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
+                    robots[i].vel = dist_temp * adjust_vel_coef
             # decrease life time of robot '-1'
             elif robots[i].status == -1:
                 robots[i].status_n1_life = robots[i].status_n1_life - frame_period/1000.0

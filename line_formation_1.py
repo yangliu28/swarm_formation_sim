@@ -63,7 +63,7 @@ robot_size = 5  # robot modeled as dot, number of pixels in radius
 icon = pygame.image.load('icon_geometry_art.jpg')
 pygame.display.set_icon(icon)
 screen = pygame.display.set_mode(screen_size)
-pygame.display.set_caption('Line Formation 1 Simulation')
+pygame.display.set_caption('Line Formation 1 Simulation - Climbing')
 
 # for physics, origin is at left bottom corner, starting (0, 0)
 # it's more natural to do the calculation in right hand coordiante system
