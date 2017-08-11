@@ -32,7 +32,7 @@
 import pygame
 import math, random
 from line_formation_2_robot import LFRobot
-from line_formation_2_functions import *
+from formation_functions import *
 
 pygame.init()
 
@@ -560,10 +560,10 @@ while not sim_exit:
             if dist_table[it0][it1] > line_space:  # equally dist_table[it1][it0]
                 # attracting each other, most likely this happens
                 robots[it0].ori = ori_temp
-                robots[it1].ori = lf_reset_radian(ori_temp + math.pi)
+                robots[it1].ori = reset_radian(ori_temp + math.pi)
             else:
                 # repelling each other
-                robots[it0].ori = lf_reset_radian(ori_temp + math.pi)
+                robots[it0].ori = reset_radian(ori_temp + math.pi)
                 robots[it1].ori = ori_temp
             # no need to check if they are already within the space error of line space
             # this will be done in the next round of status change check
@@ -753,10 +753,10 @@ while not sim_exit:
                                               robots[it1].pos[0]-robots[it0].pos[0])
                 # then calculate the 'explosion' direction
                 if seq_temp < num_1_half:
-                    robots[i].ori = lf_reset_radian(ori_temp + math.pi*(seq_temp+1)/(num_1_half+1))
+                    robots[i].ori = reset_radian(ori_temp + math.pi*(seq_temp+1)/(num_1_half+1))
                     # always 'explode' to the left side
                 else:
-                    robots[i].ori = lf_reset_radian(ori_temp + math.pi*(num_online-seq_temp)/(num_2_half+1))
+                    robots[i].ori = reset_radian(ori_temp + math.pi*(num_online-seq_temp)/(num_2_half+1))
             # pop out this group from 'groups'
             groups.pop(g_it)
         # 10.s_back_0, life time of robot '-1' expires, becoming '0'
@@ -770,16 +770,16 @@ while not sim_exit:
             # change only direction of velocity
             if robots[i].pos[0] >= world_size[0]:  # out of right boundary
                 if math.cos(robots[i].ori) > 0:  # velocity on x is pointing right
-                    robots[i].ori = lf_reset_radian(2*(math.pi/2) - robots[i].ori)
+                    robots[i].ori = reset_radian(2*(math.pi/2) - robots[i].ori)
             elif robots[i].pos[0] <= 0:  # out of left boundary
                 if math.cos(robots[i].ori) < 0:  # velocity on x is pointing left
-                    robots[i].ori = lf_reset_radian(2*(math.pi/2) - robots[i].ori)
+                    robots[i].ori = reset_radian(2*(math.pi/2) - robots[i].ori)
             if robots[i].pos[1] >= world_size[1]:  # out of top boundary
                 if math.sin(robots[i].ori) > 0:  # velocity on y is pointing up
-                    robots[i].ori = lf_reset_radian(2*(0) - robots[i].ori)
+                    robots[i].ori = reset_radian(2*(0) - robots[i].ori)
             elif robots[i].pos[1] <= 0:  # out of bottom boundary
                 if math.sin(robots[i].ori) < 0:  # velocity on y is pointing down
-                    robots[i].ori = lf_reset_radian(2*(0) - robots[i].ori)
+                    robots[i].ori = reset_radian(2*(0) - robots[i].ori)
             # update one step of distance
             travel_dist = robots[i].vel * frame_period/1000.0
             robots[i].pos[0] = robots[i].pos[0] + travel_dist*math.cos(robots[i].ori)
@@ -794,7 +794,7 @@ while not sim_exit:
                     if dist_table[i][it0] > line_space:
                         robots[i].ori = ori_temp
                     else:
-                        robots[i].ori = lf_reset_radian(ori_temp + math.pi)
+                        robots[i].ori = reset_radian(ori_temp + math.pi)
                 else:  # for the merging robot
                 # the merging des should be updated, because robots '2' are also moving
                     if (robots[i].key_neighbors[0] == -1 or
@@ -848,7 +848,7 @@ while not sim_exit:
                     ori_temp = math.atan2(vect_temp[1], vect_temp[0])
                     if dist_table[i][it1] > line_space:
                         # too far away, move closer to it1
-                        robots[i].ori = lf_reset_radian(ori_temp + math.pi)
+                        robots[i].ori = reset_radian(ori_temp + math.pi)
                         robots[i].vel = (dist_table[i][it1] - line_space) * adjust_vel_coef
                     else:
                         # too close, move farther away from it1
@@ -868,7 +868,7 @@ while not sim_exit:
                     ori_temp = math.atan2(vect_temp[1], vect_temp[0])
                     if dist_table[i][it0] > line_space:
                         # too far away, move closer to it0
-                        robots[i].ori = lf_reset_radian(ori_temp + math.pi/2)
+                        robots[i].ori = reset_radian(ori_temp + math.pi/2)
                         robots[i].vel = (dist_table[i][it0] - line_space) * adjust_vel_coef
                     else:
                         # too close, move farther away from it0
@@ -908,7 +908,7 @@ while not sim_exit:
         screen.fill(background_color)
         # draw the robots
         for i in range(robot_quantity):
-            display_pos = lf_world_to_display(robots[i].pos, world_size, screen_size)
+            display_pos = world_to_display(robots[i].pos, world_size, screen_size)
             # get color of the robot
             color_temp = ()
             if robots[i].status == 0:
