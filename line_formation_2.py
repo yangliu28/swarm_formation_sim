@@ -1,5 +1,5 @@
 # second line formation simulation, using merging method instead of climbing
-# this program shares a lot of code from first line formation sim program
+# this program shared the same framework with previous line formation simulation program
 
 # merging method analysis(compared to climbing):
 # The line may not be as straight as in first simulation, and it would take time to stretch
@@ -21,21 +21,22 @@
 # Only allowed status transitions are:
     # forward: '-1'->'0', '0'->'1', '1'->'2'
     # backward: '1'->'-1', '2'->'-1'
+# The 'key_neighbors' attribute carries more information than in previous line simulation.
 
 # make the line straight and evenly spaced:
-# A somple proportional control method was used here. The robots on the line '2' never stops
-# adjusting, there is no threshold for the distance error. The robot always moves toward
-# its calculated target, and to stablize the tracking, the moving velocity will decrease
-# proportionally to the distance error.
+# A simple proportional control method was used here. The robots on the line '2' never stops
+# adjusting, there is no threshold for the distance error. The robot is always heading toward
+# the calculated target position. And to stablize the tracking, the moving velocity will
+# decrease proportionally to the distance error.
 
 import pygame
-import math, random, sys
+import math, random
 from line_formation_2_robot import LFRobot
 from line_formation_2_functions import *
 
 pygame.init()
 
-# add music background, just for fun
+# add music as background, just for fun :)
 pygame.mixer.music.load('audio/the-flight-of-the-bumblebee.ogg')
 pygame.mixer.music.play(-1)  # -1 for playing infinite times
 pygame.mixer.music.set_volume(0.5)  # half volume
@@ -74,9 +75,9 @@ life_incre = 8  # number of seconds a new member adds to a group
 group_id_upper_limit = 1000  # upper limit of random integer for group id
 n1_life_lower = 3  # lower limit of life time for status '-1'
 n1_life_upper = 8  # upper limit of life time for status '-1'
-# coefficient for calculating velocity of robot on the line for adjust the line
+# coefficient for calculating velocity of robot '2' on the line for adjusting
 # the smaller the distance error, the smaller the velocity
-# tune this parameter to adjust the line quickly and stably
+# tune this parameter to adjust the line more quickly and stably
 adjust_vel_coef = const_vel/line_space * 2
 
 # instantiate the robot swarm as list
