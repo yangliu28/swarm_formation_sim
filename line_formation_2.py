@@ -35,6 +35,11 @@ from line_formation_2_functions import *
 
 pygame.init()
 
+# add music background, just for fun
+pygame.mixer.music.load('audio/the-flight-of-the-bumblebee.ogg')
+pygame.mixer.music.play(-1)  # -1 for playing infinite times
+pygame.mixer.music.set_volume(0.5)  # half volume
+
 # for display, window origin is at left up corner
 screen_size = (1200, 1000)  # width and height
 background_color = (0, 0, 0)  # black background
