@@ -8,7 +8,7 @@ All the formation control algorithms simulated here agree on a few conditions of
 
 *line_formation_2.py* is similar to the first line formation, except implementing merging method instead of climbing to form the line.
 
-*loop_formation.py* uses same merging method to form a loop, not aiming for a perfect cicle though.
+*loop_formation.py* uses same merging method to form a loop, not necessarily a round circle though. The initial loop starts with a pair, then a triangle.
 
 ## Run the simulations
 
