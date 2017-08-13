@@ -259,6 +259,7 @@ while not sim_exit:
                         # the target robot should have at least one spot availbe to be merged
                         s_merging[i] = target_robot
                 # process neighbors with status '1', second priority
-                
+                elif 1 in status_list[i]:
+                    # check if '1_0_0'
 
 
