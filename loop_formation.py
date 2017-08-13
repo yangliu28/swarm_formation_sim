@@ -26,7 +26,7 @@
 # reasons why still two stages forming, even when a '0' discovers two '0'
 
 import pygame
-import math, random
+import math, random, sys
 from loop_formation_robot import LFRobot
 from formation_functions import *
 
@@ -167,12 +167,13 @@ while not sim_exit:
         # the priority is in the following order
         s_merging = {}  # robot '0' detects robot '2', merging into its group
             # key is id of robot '0', value is id of corresponding robot '2'
-        s_forming0 = {}  # robot '0' forms the pair with another '0', becoming '1_0_0'
+        s_forming2 = {}  # two '1_0_0' form the triangle with a '0', becoming '1_0_1'
+            # key is group id of the two '1_0_0', value is the new robot '0'
+            # it is designed to be triggered by the new robot '0'
+        s_forming1 = {}  # robot '0' forms the pair with another '0', becoming '1_0_0'
             # key is id of robot '0' that discovers other robots '0' in range
             # value is a list of robots '0' that are detected, in order of ascending dist
-        s_forming1 = {}  # two '1_0_0' form the triangle with a '0', becoming '1_0_1'
-            # key is group id of the two '1_0_0', value is the new robot '0'
-            # it can be triggered from both ways, '1_0_0' to '0', or '0' to '1_0_0'
+            # this works the same with "s_init_form" from previous simulations
         s_form_done = {}  # robot '1_0_1' finishes initial forming, becoming '2'
             # key is group id of the robots '1_0_1'
             # value is a list of robots in group that agree froming is done, should be all
@@ -194,28 +195,59 @@ while not sim_exit:
             if robots[i].status == 0:
                 # check if this robot has valid neighbors at all
                 if len(index_list[i]) == 0: continue  # skip the neighbor check
-                # process neighbors with status '2', highest priority
+                # pre-process: classify the robot '1' neighbors into their substatus,
+                # because robot '0' reacts differently to different substatuses of '1'
+                # new statuses have been assigned as follows:
+                    # '1_0_0' -> '1.1'
+                    # '1_0_1' -> '1.2'
+                    # '1_1'   -> '1.3'
+                if 1 in status_list[i]:
+                    index_temp = 0
+                    while 1 in status_list[i]:
+                        index_temp = status_list[i].index(1)
+                        robot_temp = index_list[i][index_temp]
+                        status_1_sub = robots[index_temp].status_1_sub
+                        if status_1_sub == 0:
+                            status_1_0_sub = robots[index_temp].status_1_0_sub
+                            if status_1_0_sub == 0:
+                                status_list[i][index_temp] = 1.1  # 1.1 for status '1_0_0'
+                            elif status_1_0_sub == 1:
+                                status_list[i][index_temp] = 1.2  # 1.2 for status '1_0_1'
+                            else:  # just in case
+                                print("wrong sub status of 1_0")
+                                sys.exit()
+                        elif status_1_sub == 1:
+                            status_list[i][index_temp] = 1.3  # 1.3 for status '1_1'
+                        else:  # just in case
+                            prin("wrong sub status of 1")
+                            sys.exit()
+                # the sequence of processing the neighbors are:
+                    # '2' -> '1.1' -> '0' -> '1.2'&'1.3'
+                    # This means if there is a group of '2', join them; otherwise if there is a
+                    # pair of '1_0_0', join them; otherwise if there is a '0', pair with it; if
+                    # all the above failed, just get bounced away by closest '1_0_1' or '1_1'
+                # start processing neighbors with status '2'
                 if 2 in status_list[i]:
                     # check the group attribution of all the '2'
                     # get the robot id and group id of the first '2'
-                    current_index = status_list[i].index(2)
-                    current_robot = index_list[i][current_index]
-                    current_group = robots[current_robot].group_id
-                    groups_temp = {current_group: [current_robot]}
+                    index_temp = status_list[i].index(2)
+                    robot_temp = index_list[i][index_temp]
+                    group_temp = robots[robot_temp].group_id
+                    groups_temp = {group_temp: [robot_temp]}
                     # check if there are still '2' in the list
-                    while 2 in status_list[i][current_index+1:]:
-                        # indexing the next '2' from current_index+1
-                        # update the current_index, current_robot, current_group
-                        current_index = status_list[i].index(2, current_index+1)
-                        current_robot = index_list[i][current_index]
-                        current_group = robots[current_robot].group_id
+                    while 2 in status_list[i][index_temp+1:]:
+                        # indexing the next '2' from index_temp+1
+                        # update the index_temp, robot_temp, group_temp
+                        index_temp = status_list[i].index(2, index_temp+1)
+                        robot_temp = index_list[i][index_temp]
+                        group_temp = robots[robot_temp].group_id
                         # update groups_temp
-                        if current_group in groups_temp.keys():
+                        if group_temp in groups_temp.keys():
                             # append this robot in the existing group
-                            groups_temp[current_group].append(current_robot)
+                            groups_temp[group_temp].append(robot_temp)
                         else:
                             # add new group id in groups_temp and add this robot
-                            groups_temp[current_group] = [current_robot]
+                            groups_temp[group_temp] = [robot_temp]
                     # check if there are multiple groups detected from the '2'
                     target_robot = 0  # the target robot '2' to merge into the group
                     if len(groups_temp.keys()) == 1:
@@ -257,9 +289,123 @@ while not sim_exit:
                     # check if target robot has been located, prepare to grab on it
                     if target_robot != -1:  # not the initial value of robot_min
                         # the target robot should have at least one spot availbe to be merged
+                        # status transition scheduled, robot '0' is becoming '1_1'
                         s_merging[i] = target_robot
-                # process neighbors with status '1', second priority
-                elif 1 in status_list[i]:
-                    # check if '1_0_0'
+                # process neighbors with status '1.1'
+                elif 1.1 in status_list[i]:
+                    # check the group attribution of all '1.1'
+                    # get the robot id and group id of the first 1.1
+                    index_temp = status_list[i].index(1.1)
+                    robot_temp = index_list[i][index_temp]
+                    group_temp = robots[robot_temp].group_id
+                    groups_temp = {group_temp: [robot_temp]}
+                    # check if there are still '1.1' in the list
+                    while 1.1 in status_list[i][index_temp+1:]:
+                        # update the index_temp, robot_temp, group_temp
+                        index_temp = status_list[i].index(1.1, index_temp+1)
+                        robot_temp = index_list[i][index_temp]
+                        group_temp = robots[robot_temp].group_id
+                        # update groups_temp
+                        if group_temp in groups_temp.keys():
+                            # append this robot in the existing group
+                            groups_temp[group_temp].append(robot_temp)
+                        else:
+                            # add new entry of group id in groups_temp and add this robot
+                            groups_temp[group_temp] = [robot_temp]
+                    # check if there are multiple groups detected from the '1.1'
+                    target_robot = 0  # the target robot '1.1' to form triangle with
+                    if len(groups_temp.keys()) == 1:
+                        # there is only one group detected from the '1.1'
+                        dist_min = 2*comm_range  # variable for smallest distance
+                        robot_min = -1  # corresponding robot with dist_min
+                        # search the closest '1.1'
+                        for j in groups_temp.values()[0]:
+                            if dist_table[i][j] < dist_min:
+                                # there is no availability restriction here
+                                dist_min = dist_table[i][j]
+                                robot_min = j
+                        target_robot = robot_min
+                    else:
+                        # there are more than one group detected from the '1.1'
+                        # choose the group that has the most members in it
+                        member_max = 0  # variable for the maximum number of members
+                        group_max = 0  # corresponding group id with member_max
+                        for j in groups_temp.keys():
+                            if groups[j][0] > member_max:
+                                member_max = groups[j][0]
+                                group_max = j
+                        # search the closest '1.1' inside that group "group_max"
+                        dist_min = 2*comm_range
+                        robot_min = -1
+                        for j in groups_temp[group_max]:
+                            if dist_table[i][j] < dist_min:
+                                dist_min = dist_table[i][j]
+                                robot_min = j
+                        target_robot = robot_min
+                    # check if target robot has been located, form the triangle with it
+                    if target_robot != -1:  # not the initial value of "robot_min"
+                        group_temp = robots[i].group_id
+                        # status transition scheduled, robot '0' & '1_0_0' are becoming '1_0_1'
+                        if group_temp in s_forming2.keys():
+                            s_forming2[group_temp].append(target_robot)
+                        else:  # most likely this happens
+                            s_forming2[group_temp] = [target_robot]
+                # process neighbors with status '0'
+                elif 0 in status_list[i]:
+                    # establish a list of all '0', in order of ascending distance
+                    # the list is to be checked later if grouping is possible and no conflict
+                    # remove possible '1.2' and '1,3' from status_list
+                    while 1.2 in status_list[i]:
+                        index_temp = status_list[i].index(1.2)
+                        status_list[i].pop(index_temp)
+                        index_list[i].pop(index_temp)
+                    while 1.3 in status_list[i]:
+                        index_temp = status_list[i].index(1.3)
+                        status_list[i].pop(index_temp)
+                        index_list[i].pop(index_temp)
+                    # status transition scheduled, robot '0' is becoming '1_0_0'
+                    s_forming1[i] = index_list[i][:]
+                # process neighbors with status '1.2' and '1.3'
+                elif 1.2 in stauts_list[i] or 1.3 in status_list[i]:
+                    # find the closest '1.2' or '1.3', and get bounced away by it
+                    dist_min = 2*comm_range
+                    robot_min = -1
+                    # if here, it means '1.2' and '1.3' are the only robot left in index_list
+                    for j in index_list[i]:
+                        if dist_table[i][j] < dist_min:
+                            dist_min = dist_table[i][j]
+                            robot_min = j
+                    # target robot located, the robot_min, should not still be '-1' here
+                    # get bounced away from this robot, update the moving direction
+                    vect_temp = (robots[i].pos(0) - robots[robot_min].pos(0),
+                                 robots[i].pos(1) - robots[robot_min].pos(1))
+                    # new orientation is pointing from robot_min to the host robot
+                    robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
+            # for the host robot havign status of '1'
+            elif robots[i].status == 1:
+                # disassemble check, get group attribution of all '1' and '2'
+                # pop out the '0' first from the status_list
+                while 0 in status_list[i]:
+                    index_temp = status_list[i].index(0)
+                    status_list[i].pop(index_temp)
+                    index_list[i].pop(index_temp)
+                if len(index_list[i]) > 0:  # ensure at least one in-group robot around
+                    # start the group attribution dictionaary with first robot
+                    group_temp = robots[index_list[i][0]].group_id
+                    groups_temp = {group_temp:[robot_temp]}
+                    # then check the rest for group attribution
+                    for j in index_list[i]:
+                        group_temp = robots[j].group_id
+                        if group_temp in groups_temp.keys():
+                            groups_temp[group_temp].append(j)
+                        else:
+                            groups_temp[group_temp] = [j]
+                    # check if there are multiple groups detected
+                    if len(groups_temp.keys()) > 1:
+                        # status transition scheduled, to disassemble the minority groups
+                        s_disassemble.append(groups_temp.keys())
+                        # may produce duplicates in s_disassemble, not big problem
+                # check if any status transition needs to be scheduled
+                
 
 
