@@ -22,6 +22,12 @@
     # even their distance is not good yet. When in '1_0_1', after the three robots form
     # the perfect triangle and good loop space, they will trigger a status transition
     # of becoming '2'.
+# The index of robots on the loop starts with 0 and goes counter-clockwise, the index 0
+# robot never change its index, when a new robot merges, all robots after it on the loop
+# will increase index by 1. Since a loop has no end, all robots have two key neighbors.
+# The definition of key neighbors is that, the first one is for the robot before it on
+# the loop, second one for robot after it.
+
 
 # reasons why still two stages forming, even when a '0' discovers two '0'
 
@@ -92,6 +98,23 @@ groups = {}
 # instantiate a distance table for every pair of robots
 # make sure all data in table is being written when updating
 dist_table = [[0 for j in range(robot_quantity)] for i in range(robot_quantity)]
+
+# function for solving destination on the loop based on positions of two neighbors
+def solve_des(pos_l, pos_r, dist_0, l_d):
+    # first input is 2D position of neighbor on the left, second for on the right
+    # dist_0 is the distance between pos_l and pos_r
+    # l_d is the desired distance to the two neighbors
+    vect_0 = (pos_l[0]-pos_r[0], pos_l[1]-pos_r[1])  # vector from pos_r to pos_l
+    midpoint = [(pos_l[0]+pos_r[0])/2, (pos_l[1]+pos_r[1])/2]
+    if dist_0 >= 2*l_d:
+        # two neighbors are too far away, destination will be just midpoint
+        return midpoint
+    else:
+        # get direction perpendicular to the the line of pos_l and pos_r
+        vect_1 = [-vect_0[1]/dist_0, vect_0[0]/dist_0]  # rotate vect_0 ccw for 90 degrees
+        dist_1 = math.sqrt(l_d*l_d - dist_0*dist_0/4)
+        # return the point from midpoint, goes along vect_1 for dist_1
+        return [midpoint[0]+vect_1[0]*dist_1, midpoint[1]+vect_1[1]*dist_1]
 
 # the loop
 sim_exit = False  # simulation exit flag
@@ -174,9 +197,8 @@ while not sim_exit:
             # key is id of robot '0' that discovers other robots '0' in range
             # value is a list of robots '0' that are detected, in order of ascending dist
             # this works the same with "s_init_form" from previous simulations
-        s_form_done = {}  # robot '1_0_1' finishes initial forming, becoming '2'
-            # key is group id of the robots '1_0_1'
-            # value is a list of robots in group that agree froming is done, should be all
+        s_form_done = []  # robot '1_0_1' finishes initial forming, becoming '2'
+            # list of group id that the triangle forming is done
         s_merge_done = []  # robot '1_1' finishes merging, becoming '2'
             # list of robots '1' that finished merging
         s_group_exp = []  # life time of a group naturally expires, disassemble it
@@ -189,7 +211,7 @@ while not sim_exit:
         # such behaviors should be observable during tests, and program should not run into
         # any robot lost once it is free of bugs. Therefore it's not necessary for checking.
 
-        # check 'robots' for any status change, schedule for processing in next step
+        # check 'robots' variable for any status change, schedule for processing in next step
         for i in range(robot_quantity):
             # for the host robot having status of '0'
             if robots[i].status == 0:
@@ -381,10 +403,10 @@ while not sim_exit:
                                  robots[i].pos(1) - robots[robot_min].pos(1))
                     # new orientation is pointing from robot_min to the host robot
                     robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
-            # for the host robot havign status of '1'
+            # for the host robot having status of '1'
             elif robots[i].status == 1:
                 # disassemble check, get group attribution of all '1' and '2'
-                # pop out the '0' first from the status_list
+                # pop out the '0' from the status_list
                 while 0 in status_list[i]:
                     index_temp = status_list[i].index(0)
                     status_list[i].pop(index_temp)
@@ -406,6 +428,85 @@ while not sim_exit:
                         s_disassemble.append(groups_temp.keys())
                         # may produce duplicates in s_disassemble, not big problem
                 # check if any status transition needs to be scheduled
-                
+                if robots[i].status_1_sub == 0:
+                    if status[i].status_1_0_sub = 1:
+                        # host robot is in the triangle forming phase
+                        # check if this group has already been scheduled for status transition
+                        if robots[i].group_id not in s_form_done:
+                            it0 = robots[i].key_neighbors[0]
+                            it1 = robots[i].key_neighbors[1]
+                            dist_satisfied = True  # flag indicating the distances are satisfied
+                            if abs(dist_table[i][it0] - loop_space) > space_error:
+                                dist_satisfied = False
+                            elif abs(dist_table[i][it1] - loop_space) > space_error:
+                                dist_satisfied = False
+                            elif abs(dist_table[it0][it1] - loop_space) > space_error:
+                                dist_satisfied = False
+                            if dist_satisfied:
+                                # status transition scheduled, robots '1_0_1' are becoming '2'
+                                s_form_done.append(robots[i].group_id)
+                elif robots[i].status_1_sub == 1:
+                    # robot is in the merging phase
+                    vect_temp = (robots[i].status_1_1_des[0] - robots[i].pos[0],
+                                 robots[i].status_1_1_des[1] - robots[i].pos[1])
+                    dist_temp = math.sqrt(vect_temp[0]*vect_temp[0]+
+                                          vect_temp[1]*vect_temp[1])
+                    if dist_temp < space_error:
+                        # status transition scheduled, robot '1_1' is becoming '2'
+                        s_merge_done.append(i)
+            # for the host robot having status of '2'
+            elif robots[i].status == 2:
+                # disassemble check, get group attribution of all '1' and '2'
+                # pop out the '0' from the status_list
+                while 0 in status_list[i]:
+                    index_temp = status_list[i].index(0)
+                    status_list[i].pop(index_temp)
+                    index_list[i].pop(index_temp)
+                if len(index_list[i]) > 0:  # ensure at least one in-group robot around
+                    # start the group attribution dictionaary with first robot
+                    group_temp = robots[index_list[i][0]].group_id
+                    groups_temp = {group_temp:[robot_temp]}
+                    # then check the rest for group attribution
+                    for j in index_list[i]:
+                        group_temp = robots[j].group_id
+                        if group_temp in groups_temp.keys():
+                            groups_temp[group_temp].append(j)
+                        else:
+                            groups_temp[group_temp] = [j]
+                    # check if there are multiple groups detected
+                    if len(groups_temp.keys()) > 1:
+                        # status transition scheduled, to disassemble the minority groups
+                        s_disassemble.append(groups_temp.keys())
+                        # may produce duplicates in s_disassemble, not big problem
+            # for the host robot having status of '-1'
+            elif robots[i].status == -1:
+                # check if life time expires
+                if robots[i].status_n1_life < 0:
+                    # status transition scheduled, robot '-1' is becoming '0'
+                    s_back_0.append(i)
 
+        # check 'groups' variable for any status change
+        for g_it in groups.keys():
+            if groups[g_it][4]: continue  # already being dominant group
+            if groups[g_it][0] > robot_quantity/2:
+                # the group has more than half the totoal number of robots
+                groups[g_it][4] = True  # becoming dominant group
+                groups[g_it][1] = 100.0  # a large number
+            if groups[g_it][1] < 0:  # life time of a group expires
+                # schedule operation to disassemble this group
+                s_group_exp.append(g_it)
 
+        # process the scheduled status change, in the order of the designed priority
+        # 1.s_merging, robot '2' merges into the group where the robot '2' is from
+        for i in s_merging.keys():
+            it0 = s_merging[i]  # 'it0' is the robot that robot 'i' tries to merge with
+            # discuss the merging availability of robot 'it0'
+            g_it = robots[it0].group_id
+            # it0 was available when added to s_merging, but check in case occupied again
+            # merge availablility on left side
+            side0_avail = robots[it0].status_2_avail1[0] & robots[it0].status_2_avail2[0]
+            side0_des = [-1,-1]  # destination if merging at left side
+            if side0_avail:
+                # calculate the merging destination
+                it1 = robots[it0].key_neighbors[0]
+                side0
