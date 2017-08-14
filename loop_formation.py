@@ -31,6 +31,8 @@
 
 # reasons why still two stages forming, even when a '0' discovers two '0'
 
+# add error check for in case dist_table < 0
+
 import pygame
 import math, random, sys
 from loop_formation_robot import LFRobot
@@ -74,7 +76,7 @@ n1_life_lower = 3  # lower limit of life time for status '-1'
 n1_life_upper = 8  # upper limit of life time for status '-1'
 # coefficient for calculating velocity of robot '2' on the loop for adjusting
 # as the distance error decreases, the loop adjusting velocity also decreases
-adjust_vel_coef = const_vel/loop_space * 2
+adjust_vel_coef = const_vel/loop_space
 
 # instantiate the robot swarm as list
 robots = []  # container for all robots, index is its identification
@@ -106,8 +108,9 @@ def des_solver(pos_l, pos_r, dist_0, l_d):
     # l_d is the desired distance to the two neighbors
     vect_0 = (pos_l[0]-pos_r[0], pos_l[1]-pos_r[1])  # vector from pos_r to pos_l
     midpoint = [(pos_l[0]+pos_r[0])/2, (pos_l[1]+pos_r[1])/2]
-    if dist_0 >= 2*l_d:
+    if dist_0 >= 2*l_d or dist_0 < 0:
         # two neighbors are too far away, destination will be just midpoint
+        # dist_0 will be passed from dist_table, just in case if -1 is accidentally passed
         return midpoint
     else:
         # get direction perpendicular to the the line of pos_l and pos_r
@@ -392,7 +395,7 @@ while not sim_exit:
                     # find the closest '1.2' or '1.3', and get bounced away by it
                     dist_min = 2*comm_range
                     robot_min = -1
-                    # if here, it means '1.2' and '1.3' are the only robot left in index_list
+                    # at this time, '1.2' and '1.3' are the only robots left in index_list[i]
                     for j in index_list[i]:
                         if dist_table[i][j] < dist_min:
                             dist_min = dist_table[i][j]
@@ -436,7 +439,8 @@ while not sim_exit:
                         if robots[i].group_id not in s_form_done:
                             it0 = robots[i].key_neighbors[0]
                             it1 = robots[i].key_neighbors[1]
-                            dist_satisfied = True  # flag indicating the distances are satisfied
+                            # check all threee sides to see if distances are satisfied
+                            dist_satisfied = True
                             if abs(dist_table[i][it0] - loop_space) > space_error:
                                 dist_satisfied = False
                             elif abs(dist_table[i][it1] - loop_space) > space_error:
@@ -448,11 +452,15 @@ while not sim_exit:
                                 s_form_done.append(robots[i].group_id)
                 elif robots[i].status_1_sub == 1:
                     # robot is in the merging phase
-                    vect_temp = (robots[i].status_1_1_des[0] - robots[i].pos[0],
-                                 robots[i].status_1_1_des[1] - robots[i].pos[1])
-                    dist_temp = math.sqrt(vect_temp[0]*vect_temp[0]+
-                                          vect_temp[1]*vect_temp[1])
-                    if dist_temp < space_error:
+                    it0 = robots[i].key_neighbors[0]
+                    it1 = robots[i].key_neighbors[1]
+                    # check the two distances to see if they are satisfied
+                    dist_satisfied = True
+                    if abs(dist_table[i][it0] - loop_space) > space_error:
+                        dist_satisfied = False
+                    elif abs(dist_table[i][it1] - loop_space) > space_error:
+                        dist_satisfied = False
+                    if dist_satisfied:
                         # status transition scheduled, robot '1_1' is becoming '2'
                         s_merge_done.append(i)
             # for the host robot having status of '2'
@@ -585,7 +593,7 @@ while not sim_exit:
                 if dist_table[i][it1] < dist_min:
                     dist_min = dist_table[i][it1]
                     robot_min = i
-            it2 = robot_min  # the acquired new member
+            it2 = robot_min  # the decided new member
             # deciding which side robot it2 is at along the vector from it0 to it1
             vect_0 = (robots[it1].pos[0]-robots[it0].pos[0],
                       robots[it1].pos[1]-robots[it0].pos[1])  # vector from it0 to it1
@@ -595,11 +603,11 @@ while not sim_exit:
             if (vect_0[0]*vect_1[1]-vect_0[1]*vect_1[0]) > 0:
                 # it2 is at left side of vector from it0 to it1
                 # this is the desired sequence, it goes ccw from it0 to it1 to it2
-                pass
+                groups[g_it][3] = [it0, it1]  # it actually does nothing
             else:
                 # it2 is at right side of vector from it0 to it1
-                # swap pos of it0 and it1 in groups variable
-                groups[g_it][3] = [it1, it0]
+                # (it's very unlikely that it2 is on the line of it0 and it1)
+                groups[g_it][3] = [it1, it0]  # swap positions of it0 and it1
                 it0 = groups[g_it][3][0]  # get the updated it0 and it1
                 it1 = groups[g_it][3][1]
             # update the robots[it2], the new member
@@ -607,14 +615,14 @@ while not sim_exit:
             robots[it2].group_id = g_it
             robots[it2].status_1_sub = 0
             robots[it2].status_1_0_sub = 1
-            # it1 is on left, it0 is on right, because it2 is the end index on loop
+            # it1 is on left, it0 is on right, because it2 is the end index robot on loop
             des_new = des_solver(robots[it1].pos, robots[it0].pos,
                                  dist_table[it1][it0], loop_space)
             robots[it2].status_1_0_1_des = des_new
             vect_temp = (des_new[0]-robots[it2].pos[0], des_new[1]-robots[it2].pos[1])
             robots[it2].ori = math.atan2(vect_temp[1], vect_temp[0])
             robots[it2].key_neighbors = [it1, it0]
-            # update the robots[it0], the index 0 old member
+            # update the robots[it0]
             robots[it0].status_1_0_sub = 1
             des_new = des_solver(robots[it2].pos, robots[it1].pos,
                                  dist_table[it2][it1], loop_space)
@@ -622,7 +630,7 @@ while not sim_exit:
             vect_temp = (des_new[0]-robots[it0].pos[0], des_new[1]-robots[it0].pos[1])
             robots[it0].ori = math.atan2(vect_temp[1], vect_temp[0])
             robots[it0].key_neighbors = [it2, it1]
-            # update the robots[it0], the index 1 old member
+            # update the robots[it1]
             robots[it1].status_1_0_sub = 1
             des_new = des_solver(robots[it0].pos, robots[it2].pos,
                                  dist_table[it0][it2], loop_space)
@@ -812,7 +820,7 @@ while not sim_exit:
                 if robots[i].status_1_sub == 0 and robots[i].status_1_0_sub == 0:
                     # for the pair forming robots '1_0_0'
                     it0 = robots[i].key_neighbors[0]
-                    if abs(dist_table[i][it0]-loop_space) < space_error:
+                    if abs(dist_table[i][it0] - loop_space) < space_error:
                         # stop the robot if distance is good
                         robots[i].vel = 0
                     else:
@@ -824,14 +832,18 @@ while not sim_exit:
                             robots[i].ori = ori_temp
                         else:
                             robots[i].ori = reset_radian(ori_temp + math.pi)
-                elif ((robots[i].status_1_sub == 0 and robots[i].status_1_0_sub == 0) or
+                elif ((robots[i].status_1_sub == 0 and robots[i].status_1_0_sub == 1) or
                       robots[i].status_1_sub == 1):
                     # for the triangle forming robots '1_0_1', or merging robots '1_1'
                     it0 = robots[i].key_neighbors[0]
                     it1 = robots[i].key_neighbors[1]
                     new_des = des_solver(robots[it0].pos, robots[it1].pos,
                                          dist_table[it0][it1], loop_space)
-                    robots[i].status_1_0_1_des = new_des
+                    # update the new destination
+                    if robots[i].status_1_sub == 0:  # for '1_0_1'
+                        robots[i].status_1_0_1_des = new_des
+                    else:  # for '1_1'
+                        robots[i].status_1_1_des = new_des
                     vect_temp = (new_des[0]-robots[i].pos[0],
                                  new_des[1]-robots[i].pos[1])
                     robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
@@ -853,10 +865,9 @@ while not sim_exit:
                     robots[i].status_2_avail1 = [False,False]
                 else:
                     robots[i].status_2_avail1 = [True,True]
-                # update destination, moving direction, and velocity
+                # update moving direction and velocity
                 new_des = des_solver(robots[it0].pos, robots[it1].pos,
                                      dist_table[it0][it1], loop_space)
-                robots[i].status_1_0_1_des = new_des
                 vect_temp = (new_des[0]-robots[i].pos[0],
                              new_des[1]-robots[i].pos[1])
                 robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
