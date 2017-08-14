@@ -728,8 +728,125 @@ while not sim_exit:
                 new_seq = robots[it0].status_2_sequence + 1
                 robots[i].status_2_sequence = new_seq
                 groups[g_it][2].insert(new_seq, i)
-            robots[i]
+            robots[i].status_2_avail2 = [True,True]
+            # update for robot 'it0' and 'it1'
+            robots[it0].key_neighbors[1] = i  # right side of left neighbor
+            robots[it1].key_neighbors[0] = i  # left side of right neighbor
+            robots[it0].status_2_avail2[1] = True
+            robots[it1].status_2_avail2[0] = True
+            # update for 'groups' variable
+            groups[g_it][3].remove(i)
+        # 6.s_group_exp, natural life expiration of the groups
+        for g_it in s_group_exp:
+            s_disassemble.append([g_it])  # disassemble together in s_disassemble
+        # 7.s_disassemble, compare groups and disassemble all but the largest
+        s_dis_list = []  # list of groups that have been finalized for disassembling
+        # compare number of members to decide which groups to disassemble
+        for gs_it in s_disassemble:
+            if len(gs_it) == 1:  # disassemble trigger from other sources
+                if gs_it[0] not in s_dis_list:
+                    s_dis_list.append(gs_it[0])
+            else:
+                # compare which group has the most members, and disassemble the rest
+                g_temp = gs_it[:]
+                member_max = 0  # variable for maximum number of members
+                group_max = -1  # corresponding group id with member_max
+                for g_it in g_temp:
+                    if groups[g_it][0] > member_max:
+                        member_max = groups[g_it][0]
+                        group_max = g_it
+                g_temp.remove(group_max)  # remove the group with the most members
+                for g_it in g_temp:
+                    if g_it not in s_dis_list:
+                        s_dis_list.append(g_it)
+        # start disassembling
+        for g_it in s_dis_list:
+            # update the 'robots' variable
+            for i in groups[g_it][3]:  # for robots off the line
+                robots[i].vel = const_vel  # restore the faster speed
+                robots[i].status = -1
+                robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
+                robots[i].ori = random.random() * 2*math.pi - math.pi
+            # continue the idea of exploding robots, but it's much more straightforward here
+            for i in groups[g_it][2]:  # for robots on the loop
+                robots[i].vel = const_vel
+                robots[i].status = -1
+                robots[i].status_n1_life = random.randint(n1_life_lower, n1_life_upper)
+                it0 = robots[i].key_neighbors[0]
+                it1 = robots[i].key_neighbors[1]
+                vect_0 = (robots[it0].pos[0]-robots[it1].pos[0],
+                          robots[it0].pos[1]-robots[it1].pos[1])  # from it1 to it0
+                vect_1 = (-vect[1], vect[0])  # rotate vect_0 90 degrees ccw
+                robots[i].ori = math.atan2(vect_1[1], vect_1[0])  # exploding orientation
+            # update 'groups' variable
+            groups.pop(g_it)
+        # 8.s_back_0, life time of robot '-1' expires, becoming '0'
+        for i in s_back_0:
+            # still maintaining the old moving direction and velocity
+            robots[i].status = 0
+
+        # update the physics(pos, vel, and ori), and wall bouncing, life decrease of '-1'
+        for i in range(robot_quantity):
+            # check if out of boundaries, same algorithm from previous line formation program
+            # change only direction of velocity
+            if robots[i].pos[0] >= world_size[0]:  # out of right boundary
+                if math.cos(robots[i].ori) > 0:  # velocity on x is pointing right
+                    robots[i].ori = reset_radian(2*(math.pi/2) - robots[i].ori)
+            elif robots[i].pos[0] <= 0:  # out of left boundary
+                if math.cos(robots[i].ori) < 0:  # velocity on x is pointing left
+                    robots[i].ori = reset_radian(2*(math.pi/2) - robots[i].ori)
+            if robots[i].pos[1] >= world_size[1]:  # out of top boundary
+                if math.sin(robots[i].ori) > 0:  # velocity on y is pointing up
+                    robots[i].ori = reset_radian(2*(0) - robots[i].ori)
+            elif robots[i].pos[1] <= 0:  # out of bottom boundary
+                if math.sin(robots[i].ori) < 0:  # velocity on y is pointing down
+                    robots[i].ori = reset_radian(2*(0) - robots[i].ori)
+            # update one step of distance
+            travel_dist = robots[i].vel * frame_period/1000.0
+            robots[i].pos[0] = robots[i].pos[0] + travel_dist*math.cos(robots[i].ori)
+            robots[i].pos[1] = robots[i].pos[1] + travel_dist*math.sin(robots[i].ori)
+            # update moving direction and destination of robot '1'
+            if robots[i].status == 1:
 
 
+
+
+
+
+
+            # update moving direction, velocity and first merge availability of robot '2'
+            elif robots[i].status == 2:
+            elif robots[i].status == -1:
+        # life time decrease of the groups
+        for g_it in groups.keys():
+            if groups[g_it][4]: continue  # skip the dominant group
+            groups[g_it][1] = groups[g_it][1] - frame_period/1000.0
+
+        # graphics update
+        screen.fill(background_color)
+        # draw the robots
+        for i in range(robot_quantity):
+            display_pos = world_to_display(robots[i].pos, world_size, screen_size)
+            # get color of the robot
+            color_temp = ()
+            if robots[i].status == 0:
+                color_temp = robot_0_color
+            elif robots[i].status == 1:
+                if robots[i].status_1_sub == 0:
+                    if robots[i].status_1_0_sub == 0:
+                        color_temp = robot_1_0_0_color
+                    elif robots[i].status_1_0_sub == 1:
+                        color_temp = robot_1_0_1_color
+                elif robots[i].status_1_sub == 1:
+                    color_temp = robot_1_1_color
+            elif robots[i].status == 2:
+                color_temp = robot_2_color
+            elif robots[i].status == -1:
+                color_temp = robot_n1_color
+            # draw the robot as a small solid circle
+            pygame.draw.circle(screen, color_temp, display_pos, robot_size, 0)  # fill the circle
+        pygame.display.update()
+
+pygame.quit()
 
 
