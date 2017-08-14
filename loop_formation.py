@@ -807,16 +807,63 @@ while not sim_exit:
             robots[i].pos[1] = robots[i].pos[1] + travel_dist*math.sin(robots[i].ori)
             # update moving direction and destination of robot '1'
             if robots[i].status == 1:
-
-
-
-
-
-
-
+                if robots[i].status_1_sub == 0 and robots[i].status_1_0_sub == 0:
+                    # for the pair forming robots '1_0_0'
+                    it0 = robots[i].key_neighbors[0]
+                    if abs(dist_table[i][it0]-loop_space) < space_error:
+                        # stop the robot if distance is good
+                        robots[i].vel = 0
+                    else:
+                        vect_temp = (robots[it0].pos[0]-robots[i].pos[0],
+                                     robots[it0].pos[1]-robots[i].pos[1])  # from i to it0
+                        ori_temp = math.atan2(vect_temp[1], vect_temp[0])
+                        # update the moving direction
+                        if dist_table[i][it0] > loop_space:
+                            robots[i].ori = ori_temp
+                        else:
+                            robots[i].ori = reset_radian(ori_temp + math.pi)
+                elif ((robots[i].status_1_sub == 0 and robots[i].status_1_0_sub == 0) or
+                      robots[i].status_1_sub == 1):
+                    # for the triangle forming robots '1_0_1', or merging robots '1_1'
+                    it0 = robots[i].key_neighbors[0]
+                    it1 = robots[i].key_neighbors[1]
+                    new_des = des_solver(robots[it0].pos, robots[it1].pos,
+                                         dist_table[it0][it1], loop_space)
+                    robots[i].status_1_0_1_des = new_des
+                    vect_temp = (new_des[0]-robots[i].pos[0],
+                                 new_des[1]-robots[i].pos[1])
+                    robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
             # update moving direction, velocity and first merge availability of robot '2'
             elif robots[i].status == 2:
+                it0 = robots[i].key_neighbors[0]
+                it1 = robots[i].key_neighbors[1]
+                # update first merge availability
+                vect_0 = (robots[it0].pos[0]-robots[i].pos[0],
+                          robots[it0].pos[1]-robots[i].pos[1])  # from i to it0
+                vect_1 = (robots[it1].pos[0]-robots[i].pos[0],
+                          robots[it1].pos[1]-robots[i].pos[1])  # from i to it1
+                ori_0 = math.atan2(vect_0[1], vect_0[0])
+                ori_1 = math.atan2(vect_1[1], vect_1[0])
+                angle_diff = ori_0 - ori_1  # angle from vect_1 to vect_0
+                # reset to pisitive angle, do not use reset_radian() here
+                if angle_diff < 0: angle_diff = angle_diff + 2*math.pi
+                if angle_diff > math.pi:
+                    robots[i].status_2_avail1 = [False,False]
+                else:
+                    robots[i].status_2_avail1 = [True,True]
+                # update destination, moving direction, and velocity
+                new_des = des_solver(robots[it0].pos, robots[it1].pos,
+                                     dist_table[it0][it1], loop_space)
+                robots[i].status_1_0_1_des = new_des
+                vect_temp = (new_des[0]-robots[i].pos[0],
+                             new_des[1]-robots[i].pos[1])
+                robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
+                dist_temp = math.sqrt(vect_temp[0]*vect_temp[0]+
+                                      vect_temp[1]*vect_temp[1])
+                robots[i].vel = dist_temp * adjust_vel_coef
+            # decrease life time of robot '-1'
             elif robots[i].status == -1:
+                robots[i].status_n1_life = robots[i].status_n1_life - frame_period/1000.0
         # life time decrease of the groups
         for g_it in groups.keys():
             if groups[g_it][4]: continue  # skip the dominant group
