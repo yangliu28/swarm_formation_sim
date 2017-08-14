@@ -42,10 +42,10 @@ pygame.init()
 screen_size = (1200, 1000)  # width and height
 background_color = (0, 0, 0)  # black background
 robot_0_color = (0, 255, 0)  # for robot status '0', green
-robot_1_0_0_color = (255, 153, 153)  # for robot status '1_0_0', light pink
-robot_1_0_1_color = (255, 153, 153)  # for robot status '1_0_1', dark pink
-robot_1_1_color = (255, 153, 153)  # for robot status '1_1', dark pink
-robot_2_color = (255, 51, 0)  # for robot status '2', red
+robot_1_0_0_color = (255, 204, 204)  # for robot status '1_0_0', light pink
+robot_1_0_1_color = (255, 102, 102)  # for robot status '1_0_1', dark pink
+robot_1_1_color = (255, 102, 102)  # for robot status '1_1', dark pink
+robot_2_color = (255, 0, 0)  # for robot status '2', red
 robot_n1_color = (0, 51, 204)  # for robot status '-1', blue
 robot_size = 5  # robot modeled as dot, number of pixels in radius
 
@@ -74,7 +74,7 @@ n1_life_lower = 3  # lower limit of life time for status '-1'
 n1_life_upper = 8  # upper limit of life time for status '-1'
 # coefficient for calculating velocity of robot '2' on the loop for adjusting
 # as the distance error decreases, the loop adjusting velocity also decreases
-adjust_vel_coef = consst_vel/loop_space * 2
+adjust_vel_coef = const_vel/loop_space * 2
 
 # instantiate the robot swarm as list
 robots = []  # container for all robots, index is its identification
@@ -366,12 +366,12 @@ while not sim_exit:
                         target_robot = robot_min
                     # check if target robot has been located, form the triangle with it
                     if target_robot != -1:  # not the initial value of "robot_min"
-                        group_temp = robots[i].group_id
+                        group_temp = robots[target_robot].group_id
                         # status transition scheduled, robot '0' & '1_0_0' are becoming '1_0_1'
                         if group_temp in s_forming2.keys():
-                            s_forming2[group_temp].append(target_robot)
+                            s_forming2[group_temp].append(i)
                         else:  # most likely this happens
-                            s_forming2[group_temp] = [target_robot]
+                            s_forming2[group_temp] = [i]
                 # process neighbors with status '0'
                 elif 0 in status_list[i]:
                     # establish a list of all '0', in order of ascending distance
@@ -388,7 +388,7 @@ while not sim_exit:
                     # status transition scheduled, robot '0' is becoming '1_0_0'
                     s_forming1[i] = index_list[i][:]
                 # process neighbors with status '1.2' and '1.3'
-                elif 1.2 in stauts_list[i] or 1.3 in status_list[i]:
+                elif (1.2 in status_list[i]) or (1.3 in status_list[i]):
                     # find the closest '1.2' or '1.3', and get bounced away by it
                     dist_min = 2*comm_range
                     robot_min = -1
@@ -399,8 +399,8 @@ while not sim_exit:
                             robot_min = j
                     # target robot located, the robot_min, should not still be '-1' here
                     # get bounced away from this robot, update the moving direction
-                    vect_temp = (robots[i].pos(0) - robots[robot_min].pos(0),
-                                 robots[i].pos(1) - robots[robot_min].pos(1))
+                    vect_temp = (robots[i].pos[0] - robots[robot_min].pos[0],
+                                 robots[i].pos[1] - robots[robot_min].pos[1])
                     # new orientation is pointing from robot_min to the host robot
                     robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
             # for the host robot having status of '1'
@@ -413,10 +413,11 @@ while not sim_exit:
                     index_list[i].pop(index_temp)
                 if len(index_list[i]) > 0:  # ensure at least one in-group robot around
                     # start the group attribution dictionaary with first robot
-                    group_temp = robots[index_list[i][0]].group_id
+                    robot_temp = index_list[i][0]
+                    group_temp = robots[robot_temp].group_id
                     groups_temp = {group_temp:[robot_temp]}
                     # then check the rest for group attribution
-                    for j in index_list[i]:
+                    for j in index_list[i][1:]:
                         group_temp = robots[j].group_id
                         if group_temp in groups_temp.keys():
                             groups_temp[group_temp].append(j)
@@ -429,7 +430,7 @@ while not sim_exit:
                         # may produce duplicates in s_disassemble, not big problem
                 # check if any status transition needs to be scheduled
                 if robots[i].status_1_sub == 0:
-                    if status[i].status_1_0_sub = 1:
+                    if robots[i].status_1_0_sub == 1:
                         # host robot is in the triangle forming phase
                         # check if this group has already been scheduled for status transition
                         if robots[i].group_id not in s_form_done:
@@ -464,10 +465,11 @@ while not sim_exit:
                     index_list[i].pop(index_temp)
                 if len(index_list[i]) > 0:  # ensure at least one in-group robot around
                     # start the group attribution dictionaary with first robot
-                    group_temp = robots[index_list[i][0]].group_id
+                    robot_temp = index_list[i][0]
+                    group_temp = robots[robot_temp].group_id
                     groups_temp = {group_temp:[robot_temp]}
                     # then check the rest for group attribution
-                    for j in index_list[i]:
+                    for j in index_list[i][1:]:
                         group_temp = robots[j].group_id
                         if group_temp in groups_temp.keys():
                             groups_temp[group_temp].append(j)
@@ -512,7 +514,7 @@ while not sim_exit:
                 side0_des = des_solver(robots[it0].pos, robots[it1].pos,
                                        dist_table[it0][it1], loop_space)
             # merge availablility on right side
-            side0_avail = robots[it0].status_2_avail1[1] & robots[it0].status_2_avail2[1]
+            side1_avail = robots[it0].status_2_avail1[1] & robots[it0].status_2_avail2[1]
             side1_des = [-1,-1]
             if side1_avail:
                 it1 = robots[it0].key_neighbors[1]
@@ -677,7 +679,7 @@ while not sim_exit:
             vect_temp = (robots[it1].pos[0]-robots[it0].pos[0],
                          robots[it1].pos[1]-robots[it0].pos[1])  # from it0 to it1
             ori_temp = math.atan2(vect_temp[1], vect_temp[0])
-            if dist_table[it0][it1] > line_space:
+            if dist_table[it0][it1] > loop_space:
                 robots[it0].ori = ori_temp
                 robots[it1].ori = reset_radian(ori_temp + math.pi)
             else:
@@ -776,7 +778,7 @@ while not sim_exit:
                 it1 = robots[i].key_neighbors[1]
                 vect_0 = (robots[it0].pos[0]-robots[it1].pos[0],
                           robots[it0].pos[1]-robots[it1].pos[1])  # from it1 to it0
-                vect_1 = (-vect[1], vect[0])  # rotate vect_0 90 degrees ccw
+                vect_1 = (-vect_0[1], vect_0[0])  # rotate vect_0 90 degrees ccw
                 robots[i].ori = math.atan2(vect_1[1], vect_1[0])  # exploding orientation
             # update 'groups' variable
             groups.pop(g_it)
