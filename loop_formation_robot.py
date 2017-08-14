@@ -28,7 +28,7 @@ class LFRobot: # LF stands for loop formation
             # indicating if distances at two sides are large enough for accepting new member
             # first value for small index side, second for large side
         self.status_2_avail2 = [True,True]  # second availability for two sides to be merged
-            # indicating if a robot is merging at one side, if yet, then availability is False
+            # indicating if a robot is merging at one side, if yes, then availability is False
             # first value for small index side, second for large side
         self.key_neighbors = [-1,-1]  # key neighbors to secure the group formation
             # two members list for all '1' and '2' robots, except '1_0_0'
