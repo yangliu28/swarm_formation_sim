@@ -30,8 +30,10 @@
 
 
 # reasons why still two stages forming, even when a '0' discovers two '0'
+# the loop is not stable, that it will extend to a long loop
+# the current first availability is not balanced for adjacent robots
+# remove status_2_sequence, no index on loop, use only key_neighbors
 
-# add error check for in case dist_table < 0
 
 import pygame
 import math, random, sys
@@ -202,6 +204,7 @@ while not sim_exit:
             # this variable works the same with "s_init_form" from previous simulations
         s_form_done = []  # robot '1_0_1' finishes initial forming, becoming '2'
             # list of group id that the triangle forming is done
+        s_form_checked = []  # auxiliary variable for "s_form_done", indicating checked groups
         s_merge_done = []  # robot '1_1' finishes merging, becoming '2'
             # list of robots '1' that finished merging
         s_group_exp = []  # life time of a group naturally expires, disassemble it
@@ -281,7 +284,7 @@ while not sim_exit:
                         robot_min = -1  # corresponding robot with min distance
                         # search the closest '2'
                         for j in groups_temp.values()[0]:
-                            if dist_table[i][j] < dist_min:
+                            if dist_table[i][j] < dist_min and dist_table[i][j] > 0:
                                 if ((robots[j].status_2_avail1[0] & robots[j].status_2_avail2[0]) |
                                     (robots[j].status_2_avail1[1] & robots[j].status_2_avail2[1])):
                                     # check both avail1 and avail2 for both side
@@ -295,23 +298,21 @@ while not sim_exit:
                         # compare which group has the most members in it
                         member_max = 0  # start with 0 number of members in group
                         group_max = 0  # corresponding group id with most members
-                        for j in groups_temp.keys():
-                            ## 'line_formation_1.py' did wrong in the following line
-                            # didn't fix it, not serious problem, program rarely goes here
-                            if groups[j][0] > member_max:
-                                member_max = groups[j][0]
-                                group_max = j
+                        for g_it in groups_temp.keys():
+                            if groups[g_it][0] > member_max:
+                                member_max = groups[g_it][0]
+                                group_max = g_it
                         # search the closest '2' inside that group
                         dist_min = 2*comm_range
                         robot_min = -1
                         for j in groups_temp[group_max]:
-                            if dist_table[i][j] < dist_min:
+                            if dist_table[i][j] < dist_min and dist_table[i][j] > 0:
                                 if ((robots[j].status_2_avail1[0] & robots[j].status_2_avail2[0]) |
                                     (robots[j].status_2_avail1[1] & robots[j].status_2_avail2[1])):
                                     dist_min = dist_table[i][j]
                                     robot_min = j
                         target_robot = robot_min
-                    # check if target robot has been located, prepare to grab on it
+                    # check if target robot has been located, prepare to merge into its group
                     if target_robot != -1:  # not the initial value of robot_min
                         # the target robot should have at least one spot availbe to be merged
                         # status transition scheduled, robot '0' is becoming '1_1'
@@ -345,7 +346,7 @@ while not sim_exit:
                         robot_min = -1  # corresponding robot with dist_min
                         # search the closest '1.1'
                         for j in groups_temp.values()[0]:
-                            if dist_table[i][j] < dist_min:
+                            if dist_table[i][j] < dist_min and dist_table[i][j] > 0:
                                 # there is no availability restriction here
                                 dist_min = dist_table[i][j]
                                 robot_min = j
@@ -355,15 +356,15 @@ while not sim_exit:
                         # choose the group that has the most members in it
                         member_max = 0  # variable for the maximum number of members
                         group_max = 0  # corresponding group id with member_max
-                        for j in groups_temp.keys():
-                            if groups[j][0] > member_max:
-                                member_max = groups[j][0]
-                                group_max = j
+                        for g_it in groups_temp.keys():
+                            if groups[g_it][0] > member_max:
+                                member_max = groups[g_it][0]
+                                group_max = g_it
                         # search the closest '1.1' inside that group "group_max"
                         dist_min = 2*comm_range
                         robot_min = -1
                         for j in groups_temp[group_max]:
-                            if dist_table[i][j] < dist_min:
+                            if dist_table[i][j] < dist_min and dist_table[i][j] > 0:
                                 dist_min = dist_table[i][j]
                                 robot_min = j
                         target_robot = robot_min
@@ -378,8 +379,8 @@ while not sim_exit:
                 # process neighbors with status '0'
                 elif 0 in status_list[i]:
                     # establish a list of all '0', in order of ascending distance
-                    # the list is to be checked later if grouping is possible and no conflict
-                    # remove possible '1.2' and '1,3' from status_list
+                    # this list is to be checked later if pairing is possible and no conflict
+                    # first remove possible '1.2' and '1.3' from status_list[i]
                     while 1.2 in status_list[i]:
                         index_temp = status_list[i].index(1.2)
                         status_list[i].pop(index_temp)
@@ -397,7 +398,7 @@ while not sim_exit:
                     robot_min = -1
                     # at this time, '1.2' and '1.3' are the only robots left in index_list[i]
                     for j in index_list[i]:
-                        if dist_table[i][j] < dist_min:
+                        if dist_table[i][j] < dist_min and dist_table[i][j] > 0:
                             dist_min = dist_table[i][j]
                             robot_min = j
                     # target robot located, the robot_min, should not still be '-1' here
@@ -414,7 +415,7 @@ while not sim_exit:
                     index_temp = status_list[i].index(0)
                     status_list[i].pop(index_temp)
                     index_list[i].pop(index_temp)
-                if len(index_list[i]) > 0:  # ensure at least one in-group robot around
+                if len(index_list[i]) > 0:  # ensure there is at least one robot around
                     # start the group attribution dictionaary with first robot
                     robot_temp = index_list[i][0]
                     group_temp = robots[robot_temp].group_id
@@ -436,7 +437,10 @@ while not sim_exit:
                     if robots[i].status_1_0_sub == 1:
                         # host robot is in the triangle forming phase
                         # check if this group has already been scheduled for status transition
-                        if robots[i].group_id not in s_form_done:
+                        g_it = robots[i].group_id
+                        if g_it not in s_form_checked:
+                            # avoid checking same group three times
+                            s_form_checked.append(g_it)  # add this group, mark as checked
                             it0 = robots[i].key_neighbors[0]
                             it1 = robots[i].key_neighbors[1]
                             # check all threee sides to see if distances are satisfied
@@ -449,7 +453,7 @@ while not sim_exit:
                                 dist_satisfied = False
                             if dist_satisfied:
                                 # status transition scheduled, robots '1_0_1' are becoming '2'
-                                s_form_done.append(robots[i].group_id)
+                                s_form_done.append(g_it)
                 elif robots[i].status_1_sub == 1:
                     # robot is in the merging phase
                     it0 = robots[i].key_neighbors[0]
@@ -507,20 +511,19 @@ while not sim_exit:
                 s_group_exp.append(g_it)
 
         # process the scheduled status change, in the order of the designed priority
-        # 1.s_merging, robot '2' merges into the group where the robot '2' is from
+        # 1.s_merging, robot '0' merges into the group with the robot '2'
         for i in s_merging.keys():
             it0 = s_merging[i]  # 'it0' is the robot that robot 'i' tries to merge with
             # discuss the merging availability of robot 'it0'
             g_it = robots[it0].group_id
-            # it0 was available when added to s_merging, but check in case occupied again
-            # merge availablility on left side
+            # it0 was available when added to s_merging, but check again in case occupied            # merge availablility on left side
             side0_avail = robots[it0].status_2_avail1[0] & robots[it0].status_2_avail2[0]
             side0_des = [-1,-1]  # destination if merging at left side
             if side0_avail:
                 # calculate the merging destination
                 it1 = robots[it0].key_neighbors[0]
-                side0_des = des_solver(robots[it0].pos, robots[it1].pos,
-                                       dist_table[it0][it1], loop_space)
+                side0_des = des_solver(robots[it1].pos, robots[it0].pos,
+                                       dist_table[it1][it0], loop_space)
             # merge availablility on right side
             side1_avail = robots[it0].status_2_avail1[1] & robots[it0].status_2_avail2[1]
             side1_des = [-1,-1]
@@ -532,14 +535,14 @@ while not sim_exit:
             if side0_avail or side1_avail:
                 # status transition operations regardless of which side to merge
                 robots[i].status = 1
-                robots[i].group_id = g_it
                 robots[i].status_1_sub = 1
+                robots[i].group_id = g_it
                 robots[i].key_neighbors = [-1,-1]  # initialize it with '-1'
                 groups[g_it][0] = groups[g_it][0] + 1  # increase group size by 1
                 groups[g_it][1] = groups[g_it][1] + life_incre  # increase life time
                 groups[g_it][3].append(i)
                 # deciding which side to merge
-                side_decision = -1  # 0 or left, 1 for right
+                side_decision = -1  # 0 for left, 1 for right
                 if side0_avail and side1_avail:
                     # both sides are available, calculate distances and compare
                     vect_temp = (side0_des[0]-robots[i].pos[0], side0_des[1]-robots[i].pos[1])
@@ -558,7 +561,7 @@ while not sim_exit:
                 elif side1_avail and (not side0_avail):
                     # only right side is available
                     side_decision = 1
-                # status transiiton operations according to the side decision
+                # status transition operations according to the side decision
                 if side_decision == 0:  # taking left side
                     it1 = robots[it0].key_neighbors[0]
                     robots[i].key_neighbors = [it1, it0]
@@ -587,14 +590,14 @@ while not sim_exit:
             robot_min = -1
             for i in s_forming2[g_it]:
                 # check distance to both '1_0_0'
-                if dist_table[i][it0] < dist_min:
+                if dist_table[i][it0] < dist_min and dist_table[i][it0] > 0:
                     dist_min = dist_table[i][it0]
                     robot_min = i
-                if dist_table[i][it1] < dist_min:
+                if dist_table[i][it1] < dist_min and dist_table[i][it1] > 0:
                     dist_min = dist_table[i][it1]
                     robot_min = i
             it2 = robot_min  # the decided new member
-            # deciding which side robot it2 is at along the vector from it0 to it1
+            # deciding robot it2 is at which side along the vector from it0 to it1
             vect_0 = (robots[it1].pos[0]-robots[it0].pos[0],
                       robots[it1].pos[1]-robots[it0].pos[1])  # vector from it0 to it1
             vect_1 = (robots[it2].pos[0]-robots[it0].pos[0],
@@ -603,7 +606,7 @@ while not sim_exit:
             if (vect_0[0]*vect_1[1]-vect_0[1]*vect_1[0]) > 0:
                 # it2 is at left side of vector from it0 to it1
                 # this is the desired sequence, it goes ccw from it0 to it1 to it2
-                groups[g_it][3] = [it0, it1]  # it actually does nothing
+                groups[g_it][3] = [it0, it1]  # this line changes nothing
             else:
                 # it2 is at right side of vector from it0 to it1
                 # (it's very unlikely that it2 is on the line of it0 and it1)
@@ -612,9 +615,9 @@ while not sim_exit:
                 it1 = groups[g_it][3][1]
             # update the robots[it2], the new member
             robots[it2].status = 1
-            robots[it2].group_id = g_it
             robots[it2].status_1_sub = 0
             robots[it2].status_1_0_sub = 1
+            robots[it2].group_id = g_it
             # it1 is on left, it0 is on right, because it2 is the end index robot on loop
             des_new = des_solver(robots[it1].pos, robots[it0].pos,
                                  dist_table[it1][it0], loop_space)
@@ -661,7 +664,7 @@ while not sim_exit:
                         break
                     # have not considered the situation that 'i' in 'it' but not first one
                 else:
-                    # will be here if robot 'it' chooses to be bounced away by '1', or grab on '2'
+                    # will be here if robot 'it' is to be bounced away by '1', or merge with '2'
                     s_forming1[i].remove(it)
                     if len(s_forming1[i]) == 0:
                         s_forming1.pop(i)
@@ -711,7 +714,7 @@ while not sim_exit:
             robots[it0].status_2_sequence = 0
             robots[it1].status_2_sequence = 1
             robots[it2].status_2_sequence = 2
-            robots[it0].status_2_avail2 = [True,True]  # both sides are available
+            robots[it0].status_2_avail2 = [True,True]  # both sides of all are available
             robots[it1].status_2_avail2 = [True,True]
             robots[it2].status_2_avail2 = [True,True]
             # update the 'groups' variable
@@ -737,11 +740,11 @@ while not sim_exit:
                 # insert robot 'i' between the end index and 0 index
                 new_seq = robots[it0].status_2_sequence + 1
                 robots[i].status_2_sequence = new_seq
-                groups[g_it][2].insert(new_seq, i)
+                groups[g_it][2].append(i)  # simply append at the end
             robots[i].status_2_avail2 = [True,True]
             # update for robot 'it0' and 'it1'
-            robots[it0].key_neighbors[1] = i  # right side of left neighbor
-            robots[it1].key_neighbors[0] = i  # left side of right neighbor
+            robots[it0].key_neighbors[1] = i  # update right side of left neighbor
+            robots[it1].key_neighbors[0] = i  # update left side of right neighbor
             robots[it0].status_2_avail2[1] = True
             robots[it1].status_2_avail2[0] = True
             # update for 'groups' variable
