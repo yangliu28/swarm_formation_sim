@@ -24,9 +24,8 @@ class LFRobot: # LF stands for loop formation
         self.status_1_1_des = [0,0]  # destination for the merging robots
         self.status_2_sequence = 0  # sequence along the line for status '2' robots
             # index range from 0 to N-1
-        self.status_2_avail1 = [True,True]  # first availability for two sides to be merged
-            # indicating if distances at two sides are large enough for accepting new member
-            # first value for small index side, second for large side
+        self.status_2_avail1 =  True  # first availability for this robot allowing merging
+            # indicating if the interior angle at this node is at good range
         self.status_2_avail2 = [True,True]  # second availability for two sides to be merged
             # indicating if a robot is merging at one side, if yes, then availability is False
             # first value for small index side, second for large side

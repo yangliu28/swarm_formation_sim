@@ -31,9 +31,10 @@
 
 # reasons why still two stages forming, even when a '0' discovers two '0'
 # the loop is not stable, that it will extend to a long loop
-# the current first availability is not balanced for adjacent robots
+    # constrain the lower limit of the interior angle
 # remove status_2_sequence, no index on loop, use only key_neighbors
 
+# the current first availability is not balanced for adjacent robots
 
 import pygame
 import math, random, sys
@@ -285,12 +286,16 @@ while not sim_exit:
                         # search the closest '2'
                         for j in groups_temp.values()[0]:
                             if dist_table[i][j] < dist_min and dist_table[i][j] > 0:
-                                if ((robots[j].status_2_avail1[0] & robots[j].status_2_avail2[0]) |
-                                    (robots[j].status_2_avail1[1] & robots[j].status_2_avail2[1])):
-                                    # check both avail1 and avail2 for both side
-                                    # there is at least one side is available to be merged
-                                    dist_min = dist_table[i][j]
-                                    robot_min = j
+                                if robots[j].status_2_avail1:
+                                    # at least the interior angle of robot j should be good
+                                    it0 = robots[j].key_neighbors[0]  # the two neighbors
+                                    it1 = robots[j].key_neighbors[1]
+                                    if ((robots[it0].status_2_avail1 and robots[j].status_2_avail2[0]) or
+                                        (robots[it1].status_2_avail1 and robots[j].status_2_avail2[1])):
+                                        # check both avail1 of neighbors and avail2 of robot j
+                                        # there should be at least one side available to be merged
+                                        dist_min = dist_table[i][j]
+                                        robot_min = j
                         target_robot = robot_min
                     else:
                         # there is more than one group detected
@@ -307,10 +312,14 @@ while not sim_exit:
                         robot_min = -1
                         for j in groups_temp[group_max]:
                             if dist_table[i][j] < dist_min and dist_table[i][j] > 0:
-                                if ((robots[j].status_2_avail1[0] & robots[j].status_2_avail2[0]) |
-                                    (robots[j].status_2_avail1[1] & robots[j].status_2_avail2[1])):
-                                    dist_min = dist_table[i][j]
-                                    robot_min = j
+                                if robots[j].status_2_avail1:
+                                    # at least the interior angle of robot j should be good
+                                    it0 = robots[j].key_neighbors[0]  # the two neighbors
+                                    it1 = robots[j].key_neighbors[1]
+                                    if ((robots[it0].status_2_avail1 and robots[j].status_2_avail2[0]) or
+                                        (robots[it1].status_2_avail1 and robots[j].status_2_avail2[1])):
+                                        dist_min = dist_table[i][j]
+                                        robot_min = j
                         target_robot = robot_min
                     # check if target robot has been located, prepare to merge into its group
                     if target_robot != -1:  # not the initial value of robot_min
@@ -454,6 +463,7 @@ while not sim_exit:
                             if dist_satisfied:
                                 # status transition scheduled, robots '1_0_1' are becoming '2'
                                 s_form_done.append(g_it)
+                                print "triangle finished, group {}, member {}, triggered by {}".format(g_it, groups[g_it][3], i)
                 elif robots[i].status_1_sub == 1:
                     # robot is in the merging phase
                     it0 = robots[i].key_neighbors[0]
@@ -513,24 +523,26 @@ while not sim_exit:
         # process the scheduled status change, in the order of the designed priority
         # 1.s_merging, robot '0' merges into the group with the robot '2'
         for i in s_merging.keys():
-            it0 = s_merging[i]  # 'it0' is the robot that robot 'i' tries to merge with
-            # discuss the merging availability of robot 'it0'
-            g_it = robots[it0].group_id
-            # it0 was available when added to s_merging, but check again in case occupied            # merge availablility on left side
-            side0_avail = robots[it0].status_2_avail1[0] & robots[it0].status_2_avail2[0]
+            j = s_merging[i]  # 'j' is the robot that robot 'i' tries to merge with
+            # the first merge availability of robot 'j' should be true to be here
+            # discuss the merging availability of robot 'j' on the two sides
+            g_it = robots[j].group_id
+            it0 = robots[j].key_neighbors[0]
+            it1 = robots[j].key_neighbors[1]
+            # j was available when added to s_merging, but check again in case occupied
+            # merge availablility on left side
+            side0_avail = robots[it0].status_2_avail1 and robots[j].status_2_avail2[0]
             side0_des = [-1,-1]  # destination if merging at left side
             if side0_avail:
                 # calculate the merging destination
-                it1 = robots[it0].key_neighbors[0]
-                side0_des = des_solver(robots[it1].pos, robots[it0].pos,
-                                       dist_table[it1][it0], loop_space)
+                side0_des = des_solver(robots[it0].pos, robots[j].pos,
+                                       dist_table[it0][j], loop_space)
             # merge availablility on right side
-            side1_avail = robots[it0].status_2_avail1[1] & robots[it0].status_2_avail2[1]
+            side1_avail = robots[it1].status_2_avail1 and robots[j].status_2_avail2[1]
             side1_des = [-1,-1]
             if side1_avail:
-                it1 = robots[it0].key_neighbors[1]
-                side1_des = des_solver(robots[it0].pos, robots[it1].pos,
-                                       dist_table[it0][it1], loop_space)
+                side1_des = des_solver(robots[j].pos, robots[it1].pos,
+                                       dist_table[j][it1], loop_space)
             # check if there is at least one side available
             if side0_avail or side1_avail:
                 # status transition operations regardless of which side to merge
@@ -563,22 +575,22 @@ while not sim_exit:
                     side_decision = 1
                 # status transition operations according to the side decision
                 if side_decision == 0:  # taking left side
-                    it1 = robots[it0].key_neighbors[0]
-                    robots[i].key_neighbors = [it1, it0]
+                    it1 = robots[j].key_neighbors[0]
+                    robots[i].key_neighbors = [it1, j]
                     robots[i].status_1_1_des = side0_des
                     vect_temp = (side0_des[0]-robots[i].pos[0], side0_des[1]-robots[i].pos[1])
                     robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])  # update moving ori
-                    # update for it0 and it1
-                    robots[it0].status_2_avail2[0] = False
+                    # update for j and it1
+                    robots[j].status_2_avail2[0] = False
                     robots[it1].status_2_avail2[1] = False
                 else:  # taking right side
-                    it1 = robots[it0].key_neighbors[1]
-                    robots[i].key_neighbors = [it0, it1]
+                    it1 = robots[j].key_neighbors[1]
+                    robots[i].key_neighbors = [j, it1]
                     robots[i].status_1_1_des = side1_des
                     vect_temp = (side1_des[0]-robots[i].pos[0], side1_des[1]-robots[i].pos[1])
                     robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])  # update moving ori
-                    # update for it0 and it1
-                    robots[it0].status_2_avail2[1] = False
+                    # update for j and it1
+                    robots[j].status_2_avail2[1] = False
                     robots[it1].status_2_avail2[0] = False
         # 2.s_forming2, two '1_0_0' forms a triangle with one '0', all becomes '1_0_1'
         for g_it in s_forming2.keys():
@@ -865,9 +877,9 @@ while not sim_exit:
                 # reset to pisitive angle, do not use reset_radian() here
                 if angle_diff < 0: angle_diff = angle_diff + 2*math.pi
                 if angle_diff > math.pi:
-                    robots[i].status_2_avail1 = [False,False]
+                    robots[i].status_2_avail1 = False
                 else:
-                    robots[i].status_2_avail1 = [True,True]
+                    robots[i].status_2_avail1 = True
                 # update moving direction and velocity
                 new_des = des_solver(robots[it0].pos, robots[it1].pos,
                                      dist_table[it0][it1], loop_space)
