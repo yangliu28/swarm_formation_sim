@@ -22,8 +22,6 @@ class LFRobot: # LF stands for loop formation
             # '1' for forming the triangle
         self.status_1_0_1_des = [0,0]  # destination for the triangle forming robots
         self.status_1_1_des = [0,0]  # destination for the merging robots
-        self.status_2_sequence = 0  # sequence along the line for status '2' robots
-            # index range from 0 to N-1
         self.status_2_avail1 =  True  # first availability for this robot allowing merging
             # indicating if the interior angle at this node is at good range
         self.status_2_avail2 = [True,True]  # second availability for two sides to be merged

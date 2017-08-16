@@ -30,11 +30,13 @@
 
 
 # reasons why still two stages forming, even when a '0' discovers two '0'
+
 # the loop is not stable, that it will extend to a long loop
     # constrain the lower limit of the interior angle
-# remove status_2_sequence, no index on loop, use only key_neighbors
 
-# the current first availability is not balanced for adjacent robots
+
+# changes in groups variable, and no status_2_sequence
+
 
 import pygame
 import math, random, sys
@@ -95,11 +97,12 @@ for i in range(robot_quantity):
 groups = {}
     # key is the group id
     # value is a list
-        # 0.first element: the group size, member includes both '2' and '1'
-        # 1.second element: remaining life time
-        # 2.third element: a list of robots on the loop in adjacent order, status '2'
+        # 0.first element: the group size, all members including both '2' and '1'
+        # 1.second element: the number of robots in formation, only robot '2'
+        # 2.third element: a list of robots on the loop, nor ordered, status '2'
         # 3.fourth element: a list of robots off the loop, not ordered, status '1'
-        # 4.fifth element: true or false, being the dominant group
+        # 4.second element: remaining life time
+        # 5.fifth element: true or false of being the dominant group
 # instantiate a distance table for every pair of robots
 # make sure all data in table is being written when updating
 dist_table = [[0 for j in range(robot_quantity)] for i in range(robot_quantity)]
