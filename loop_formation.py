@@ -23,14 +23,11 @@
     # the perfect triangle and good loop space, they will trigger a status transition
     # of becoming '2'.
 
+# There is no index indicating where the robot is on the loop, that means each robot's
+# role is equal. Each has two neighbors, one on left, one on right. There is no start or
+# end on the loop.
 
-# There is no index indicating where the robot is on the loop.
 
-# (The index of robots on the loop starts with 0 and goes counter-clockwise, the index 0
-# robot never change its index, when a new robot merges, all robots after it on the loop
-# will increase index by 1. Since a loop has no end, all robots have two key neighbors.
-# The definition of key neighbors is that, the first one is for the robot before it on
-# the loop, second one for robot after it.)
 
 
 # reasons why still two stages forming, even when a '0' discovers two '0'
