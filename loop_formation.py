@@ -22,20 +22,20 @@
     # even their distance is not good yet. When in '1_0_1', after the three robots form
     # the perfect triangle and good loop space, they will trigger a status transition
     # of becoming '2'.
-# The index of robots on the loop starts with 0 and goes counter-clockwise, the index 0
+
+
+# There is no index indicating where the robot is on the loop.
+
+# (The index of robots on the loop starts with 0 and goes counter-clockwise, the index 0
 # robot never change its index, when a new robot merges, all robots after it on the loop
 # will increase index by 1. Since a loop has no end, all robots have two key neighbors.
 # The definition of key neighbors is that, the first one is for the robot before it on
-# the loop, second one for robot after it.
+# the loop, second one for robot after it.)
 
 
 # reasons why still two stages forming, even when a '0' discovers two '0'
 
-# the loop is not stable, that it will extend to a long loop
-    # constrain the lower limit of the interior angle
 
-
-# changes in groups variable, and no status_2_sequence
 
 
 import pygame
@@ -74,14 +74,14 @@ const_vel = 3.0  # all robots except those in adjusting phase are moving at this
 frame_period = 100  # updating period of the simulation and graphics, in millisecond
 comm_range = 5.0  # sensing and communication share this same range, in radius
 loop_space = comm_range * 0.7  # desired space of robots on the lop
-space_error = loop_space * 0.1  # error to determine if a status transition is needed
+space_error = loop_space * 0.2  # error to determine if a status transition is needed
 life_incre = 8  # number of seconds a new member adds to a group
 group_id_upper_limit = 1000  # upper limit of random integer for group id
 n1_life_lower = 3  # lower limit of life time for status '-1'
 n1_life_upper = 8  # upper limit of life time for status '-1'
 # coefficient for calculating velocity of robot '2' on the loop for adjusting
 # as the distance error decreases, the loop adjusting velocity also decreases
-adjust_vel_coef = const_vel/loop_space
+adjust_vel_coef = const_vel/loop_space * 0.8
 
 # instantiate the robot swarm as list
 robots = []  # container for all robots, index is its identification
@@ -200,7 +200,7 @@ while not sim_exit:
         s_merging = {}  # robot '0' detects robot '2', merging into its group
             # key is id of robot '0', value is id of corresponding robot '2'
         s_forming2 = {}  # two '1_0_0' form the triangle with a '0', becoming '1_0_1'
-            # key is group id of the two '1_0_0', value is the new robot '0'
+            # key is id of the robot '0', value is the group id of the pair '1_0_0'
             # it is designed to be triggered by the new robot '0'
         s_forming1 = {}  # robot '0' forms the pair with another '0', becoming '1_0_0'
             # key is id of robot '0' that discovers other robots '0' in range
@@ -384,10 +384,9 @@ while not sim_exit:
                     if target_robot != -1:  # not the initial value of "robot_min"
                         group_temp = robots[target_robot].group_id
                         # status transition scheduled, robot '0' & '1_0_0' are becoming '1_0_1'
-                        if group_temp in s_forming2.keys():
-                            s_forming2[group_temp].append(i)
-                        else:  # most likely this happens
-                            s_forming2[group_temp] = [i]
+                        s_forming2[i] = group_temp
+                        # it's possible that more than 1 of robot '0' are working with same group
+                        # the first robot '0' that gets processed will win
                 # process neighbors with status '0'
                 elif 0 in status_list[i]:
                     # establish a list of all '0', in order of ascending distance
@@ -514,17 +513,17 @@ while not sim_exit:
 
         # check 'groups' variable for any status change
         for g_it in groups.keys():
-            if groups[g_it][4]: continue  # already being dominant group
+            if groups[g_it][5]: continue  # already being dominant group
             if groups[g_it][0] > robot_quantity/2:
                 # the group has more than half the totoal number of robots
-                groups[g_it][4] = True  # becoming dominant group
-                groups[g_it][1] = 100.0  # a large number
-            if groups[g_it][1] < 0:  # life time of a group expires
+                groups[g_it][5] = True  # becoming dominant group
+                groups[g_it][4] = 100.0  # a large number
+            if groups[g_it][4] < 0:  # life time of a group expires
                 # schedule operation to disassemble this group
                 s_group_exp.append(g_it)
 
         # process the scheduled status change, in the order of the designed priority
-        # 1.s_merging, robot '0' merges into the group with the robot '2'
+        # 1.s_merging, robot '0' starts to merge into the group with the robot '2'
         for i in s_merging.keys():
             j = s_merging[i]  # 'j' is the robot that robot 'i' tries to merge with
             # the first merge availability of robot 'j' should be true to be here
@@ -554,8 +553,8 @@ while not sim_exit:
                 robots[i].group_id = g_it
                 robots[i].key_neighbors = [-1,-1]  # initialize it with '-1'
                 groups[g_it][0] = groups[g_it][0] + 1  # increase group size by 1
-                groups[g_it][1] = groups[g_it][1] + life_incre  # increase life time
                 groups[g_it][3].append(i)
+                groups[g_it][4] = groups[g_it][4] + life_incre  # increase life time
                 # deciding which side to merge
                 side_decision = -1  # 0 for left, 1 for right
                 if side0_avail and side1_avail:
@@ -596,70 +595,61 @@ while not sim_exit:
                     robots[j].status_2_avail2[1] = False
                     robots[it1].status_2_avail2[0] = False
         # 2.s_forming2, two '1_0_0' forms a triangle with one '0', all becomes '1_0_1'
-        for g_it in s_forming2.keys():
+        for i in s_forming2.keys():
+            g_it = s_forming2[i]  # get the group id of the group to form the triangle
+            if groups[g_it][0] > 2: continue  # the group already accepted a robot '0'
             # the two group members
             it0 = groups[g_it][3][0]
             it1 = groups[g_it][3][1]
-            # find the closest new member, there may be more than 1 for this group
-            dist_min = 2*comm_range
-            robot_min = -1
-            for i in s_forming2[g_it]:
-                # check distance to both '1_0_0'
-                if dist_table[i][it0] < dist_min and dist_table[i][it0] > 0:
-                    dist_min = dist_table[i][it0]
-                    robot_min = i
-                if dist_table[i][it1] < dist_min and dist_table[i][it1] > 0:
-                    dist_min = dist_table[i][it1]
-                    robot_min = i
-            it2 = robot_min  # the decided new member
-            # deciding robot it2 is at which side along the vector from it0 to it1
+            # deciding robot i is at which side along the vector from it0 to it1
             vect_0 = (robots[it1].pos[0]-robots[it0].pos[0],
                       robots[it1].pos[1]-robots[it0].pos[1])  # vector from it0 to it1
-            vect_1 = (robots[it2].pos[0]-robots[it0].pos[0],
-                      robots[it2].pos[1]-robots[it0].pos[1])  # vector from it0 to it2
+            vect_1 = (robots[i].pos[0]-robots[it0].pos[0],
+                      robots[i].pos[1]-robots[it0].pos[1])  # vector from it0 to i
             # calculate cross product of vect_0 and vect_1
             if (vect_0[0]*vect_1[1]-vect_0[1]*vect_1[0]) > 0:
-                # it2 is at left side of vector from it0 to it1
-                # this is the desired sequence, it goes ccw from it0 to it1 to it2
-                groups[g_it][3] = [it0, it1]  # this line changes nothing
+                # i is at left side of vector from it0 to it1
+                # this is the desired sequence, it goes ccw from it0 to it1 to i
+                pass
             else:
-                # it2 is at right side of vector from it0 to it1
-                # (it's very unlikely that it2 is on the line of it0 and it1)
-                groups[g_it][3] = [it1, it0]  # swap positions of it0 and it1
-                it0 = groups[g_it][3][0]  # get the updated it0 and it1
-                it1 = groups[g_it][3][1]
-            # update the robots[it2], the new member
-            robots[it2].status = 1
-            robots[it2].status_1_sub = 0
-            robots[it2].status_1_0_sub = 1
-            robots[it2].group_id = g_it
-            # it1 is on left, it0 is on right, because it2 is the end index robot on loop
+                # i is at right side of vector from it0 to it1
+                # (it's very unlikely that i is on the line of it0 and it1)
+                # swap value of it0 and it1
+                # because variable it1 will be treated as robot on i's left, and it0 right
+                it0 = groups[g_it][3][1]
+                it1 = groups[g_it][3][0]
+            # update the robots[i], the new member
+            robots[i].status = 1
+            robots[i].status_1_sub = 0
+            robots[i].status_1_0_sub = 1
+            robots[i].group_id = g_it
+            # it1 is on left, it0 is on right, because i is the end index robot on loop
             des_new = des_solver(robots[it1].pos, robots[it0].pos,
                                  dist_table[it1][it0], loop_space)
-            robots[it2].status_1_0_1_des = des_new
-            vect_temp = (des_new[0]-robots[it2].pos[0], des_new[1]-robots[it2].pos[1])
-            robots[it2].ori = math.atan2(vect_temp[1], vect_temp[0])
-            robots[it2].key_neighbors = [it1, it0]
+            robots[i].status_1_0_1_des = des_new
+            vect_temp = (des_new[0]-robots[i].pos[0], des_new[1]-robots[i].pos[1])
+            robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
+            robots[i].key_neighbors = [it1, it0]
             # update the robots[it0]
             robots[it0].status_1_0_sub = 1
-            des_new = des_solver(robots[it2].pos, robots[it1].pos,
-                                 dist_table[it2][it1], loop_space)
+            des_new = des_solver(robots[i].pos, robots[it1].pos,
+                                 dist_table[i][it1], loop_space)
             robots[it0].status_1_0_1_des = des_new
             vect_temp = (des_new[0]-robots[it0].pos[0], des_new[1]-robots[it0].pos[1])
             robots[it0].ori = math.atan2(vect_temp[1], vect_temp[0])
-            robots[it0].key_neighbors = [it2, it1]
+            robots[it0].key_neighbors = [i, it1]
             # update the robots[it1]
             robots[it1].status_1_0_sub = 1
-            des_new = des_solver(robots[it0].pos, robots[it2].pos,
-                                 dist_table[it0][it2], loop_space)
+            des_new = des_solver(robots[it0].pos, robots[i].pos,
+                                 dist_table[it0][i], loop_space)
             robots[it1].status_1_0_1_des = des_new
             vect_temp = (des_new[0]-robots[it1].pos[0], des_new[1]-robots[it1].pos[1])
             robots[it1].ori = math.atan2(vect_temp[1], vect_temp[0])
-            robots[it1].key_neighbors = [it0, it2]
+            robots[it1].key_neighbors = [it0, i]
             # update the 'groups' variable
             groups[g_it][0] = groups[g_it][0] + 1  # increase group size by 1
-            groups[g_it][1] = groups[g_it][1] + life_incre
-            groups[g_it][3].append(it2)
+            groups[g_it][3].append(i)
+            groups[g_it][4] = groups[g_it][4] + life_incre
         # 3.s_forming1, robot '0' forms a pair with another '0', both are beoming '1_0_0'
         s_pairs = []  # the container for the finalized pairs
         while len(s_forming1.keys()) != 0:  # there are still robots to be processed
@@ -712,7 +702,7 @@ while not sim_exit:
                 robots[it0].ori = reset_radian(ori_temp + math.pi)
                 robots[it1].ori = ori_temp
             # update the 'groups' variable
-            groups[g_it] = [2, 2*life_incre, [], [it0, it1], False]  # new entry
+            groups[g_it] = [2, 0, [], [it0, it1], 2*life_incre, False]  # new entry
         # 4.s_form_done, robots '1_0_1' finish triangle forming, all are becoming '2'
         for g_it in s_form_done:
             # get the three robots
@@ -726,14 +716,12 @@ while not sim_exit:
             robots[it0].vel = 0  # temporarily initialize with 0
             robots[it1].vel = 0
             robots[it2].vel = 0
-            robots[it0].status_2_sequence = 0
-            robots[it1].status_2_sequence = 1
-            robots[it2].status_2_sequence = 2
             robots[it0].status_2_avail2 = [True,True]  # both sides of all are available
             robots[it1].status_2_avail2 = [True,True]
             robots[it2].status_2_avail2 = [True,True]
             # update the 'groups' variable
-            groups[g_it][2] = [it0, it1, it2]  # copy the same sequence
+            groups[g_it][1] = 3  # three members formally on the loop now
+            groups[g_it][2] = [it0, it1, it2]  # copy the same robots
             groups[g_it][3] = []  # empty the temporary pool
         # 5.s_merge_done, robot '1_1' finishes merging, becoming '2'
         for i in s_merge_done:
@@ -743,19 +731,6 @@ while not sim_exit:
             # update for robot 'i'
             robots[i].status = 2
             robots[i].vel = 0
-            if robots[it1].status_2_sequence != 0:
-                # robot 'i' replace the sequence of 'it1'
-                new_seq = robots[it1].status_2_sequence
-                robots[i].status_2_sequence = new_seq
-                groups[g_it][2].insert(new_seq, i)
-                # shift sequence of robots after i
-                for j in groups[g_it][2][new_seq+1:]:
-                    robots[j].status_2_sequence = robots[j].status_2_sequence + 1
-            else:
-                # insert robot 'i' between the end index and 0 index
-                new_seq = robots[it0].status_2_sequence + 1
-                robots[i].status_2_sequence = new_seq
-                groups[g_it][2].append(i)  # simply append at the end
             robots[i].status_2_avail2 = [True,True]
             # update for robot 'it0' and 'it1'
             robots[it0].key_neighbors[1] = i  # update right side of left neighbor
@@ -763,7 +738,8 @@ while not sim_exit:
             robots[it0].status_2_avail2[1] = True
             robots[it1].status_2_avail2[0] = True
             # update for 'groups' variable
-            groups[g_it][3].remove(i)
+            groups[g_it][2].append(i)  # add to the list of robots on the loop
+            groups[g_it][3].remove(i)  # remove from the list of robots off the loop
         # 6.s_group_exp, natural life expiration of the groups
         for g_it in s_group_exp:
             s_disassemble.append([g_it])  # disassemble together in s_disassemble
@@ -869,23 +845,45 @@ while not sim_exit:
             elif robots[i].status == 2:
                 it0 = robots[i].key_neighbors[0]
                 it1 = robots[i].key_neighbors[1]
-                # update first merge availability
                 vect_0 = (robots[it0].pos[0]-robots[i].pos[0],
                           robots[it0].pos[1]-robots[i].pos[1])  # from i to it0
                 vect_1 = (robots[it1].pos[0]-robots[i].pos[0],
                           robots[it1].pos[1]-robots[i].pos[1])  # from i to it1
                 ori_0 = math.atan2(vect_0[1], vect_0[0])
                 ori_1 = math.atan2(vect_1[1], vect_1[0])
-                angle_diff = ori_0 - ori_1  # angle from vect_1 to vect_0
+                # calculate the interior angle of the polygon at robot 'i'
+                angle_inter = ori_0 - ori_1  # angle from vect_1 to vect_0
                 # reset to pisitive angle, do not use reset_radian() here
-                if angle_diff < 0: angle_diff = angle_diff + 2*math.pi
-                if angle_diff > math.pi:
+                if angle_inter < 0: angle_inter = angle_inter + 2*math.pi
+                # update the first merge availability
+                if angle_inter > math.pi:
+                    # only set to false if exceed the upper limit, not the lower limit
                     robots[i].status_2_avail1 = False
                 else:
                     robots[i].status_2_avail1 = True
                 # update moving direction and velocity
-                new_des = des_solver(robots[it0].pos, robots[it1].pos,
-                                     dist_table[it0][it1], loop_space)
+                g_it = robots[i].group_id
+                num_loop = groups[g_it][1]  # get number of robots on loop
+                poly_inter = math.pi - 2*math.pi/num_loop  # interior angle if regular polygon
+                # calculate the lower limit of interior angle allowed
+                angle_lower = max(math.pi/3, 2*poly_inter-math.pi)
+                # calculate new destination according to the situation of interior angle
+                new_des = [-1,-1]
+                if angle_inter > math.pi:  # upper limit of the interior angle
+                    # calculate the critical destination to make angle correct
+                    new_des = des_solver(robots[it0].pos, robots[it1].pos,
+                                         dist_table[it0][it1], dist_table[it0][it1]/2)
+                elif angle_inter < angle_lower:
+                    new_space = (dist_table[it0][it1] / math.sin(angle_lower) *
+                                 math.sin((math.pi-angle_lower)/2))  # sin rule to solve triangle
+                    # calculate the new destination with new space
+                    new_des = des_solver(robots[it0].pos, robots[it1].pos,
+                                         dist_table[it0][it1], new_space)
+                else:
+                    # interior angle is in good shape, adjust space with proportional speed
+                    new_des = des_solver(robots[it0].pos, robots[it1].pos,
+                                         dist_table[it0][it1], loop_space)
+                # update moving orientation and velocity based on calculated new destination
                 vect_temp = (new_des[0]-robots[i].pos[0],
                              new_des[1]-robots[i].pos[1])
                 robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
@@ -897,8 +895,8 @@ while not sim_exit:
                 robots[i].status_n1_life = robots[i].status_n1_life - frame_period/1000.0
         # life time decrease of the groups
         for g_it in groups.keys():
-            if groups[g_it][4]: continue  # skip the dominant group
-            groups[g_it][1] = groups[g_it][1] - frame_period/1000.0
+            if groups[g_it][5]: continue  # skip the dominant group
+            groups[g_it][4] = groups[g_it][4] - frame_period/1000.0
 
         # graphics update
         screen.fill(background_color)
