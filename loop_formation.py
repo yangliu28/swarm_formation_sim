@@ -920,33 +920,6 @@ while not sim_exit:
                                  robots[i].pos[1]-robots[robot_min].pos[1])
                     robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
                     # not updating velocity here, use the same urgency of moving to ideal des
-
-                # poly_inter = math.pi - 2*math.pi/num_loop  # interior angle if regular polygon
-                # # calculate the lower limit of interior angle allowed
-                # angle_lower = max(math.pi/3, 2*poly_inter-math.pi)
-                # # calculate new destination according to the situation of interior angle
-                # new_des = [-1,-1]
-                # if angle_inter > math.pi:  # upper limit of the interior angle
-                #     # calculate the critical destination to make angle correct
-                #     new_des = des_solver(robots[it0].pos, robots[it1].pos,
-                #                          dist_table[it0][it1], dist_table[it0][it1]/2)
-                # elif angle_inter < angle_lower:
-                #     new_space = (dist_table[it0][it1] / math.sin(angle_lower) *
-                #                  math.sin((math.pi-angle_lower)/2))  # sin rule to solve triangle
-                #     # calculate the new destination with new space
-                #     new_des = des_solver(robots[it0].pos, robots[it1].pos,
-                #                          dist_table[it0][it1], new_space)
-                # else:
-                #     # interior angle is in good shape, adjust space with proportional speed
-                #     new_des = des_solver(robots[it0].pos, robots[it1].pos,
-                #                          dist_table[it0][it1], loop_space)
-                # # update moving orientation and velocity based on calculated new destination
-                # vect_temp = (new_des[0]-robots[i].pos[0],
-                #              new_des[1]-robots[i].pos[1])
-                # robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
-                # dist_temp = math.sqrt(vect_temp[0]*vect_temp[0]+
-                #                       vect_temp[1]*vect_temp[1])
-                # robots[i].vel = dist_temp * adjust_vel_coef
             # decrease life time of robot '-1'
             elif robots[i].status == -1:
                 robots[i].status_n1_life = robots[i].status_n1_life - frame_period/1000.0
