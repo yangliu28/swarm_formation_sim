@@ -22,17 +22,17 @@
     # even their distance is not good yet. When in '1_0_1', after the three robots form
     # the perfect triangle and good loop space, they will trigger a status transition
     # of becoming '2'.
+# Two-stage forming explanation:
+    # It's likely to happen that a '0' meets two '0' at the same time, especially at the
+    # the begining of the simulation. It would be conveniently to form a triangle directly
+    # if this happens. But I stick with two stage forming, to have a pair before the triangle.
+    # Mainly because it makes programming simplier, and it takes another loop to turn the
+    # pair to a triangle. And also in real robots, the pair will be established before the
+    # triangle.
 
 # There is no index indicating where the robot is on the loop, that means each robot's
 # role is equal. Each has two neighbors, one on left, one on right. There is no start or
 # end on the loop.
-
-
-
-
-# reasons why still two stages forming, even when a '0' discovers two '0'
-
-
 
 
 import pygame
@@ -46,11 +46,11 @@ pygame.init()
 screen_size = (1200, 1000)  # width and height
 background_color = (0, 0, 0)  # black background
 robot_0_color = (0, 255, 0)  # for robot status '0', green
-robot_1_0_0_color = (255, 204, 204)  # for robot status '1_0_0', light pink
+robot_1_0_0_color = (255, 153, 153)  # for robot status '1_0_0', light pink
 robot_1_0_1_color = (255, 102, 102)  # for robot status '1_0_1', dark pink
 robot_1_1_color = (255, 102, 102)  # for robot status '1_1', dark pink
 robot_2_color = (255, 0, 0)  # for robot status '2', red
-robot_n1_color = (0, 51, 204)  # for robot status '-1', blue
+robot_n1_color = (0, 0, 102)  # for robot status '-1', blue
 robot_size = 5  # robot modeled as dot, number of pixels in radius
 
 # set up the simulation window and surface object
@@ -67,12 +67,12 @@ world_size = (100.0, 100.0 * screen_size[1]/screen_size[0])
 # variables to configure the simulation
 robot_quantity = 30
 distrib_coef = 0.5  # coefficient to resize the initial robot distribution
-const_vel = 3.0  # all robots except those in adjusting phase are moving at this speed
+const_vel = 4.0  # all robots except those in adjusting phase are moving at this speed
 frame_period = 100  # updating period of the simulation and graphics, in millisecond
 comm_range = 5.0  # sensing and communication share this same range, in radius
 loop_space = comm_range * 0.7  # desired space of robots on the lop
 space_error = loop_space * 0.2  # error to determine if a status transition is needed
-life_incre = 8  # number of seconds a new member adds to a group
+life_incre = 10  # number of seconds a new member adds to a group
 group_id_upper_limit = 1000  # upper limit of random integer for group id
 n1_life_lower = 3  # lower limit of life time for status '-1'
 n1_life_upper = 8  # upper limit of life time for status '-1'
@@ -235,9 +235,9 @@ while not sim_exit:
                     while 1 in status_list[i]:
                         index_temp = status_list[i].index(1)
                         robot_temp = index_list[i][index_temp]
-                        status_1_sub = robots[index_temp].status_1_sub
+                        status_1_sub = robots[robot_temp].status_1_sub
                         if status_1_sub == 0:
-                            status_1_0_sub = robots[index_temp].status_1_0_sub
+                            status_1_0_sub = robots[robot_temp].status_1_0_sub
                             if status_1_0_sub == 0:
                                 status_list[i][index_temp] = 1.1  # 1.1 for status '1_0_0'
                             elif status_1_0_sub == 1:
@@ -462,7 +462,6 @@ while not sim_exit:
                             if dist_satisfied:
                                 # status transition scheduled, robots '1_0_1' are becoming '2'
                                 s_form_done.append(g_it)
-                                print "triangle finished, group {}, member {}, triggered by {}".format(g_it, groups[g_it][3], i)
                 elif robots[i].status_1_sub == 1:
                     # robot is in the merging phase
                     it0 = robots[i].key_neighbors[0]
