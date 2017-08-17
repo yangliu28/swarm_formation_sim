@@ -82,7 +82,9 @@ adjust_vel_coef = const_vel/loop_space
 # the interior angle at one node of the loop will be randomly generated
 # within a small range around the regular polygon interior angle
 # the half range will be inversely proportional to the polygon size
-inter_range_numerator = math.pi/2
+range_numerator = math.pi/2  # for randomly generating interior angle
+
+space_comp_ratio = 0.8
 
 # instantiate the robot swarm as list
 robots = []  # container for all robots, index is its identification
@@ -732,6 +734,9 @@ while not sim_exit:
             robots[it0].status_2_avail2 = [True,True]  # both sides of all are available
             robots[it1].status_2_avail2 = [True,True]
             robots[it2].status_2_avail2 = [True,True]
+            robots[it0].status_2_inter = inter_generator(3, range_numerator)
+            robots[it1].status_2_inter = inter_generator(3, range_numerator)
+            robots[it2].status_2_inter = inter_generator(3, range_numerator)
             # update the 'groups' variable
             groups[g_it][1] = 3  # three members formally on the loop now
             groups[g_it][2] = [it0, it1, it2]  # copy the same robots
@@ -751,8 +756,13 @@ while not sim_exit:
             robots[it0].status_2_avail2[1] = True
             robots[it1].status_2_avail2[0] = True
             # update for 'groups' variable
+            groups[g_it][1] = groups[g_it][1] + 1  # update number of robots on the loop
             groups[g_it][2].append(i)  # add to the list of robots on the loop
             groups[g_it][3].remove(i)  # remove from the list of robots off the loop
+            # update interior angle of all robots on the loop, because polygon size changed
+            poly_size = len(groups[g_it][2])
+            for j in groups[g_it][2]:
+                robots[j].status_2_inter = inter_generator(poly_size, range_numerator)
         # 6.s_group_exp, natural life expiration of the groups
         for g_it in s_group_exp:
             s_disassemble.append([g_it])  # disassemble together in s_disassemble

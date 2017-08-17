@@ -27,9 +27,6 @@ class LFRobot: # LF stands for loop formation
         self.status_2_avail2 = [True,True]  # second availability for two sides to be merged
             # indicating if a robot is merging at one side, if yes, then availability is False
             # first value for small index side, second for large side
-        self.status_2_inter = 0  # interior angle of the polygon at this node
-            # it is generated randomly in a small range around the normal interior angle
-            # normal interior angle is calculated for the loop to form a regular polygon
         self.key_neighbors = [-1,-1]  # key neighbors to secure the group formation
             # two members list for all '1' and '2' robots, except '1_0_0'
             # first value is the robot on the small index side, second for large side
