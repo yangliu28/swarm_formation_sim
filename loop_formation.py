@@ -78,7 +78,11 @@ n1_life_lower = 3  # lower limit of life time for status '-1'
 n1_life_upper = 8  # upper limit of life time for status '-1'
 # coefficient for calculating velocity of robot '2' on the loop for adjusting
 # as the distance error decreases, the loop adjusting velocity also decreases
-adjust_vel_coef = const_vel/loop_space * 0.8
+adjust_vel_coef = const_vel/loop_space
+# the interior angle at one node of the loop will be randomly generated
+# within a small range around the regular polygon interior angle
+# the half range will be inversely proportional to the polygon size
+inter_range_numerator = math.pi/2
 
 # instantiate the robot swarm as list
 robots = []  # container for all robots, index is its identification
@@ -103,6 +107,14 @@ groups = {}
 # instantiate a distance table for every pair of robots
 # make sure all data in table is being written when updating
 dist_table = [[0 for j in range(robot_quantity)] for i in range(robot_quantity)]
+
+# randomly generate the interior angle according the polygon size and angle randoml range
+def inter_generator(poly_n, range_nume):
+    regu_inter = math.pi - 2*math.pi/poly_n
+    half_range = range_num/poly_n
+    lower_limit = regu_inter - half_range
+    upper_limit = regu_inter + half_range
+    return random.uniform(lower_limit, upper_limit)
 
 # function for solving destination on the loop based on positions of two neighbors
 def des_solver(pos_l, pos_r, dist_0, l_d):
@@ -453,12 +465,17 @@ while not sim_exit:
                             it1 = robots[i].key_neighbors[1]
                             # check all threee sides to see if distances are satisfied
                             dist_satisfied = True
-                            if abs(dist_table[i][it0] - loop_space) > space_error:
-                                dist_satisfied = False
-                            elif abs(dist_table[i][it1] - loop_space) > space_error:
-                                dist_satisfied = False
-                            elif abs(dist_table[it0][it1] - loop_space) > space_error:
-                                dist_satisfied = False
+                            # if abs(dist_table[i][it0] - loop_space) > space_error:
+                            #     dist_satisfied = False
+                            # elif abs(dist_table[i][it1] - loop_space) > space_error:
+                            #     dist_satisfied = False
+                            # elif abs(dist_table[it0][it1] - loop_space) > space_error:
+                            #     dist_satisfied = False
+                            # release the requirements that as long as three robots can see
+                            # each other, they can form the initial loop of triangle
+                            if dist_table[i][it0] > comm_range:  dist_satisfied = False
+                            if dist_table[i][it1] > comm_range:  dist_satisfied = False
+                            if dist_table[it0][it1] > comm_range:  dist_satisfied = False
                             if dist_satisfied:
                                 # status transition scheduled, robots '1_0_1' are becoming '2'
                                 s_form_done.append(g_it)
