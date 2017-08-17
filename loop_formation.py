@@ -34,6 +34,11 @@
 # role is equal. Each has two neighbors, one on left, one on right. There is no start or
 # end on the loop.
 
+# A simple loop adjusting method was used. Each robot keeps moving to achieve the desired
+# loop space. In the meantime, if a robot on the loop meets another robot on the same loop
+# that is not one of its key neighbors, it moves away from that robot, using the old velocity
+# for the loop space destination.
+
 
 import pygame
 import math, random, sys
@@ -70,7 +75,10 @@ distrib_coef = 0.5  # coefficient to resize the initial robot distribution
 const_vel = 4.0  # all robots except those in adjusting phase are moving at this speed
 frame_period = 100  # updating period of the simulation and graphics, in millisecond
 comm_range = 5.0  # sensing and communication share this same range, in radius
-loop_space = comm_range * 0.7  # desired space of robots on the lop
+
+# critical coefficient here
+
+loop_space = comm_range * 0.75  # desired space of robots on the lop
 space_error = loop_space * 0.2  # error to determine if a status transition is needed
 life_incre = 10  # number of seconds a new member adds to a group
 group_id_upper_limit = 1000  # upper limit of random integer for group id
@@ -78,13 +86,7 @@ n1_life_lower = 3  # lower limit of life time for status '-1'
 n1_life_upper = 8  # upper limit of life time for status '-1'
 # coefficient for calculating velocity of robot '2' on the loop for adjusting
 # as the distance error decreases, the loop adjusting velocity also decreases
-adjust_vel_coef = const_vel/loop_space
-# the interior angle at one node of the loop will be randomly generated
-# within a small range around the regular polygon interior angle
-# the half range will be inversely proportional to the polygon size
-range_numerator = math.pi/2  # for randomly generating interior angle
-
-space_comp_ratio = 0.8
+adjust_vel_coef = const_vel/loop_space * 0.8
 
 # instantiate the robot swarm as list
 robots = []  # container for all robots, index is its identification
@@ -101,7 +103,7 @@ groups = {}
     # key is the group id
     # value is a list
         # 0.first element: the group size, all members including both '2' and '1'
-        # 1.second element: the number of robots in formation, only robot '2'
+        # 1.second element: the number of robots on the loop, only robot '2'
         # 2.third element: a list of robots on the loop, nor ordered, status '2'
         # 3.fourth element: a list of robots off the loop, not ordered, status '1'
         # 4.second element: remaining life time
@@ -109,14 +111,6 @@ groups = {}
 # instantiate a distance table for every pair of robots
 # make sure all data in table is being written when updating
 dist_table = [[0 for j in range(robot_quantity)] for i in range(robot_quantity)]
-
-# randomly generate the interior angle according the polygon size and angle randoml range
-def inter_generator(poly_n, range_nume):
-    regu_inter = math.pi - 2*math.pi/poly_n
-    half_range = range_num/poly_n
-    lower_limit = regu_inter - half_range
-    upper_limit = regu_inter + half_range
-    return random.uniform(lower_limit, upper_limit)
 
 # function for solving destination on the loop based on positions of two neighbors
 def des_solver(pos_l, pos_r, dist_0, l_d):
@@ -138,7 +132,7 @@ def des_solver(pos_l, pos_r, dist_0, l_d):
 
 # the loop
 sim_exit = False  # simulation exit flag
-sim_pause = False  # simulation pause flag
+sim_pause = True  # simulation pause flag
 timer_last = pygame.time.get_ticks()  # return number of milliseconds after pygame.init()
 timer_now = timer_last  # initialize it with timer_last
 while not sim_exit:
@@ -519,6 +513,29 @@ while not sim_exit:
                         # status transition scheduled, to disassemble the minority groups
                         s_disassemble.append(groups_temp.keys())
                         # may produce duplicates in s_disassemble, not big problem
+                    # further process the 'status_list[i]' and 'index_list[i]'
+                    # for use in loop adjusting when in the physics update
+                    # the following removes all '1', and keep same group '2' except key neighbors
+                    g_it = robots[i].group_id  # group id of host robot
+                    while 1 in status_list[i]:
+                        index_temp = status_list[i].index(1)
+                        status_list[i].pop(index_temp)
+                        index_list[i].pop(index_temp)
+                    index_temp = 0
+                    while 2 in status_list[i][index_temp:]:
+                        index_temp = status_list[i].index(2,index_temp)
+                        robot_temp = index_list[i][index_temp]
+                        if robot_temp in robots[i].key_neighbors:
+                            # remove the same group key neighbors
+                            status_list[i].pop(index_temp)
+                            index_list[i].pop(index_temp)
+                        elif robots[robot_temp].group_id != g_it:
+                            # remove non-same-group robot '2'
+                            status_list[i].pop(index_temp)
+                            index_list[i].pop(index_temp)
+                        else:
+                            # keep the same group '2' that aren't key neighbors
+                            index_temp = index_temp + 1
             # for the host robot having status of '-1'
             elif robots[i].status == -1:
                 # check if life time expires
@@ -533,6 +550,7 @@ while not sim_exit:
                 # the group has more than half the totoal number of robots
                 groups[g_it][5] = True  # becoming dominant group
                 groups[g_it][4] = 100.0  # a large number
+                print("dominant group established")
             if groups[g_it][4] < 0:  # life time of a group expires
                 # schedule operation to disassemble this group
                 s_group_exp.append(g_it)
@@ -734,11 +752,8 @@ while not sim_exit:
             robots[it0].status_2_avail2 = [True,True]  # both sides of all are available
             robots[it1].status_2_avail2 = [True,True]
             robots[it2].status_2_avail2 = [True,True]
-            robots[it0].status_2_inter = inter_generator(3, range_numerator)
-            robots[it1].status_2_inter = inter_generator(3, range_numerator)
-            robots[it2].status_2_inter = inter_generator(3, range_numerator)
             # update the 'groups' variable
-            groups[g_it][1] = 3  # three members formally on the loop now
+            groups[g_it][1] = 3  # three members on the loop now
             groups[g_it][2] = [it0, it1, it2]  # copy the same robots
             groups[g_it][3] = []  # empty the temporary pool
         # 5.s_merge_done, robot '1_1' finishes merging, becoming '2'
@@ -759,10 +774,6 @@ while not sim_exit:
             groups[g_it][1] = groups[g_it][1] + 1  # update number of robots on the loop
             groups[g_it][2].append(i)  # add to the list of robots on the loop
             groups[g_it][3].remove(i)  # remove from the list of robots off the loop
-            # update interior angle of all robots on the loop, because polygon size changed
-            poly_size = len(groups[g_it][2])
-            for j in groups[g_it][2]:
-                robots[j].status_2_inter = inter_generator(poly_size, range_numerator)
         # 6.s_group_exp, natural life expiration of the groups
         for g_it in s_group_exp:
             s_disassemble.append([g_it])  # disassemble together in s_disassemble
@@ -885,27 +896,9 @@ while not sim_exit:
                 else:
                     robots[i].status_2_avail1 = True
                 # update moving direction and velocity
-                g_it = robots[i].group_id
-                num_loop = groups[g_it][1]  # get number of robots on loop
-                poly_inter = math.pi - 2*math.pi/num_loop  # interior angle if regular polygon
-                # calculate the lower limit of interior angle allowed
-                angle_lower = max(math.pi/3, 2*poly_inter-math.pi)
-                # calculate new destination according to the situation of interior angle
-                new_des = [-1,-1]
-                if angle_inter > math.pi:  # upper limit of the interior angle
-                    # calculate the critical destination to make angle correct
-                    new_des = des_solver(robots[it0].pos, robots[it1].pos,
-                                         dist_table[it0][it1], dist_table[it0][it1]/2)
-                elif angle_inter < angle_lower:
-                    new_space = (dist_table[it0][it1] / math.sin(angle_lower) *
-                                 math.sin((math.pi-angle_lower)/2))  # sin rule to solve triangle
-                    # calculate the new destination with new space
-                    new_des = des_solver(robots[it0].pos, robots[it1].pos,
-                                         dist_table[it0][it1], new_space)
-                else:
-                    # interior angle is in good shape, adjust space with proportional speed
-                    new_des = des_solver(robots[it0].pos, robots[it1].pos,
-                                         dist_table[it0][it1], loop_space)
+                # also keep away from same group robots '2' that are not key neighbors
+                new_des = des_solver(robots[it0].pos, robots[it1].pos,
+                                     dist_table[it0][it1], loop_space)
                 # update moving orientation and velocity based on calculated new destination
                 vect_temp = (new_des[0]-robots[i].pos[0],
                              new_des[1]-robots[i].pos[1])
@@ -913,6 +906,47 @@ while not sim_exit:
                 dist_temp = math.sqrt(vect_temp[0]*vect_temp[0]+
                                       vect_temp[1]*vect_temp[1])
                 robots[i].vel = dist_temp * adjust_vel_coef
+                if len(index_list[i]) > 0:
+                    # there are same group non-neighbor robots '2' around
+                    # find the closest one within them, and move away from it
+                    dist_min = 2*comm_range
+                    robot_min = -1
+                    for j in index_list[i]:
+                        if dist_table[i][j] < dist_min and dist_table[i][j] > 0:
+                            dist_min = dist_table[i][j]
+                            robot_min = j
+                    # robot_min is the acquired closest robot
+                    vect_temp = (robots[i].pos[0]-robots[robot_min].pos[0],
+                                 robots[i].pos[1]-robots[robot_min].pos[1])
+                    robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
+                    # not updating velocity here, use the same urgency of moving to ideal des
+
+                # poly_inter = math.pi - 2*math.pi/num_loop  # interior angle if regular polygon
+                # # calculate the lower limit of interior angle allowed
+                # angle_lower = max(math.pi/3, 2*poly_inter-math.pi)
+                # # calculate new destination according to the situation of interior angle
+                # new_des = [-1,-1]
+                # if angle_inter > math.pi:  # upper limit of the interior angle
+                #     # calculate the critical destination to make angle correct
+                #     new_des = des_solver(robots[it0].pos, robots[it1].pos,
+                #                          dist_table[it0][it1], dist_table[it0][it1]/2)
+                # elif angle_inter < angle_lower:
+                #     new_space = (dist_table[it0][it1] / math.sin(angle_lower) *
+                #                  math.sin((math.pi-angle_lower)/2))  # sin rule to solve triangle
+                #     # calculate the new destination with new space
+                #     new_des = des_solver(robots[it0].pos, robots[it1].pos,
+                #                          dist_table[it0][it1], new_space)
+                # else:
+                #     # interior angle is in good shape, adjust space with proportional speed
+                #     new_des = des_solver(robots[it0].pos, robots[it1].pos,
+                #                          dist_table[it0][it1], loop_space)
+                # # update moving orientation and velocity based on calculated new destination
+                # vect_temp = (new_des[0]-robots[i].pos[0],
+                #              new_des[1]-robots[i].pos[1])
+                # robots[i].ori = math.atan2(vect_temp[1], vect_temp[0])
+                # dist_temp = math.sqrt(vect_temp[0]*vect_temp[0]+
+                #                       vect_temp[1]*vect_temp[1])
+                # robots[i].vel = dist_temp * adjust_vel_coef
             # decrease life time of robot '-1'
             elif robots[i].status == -1:
                 robots[i].status_n1_life = robots[i].status_n1_life - frame_period/1000.0
@@ -944,6 +978,32 @@ while not sim_exit:
                 color_temp = robot_n1_color
             # draw the robot as a small solid circle
             pygame.draw.circle(screen, color_temp, display_pos, robot_size, 0)  # fill the circle
+        # draw the line segments for the loops
+        for g_it in groups.keys():
+            if groups[g_it][1] > 0:
+                # this group is not in the initial forming phase
+                # will not use the groups[g_it][2] to draw the line, it's not ordered
+                # start with first robot in groups[g_it][2], and use key neighbors to continue
+                # this also acts as a way to check if key_neighbors are in good shape
+                it_start = groups[g_it][2][0]
+                # do one iteration first
+                it0 = it_start
+                it1 = robots[it0].key_neighbors[1]  # going ccw
+                it0_disp = world_to_display(robots[it0].pos, world_size, screen_size)
+                it1_disp = world_to_display(robots[it1].pos, world_size, screen_size)
+                pygame.draw.line(screen, robot_2_color, it0_disp, it1_disp)
+                line_count = 1  # count number of line segments that have been drawn
+                while it1 != it_start:  # keep iterating
+                    it0 = it1
+                    it1 = robots[it0].key_neighbors[1]
+                    it0_disp = world_to_display(robots[it0].pos, world_size, screen_size)
+                    it1_disp = world_to_display(robots[it1].pos, world_size, screen_size)
+                    pygame.draw.line(screen, robot_2_color, it0_disp, it1_disp)
+                    line_count = line_count + 1
+                # check if number of drawed line segments is correct
+                if line_count != groups[g_it][1]:
+                    print "group {} has {} nodes but {} line segments".format(g_it, groups[g_it][1],
+                                                                              line_count)
         pygame.display.update()
 
 pygame.quit()
