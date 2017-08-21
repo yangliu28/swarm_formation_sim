@@ -37,6 +37,20 @@ pygame.display.set_caption("Loop Reshape(static version)")
 # It's more natural to compute the physics in right hand coordiante system.
 world_size = (100.0, 100.0 * screen_size[1]/screen_size[0])
 
+# variables to configure the simulation
+robot_quantity = 30  # the number of nodes for the polygon
+loop_space = 4.0  # side length of the equilateral polygon
+int_angle_reg = math.pi - 2*math.pi/robot_quantity  # interior angle of regular polygon
+int_angle_range = 2*(math.pi - reg_int_angle)  # half range of the interior angle
+# lower limit of the interior angle
+int_angle_lower = max(math.pi/3, int_angle_reg - int_angle_range)
+# upper limit of the interior angle
+int_angle_upper = int_angle_reg + 
+
+# instantiate the robots variable for the positions
+robots = []  # for all robots, index is the robot's identification
+for i in range(robot_quantity):
+    robots.append([0,0])  # append a 2-D position
 
 
 
