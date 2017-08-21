@@ -75,9 +75,6 @@ distrib_coef = 0.5  # coefficient to resize the initial robot distribution
 const_vel = 4.0  # all robots except those in adjusting phase are moving at this speed
 frame_period = 100  # updating period of the simulation and graphics, in millisecond
 comm_range = 5.0  # sensing and communication share this same range, in radius
-
-# critical coefficient here
-
 loop_space = comm_range * 0.75  # desired space of robots on the lop
 space_error = loop_space * 0.2  # error to determine if a status transition is needed
 life_incre = 10  # number of seconds a new member adds to a group
