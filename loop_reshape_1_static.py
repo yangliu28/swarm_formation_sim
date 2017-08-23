@@ -22,7 +22,8 @@
 
 
 import pygame
-import math, random, numpy, sys
+import math, random, numpy
+import sys, time, os
 from formation_functions import *
 
 # Read simulation options from passed arguments, the structure is:
@@ -50,7 +51,7 @@ elif initial_option == 'initial_read':
     form_files[0] = sys.argv[2]
 else:
     # unrecognized argument for initial formation
-    print "argument {} for initial formation can not be recognized".format(initial_option)
+    print "arg {} for initial formation can not be recognized".format(initial_option)
     sys.exit()
 # continue to read target formation option
 target_option = 0
@@ -69,15 +70,22 @@ elif target_option == 'target_read':
         form_files[1] = sys.argv[4]
 else:
     # unregocnized argument for target formation
-    print "argument {} for target formation can not be recognized".format(target_option)
+    print "arg {} for target formation can not be recognized".format(target_option)
     sys.exit()
 
-# The loop data file structure explained:
-# no file extention
+# The file structure for the loop formation data:
+# First line is an integer for the number of sides of this polygon.
+# From the second line, each line is an float number for an interior angle. The interior
+# angles are arranged in ccw order along the loop. The reason of using interior angle
+# instead of node position, is that it is independent of the side length.
+# Not all interior angles are recorded, only the first (n-3) are. Since the polygon is
+# equilateral, (n-3) of interior angles are enough to determine the shape.
+# Filename is the time stamp when generating this file, there is no file extention.
 
-# store the formation as an array of interior angles, independent of side length
+
 # examine the sum of interior angles, and check if number of sides is as required
 
+# file read/write needs to be tested under both windows and ubuntu
 
 
 # initialize the pygame
@@ -112,22 +120,21 @@ int_angle_dev = (int_angle_reg - math.pi/3)/5
 
 # instantiate the robots variable for the positions
 nodes = [[],[]]  # node positions for two formation, index is the robot's identification
-for i in range(poly_n):
+nodes[0][0] = [0, 0]  # first node starts at origin
+nodes[0][1] = [loop_space, 0]  # second node is loop space away on the right
+nodes[1][0] = [0, 0]
+nodes[1][1] = [loop_space, 0]
+for i in range(2, poly_n):
     nodes[0].append([0, 0])  # filled with [0,0]
     nodes[1].append([0, 0])
 
-
-
-
-# construct the formation data for the two formation, either generate or from file
+# construct the formation data for the two formation, either generating or from file
 for i in range(2):
     if form_opts[i] == 0:  # option to generate a new formation
-        # initialize the positions of first two nodes
-        nodes[i][0] = [0, 0]  # first node starts at origin
-        nodes[i][1] = [loop_space, 0]  # second node is loop space away on the right
         # process for generating the random equilateral polygon, two stages
         poly_success = False  # flag for succeed in generating the polygon
-        trial_count = 0  # record number of trials until a successful polygon
+        trial_count = 0  # record number of trials until a successful polygon is achieved
+        int_final = []  # interior angles to be saved later in file
         while not poly_success:
             trial_count = trial_count + 1
             print "trial {}: ".format(trial_count),
@@ -136,12 +143,12 @@ for i in range(2):
             dof = poly_n-3  # number of free interior angles to be randomly generated
             if dof > 0:  # only continue guessing if at least one free interior angle
                 # generate all the guesses from a normal distribution
-                int_guesses = numpy.random.normal(int_angle_reg, int_angle_dev, dof)
+                int_guesses = numpy.random.normal(int_angle_reg, int_angle_dev, dof).tolist()
                 ori_current = 0  # orientation of the line segment
                 no_irregular = True  # flag indicating if the polygon is irregular or not
                     # example for irregular cases are intersecting of line segments
                     # or non neighbor nodes are closer than the loop space
-                # construct the polygon based on these guesses
+                # construct the polygon based on these guessed angles
                 for j in range(2, 2+dof):  # for the position of j-th node
                     int_angle_t = int_guesses[j-2]  # interior angle of previous node
                     ori_current = reset_radian(ori_current + (math.pi - int_angle_t))
@@ -162,6 +169,10 @@ for i in range(2):
                         break
                 if not no_irregular:
                     continue  # continue the while loop, keep trying new polygon
+                else:  # if here, current interior angle guesses are good
+                    int_final = int_guesses[:]
+                    # although later check on the final node may still disqualify
+                    # these guesses, the while loop will exit with a good int_final 
             # stage 2: use convex triangle for the rest, and deciding if polygon is possible
             # solve the one last node
             vect_temp = [nodes[i][0][0]-nodes[i][poly_n-2][0],
@@ -195,8 +206,38 @@ for i in range(2):
                 if no_irregular:
                     poly_success = True  # reverse the flag
                     print("successful!")
-        # if here, a polygon has been successfully generated
-        # save the polygon data
+        # if here, a polygon has been successfully generated, save any new formation
+        new_filename = get_date_time()
+        new_filepath = os.path.join(os.getcwd(), 'loop-data', new_filename)
+        f = open(new_filepath, 'w')
+        f.write(str(poly_n) + '\n')  # first line is the number of sides of the polygon
+        for j in int_final:  # only recorded guessed interior angles
+            f.write(str(j) + '\n')  # convert float to string
+        f.close()
+    else:  # option to read formation from file
+        new_filepath = os.path.join(os.getcwd(), 'loop-data', form_files[i])
+        f = open(new_filepath, 'r')  # read only
+        # check if the loop has the same number of side
+        if int(f.readline()) == poly_n:
+            # continue getting the interior angles
+            int_angles = []
+            new_line = f.readline()
+            while len(new_line) != 0:  # not the end of the file yet
+                int_angles.append(float(new_line))  # add the new angle
+            # check if this file has the number of interior angles as it promised
+            if len(int_angles) != poly_n-3  # these many angles can determine the polygon
+                # the number of sides is not consistent inside the file
+                print "file {} has inconsistent number of sides of polygon".format(form_files[i])
+                sys.exit()
+            # construct the polygon from these interior angles
+            for j in range(2, poly_n-1):
+
+                ############################### programming goes here
+
+        else:
+            # the number of sides is not the same with poly_n specified here
+            print "file {} has incorrect number of sides of polygon".format(form_files[i])
+            sys.exit()
 
 
 # calculate the geometry center of current polygon
