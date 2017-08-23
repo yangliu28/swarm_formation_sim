@@ -1,6 +1,6 @@
 # static version of the probabilistic approach for the loop reshape formation
 
-# random equilateral polygon generating method:
+# Random equilateral polygon generating method:
 # Given all the side length of a n-side polygon, it can still varies in shape. The number of
 # degree of freedom is (n-3). Equilateral polygon also has fixed side length, the way to
 # generate such random polygon is to treat first (n-3) number of interior angles as DOFs.
@@ -12,12 +12,13 @@
 # inside the polygon. That is, any non-neighbor nodes should not be closer than loop space.
 
 
-# store data of one formation for the target
-# option to store the formation data
-
-
 # show all the evolution of the preferability of all nodes
 # plot the graph in histogram with matplotlib
+
+
+
+
+# an extra program to read loop formation and visualize it, for organizing loop data
 
 
 import pygame
@@ -35,7 +36,8 @@ from formation_functions import *
 # Any randomly generated formation will be saved as a file under folder 'loop-data'.
 form_opts = [0,0]  # variable for the results parsed from arguments
     # first value for initial formation, second for target
-    # '0' for from random generation, '1' for read from file
+    # '0' for randomly generated
+    # '1' for read from file
 form_files = [0,0]  # filename for the formation if read from file
 # start to read initial formation option
 # start with argv[1], argv[0] is for the filename of this script when run in command line
@@ -70,15 +72,15 @@ else:
     print "argument {} for target formation can not be recognized".format(target_option)
     sys.exit()
 
-
+# The loop data file structure explained:
+# no file extention
 
 # store the formation as an array of interior angles, independent of side length
-# examine the sum of interior angles, and number of sides
-
-target_option = 
+# examine the sum of interior angles, and check if number of sides is as required
 
 
 
+# initialize the pygame
 pygame.init()
 
 # parameters for display, window origin is at left up corner
@@ -109,82 +111,93 @@ int_angle_reg = math.pi - 2*math.pi/poly_n  # interior angle of regular polygon
 int_angle_dev = (int_angle_reg - math.pi/3)/5
 
 # instantiate the robots variable for the positions
-nodes = []  # position of all nodes, index is the robot's identification
-nodes.append([0, 0])  # first node start at origin
-nodes.append([loop_space, 0])  # second node is loop_space distance away on the right
-for i in range(2, poly_n):
-    nodes.append([0, 0])  # fill the rest nodes with [0,0]
+nodes = [[],[]]  # node positions for two formation, index is the robot's identification
+for i in range(poly_n):
+    nodes[0].append([0, 0])  # filled with [0,0]
+    nodes[1].append([0, 0])
 
-# process for generating the random equilateral polygon, two stages
-poly_success = False  # flag for succeed in generating the polygon
-trial_count = 0  # record number of trials until one is successful
-while not poly_success:
-    trial_count = trial_count + 1
-    print "trial {}: ".format(trial_count),
-    # continue trying until all the guesses can forming the desired polygon
-    # stage 1: guessing all the free interior angles
-    dof = poly_n-3  # number of free interior angles to be randomly generated
-    if dof > 0:  # only continue guessing if at least one free interior angle
-        # generate all the guesses from a normal distribution
-        int_guesses = numpy.random.normal(int_angle_reg, int_angle_dev, dof)
-        ori_current = 0  # orientation of the line segment
-        no_irregular = True  # flag indicating if the polygon is irregular or not
-            # irregular cases can be intersecting of line segments
-            # or non neighbor nodes are closer than the loop space
-        # construct the polygon based on these guesses
-        for i in range(2, 2+dof):  # for the position of i-th node
-            int_angle_t = int_guesses[i-2]  # interior angle of previous node
-            ori_current = reset_radian(ori_current + (math.pi - int_angle_t))
-            nodes[i][0] = nodes[i-1][0] + loop_space*math.cos(ori_current)
-            nodes[i][1] = nodes[i-1][1] + loop_space*math.sin(ori_current)
-            # check the distance of node i to all previous nodes
-            # should not be closer than the loop space
-            for j in range(i-1):  # exclude the previous neighbor
-                vect_temp = [nodes[j][0]-nodes[i][0],
-                             nodes[j][1]-nodes[i][1]]  # from i to j
-                dist_temp = math.sqrt(vect_temp[0]*vect_temp[0]+
-                                      vect_temp[1]*vect_temp[1])
-                if dist_temp < loop_space:
-                    no_irregular = False
-                    print "node {} is too close to node {}".format(i, j)
-                    break
-            if not no_irregular:
-                break
-        if not no_irregular:
-            continue  # continue the while loop, keep trying new polygon
-    # stage 2: use convex triangle for the rest, and deciding if polygon is possible
-    # solve the one last node
-    vect_temp = [nodes[0][0]-nodes[poly_n-2][0],
-                 nodes[0][1]-nodes[poly_n-2][1]]  # from n-2 to 0
-    dist_temp = math.sqrt(vect_temp[0]*vect_temp[0]+
-                          vect_temp[1]*vect_temp[1])
-    # check distance between node n-2 and 0 to see if a convex triangle is possible
-    # the situation that whether node n-2 and 0 are too close has been excluded
-    if dist_temp > 2*loop_space:
-        print("second last node is too far away from the starting node")
-        continue
-    else:
-        # calculate the position of the last node
-        midpoint = [(nodes[poly_n-2][0]+nodes[0][0])/2,
-                    (nodes[poly_n-2][1]+nodes[0][1])/2]
-        perp_dist = math.sqrt(loop_space*loop_space - dist_temp*dist_temp/4)
-        perp_ori = math.atan2(vect_temp[1], vect_temp[0]) - math.pi/2
-        nodes[poly_n-1][0] = midpoint[0] + perp_dist*math.cos(perp_ori)
-        nodes[poly_n-1][1] = midpoint[1] + perp_dist*math.sin(perp_ori)
-        # also check any irregularity for the last node
-        no_irregular = True
-        for i in range(1, poly_n-2):  # exclude starting node and second last node
-            vect_temp = [nodes[i][0]-nodes[poly_n-1][0],
-                         nodes[i][1]-nodes[poly_n-1][1]]  # from n-1 to i
+
+
+
+# construct the formation data for the two formation, either generate or from file
+for i in range(2):
+    if form_opts[i] == 0:  # option to generate a new formation
+        # initialize the positions of first two nodes
+        nodes[i][0] = [0, 0]  # first node starts at origin
+        nodes[i][1] = [loop_space, 0]  # second node is loop space away on the right
+        # process for generating the random equilateral polygon, two stages
+        poly_success = False  # flag for succeed in generating the polygon
+        trial_count = 0  # record number of trials until a successful polygon
+        while not poly_success:
+            trial_count = trial_count + 1
+            print "trial {}: ".format(trial_count),
+            # continue trying until all the guesses can forming the desired polygon
+            # stage 1: guessing all the free interior angles
+            dof = poly_n-3  # number of free interior angles to be randomly generated
+            if dof > 0:  # only continue guessing if at least one free interior angle
+                # generate all the guesses from a normal distribution
+                int_guesses = numpy.random.normal(int_angle_reg, int_angle_dev, dof)
+                ori_current = 0  # orientation of the line segment
+                no_irregular = True  # flag indicating if the polygon is irregular or not
+                    # example for irregular cases are intersecting of line segments
+                    # or non neighbor nodes are closer than the loop space
+                # construct the polygon based on these guesses
+                for j in range(2, 2+dof):  # for the position of j-th node
+                    int_angle_t = int_guesses[j-2]  # interior angle of previous node
+                    ori_current = reset_radian(ori_current + (math.pi - int_angle_t))
+                    nodes[i][j][0] = nodes[i][j-1][0] + loop_space*math.cos(ori_current)
+                    nodes[i][j][1] = nodes[i][j-1][1] + loop_space*math.sin(ori_current)
+                    # check the distance of node j to all previous nodes
+                    # should not be closer than the loop space
+                    for k in range(j-1):  # exclude the previous neighbor
+                        vect_temp = [nodes[i][k][0]-nodes[i][j][0],
+                                     nodes[i][k][1]-nodes[i][j][1]]  # from j to k
+                        dist_temp = math.sqrt(vect_temp[0]*vect_temp[0]+
+                                              vect_temp[1]*vect_temp[1])
+                        if dist_temp < loop_space:
+                            no_irregular = False
+                            print "node {} is too close to node {}".format(j, k)
+                            break
+                    if not no_irregular:
+                        break
+                if not no_irregular:
+                    continue  # continue the while loop, keep trying new polygon
+            # stage 2: use convex triangle for the rest, and deciding if polygon is possible
+            # solve the one last node
+            vect_temp = [nodes[i][0][0]-nodes[i][poly_n-2][0],
+                         nodes[i][0][1]-nodes[i][poly_n-2][1]]  # from n-2 to 0
             dist_temp = math.sqrt(vect_temp[0]*vect_temp[0]+
                                   vect_temp[1]*vect_temp[1])
-            if dist_temp < loop_space:
-                no_irregular = False
-                print "last node is too close to node {}".format(i)
-                break
-        if no_irregular:
-            poly_success = True  # reverse the flag
-            print("successful!")
+            # check distance between node n-2 and 0 to see if a convex triangle is possible
+            # the situation that whether node n-2 and 0 are too close has been excluded
+            if dist_temp > 2*loop_space:
+                print("second last node is too far away from the starting node")
+                continue
+            else:
+                # calculate the position of the last node
+                midpoint = [(nodes[i][poly_n-2][0]+nodes[i][0][0])/2,
+                            (nodes[i][poly_n-2][1]+nodes[i][0][1])/2]
+                perp_dist = math.sqrt(loop_space*loop_space - dist_temp*dist_temp/4)
+                perp_ori = math.atan2(vect_temp[1], vect_temp[0]) - math.pi/2
+                nodes[i][poly_n-1][0] = midpoint[0] + perp_dist*math.cos(perp_ori)
+                nodes[i][poly_n-1][1] = midpoint[1] + perp_dist*math.sin(perp_ori)
+                # also check any irregularity for the last node
+                no_irregular = True
+                for j in range(1, poly_n-2):  # exclude starting node and second last node
+                    vect_temp = [nodes[i][j][0]-nodes[i][poly_n-1][0],
+                                 nodes[i][j][1]-nodes[i][poly_n-1][1]]  # from n-1 to j
+                    dist_temp = math.sqrt(vect_temp[0]*vect_temp[0]+
+                                          vect_temp[1]*vect_temp[1])
+                    if dist_temp < loop_space:
+                        no_irregular = False
+                        print "last node is too close to node {}".format(j)
+                        break
+                if no_irregular:
+                    poly_success = True  # reverse the flag
+                    print("successful!")
+        # if here, a polygon has been successfully generated
+        # save the polygon data
+
 
 # calculate the geometry center of current polygon
 geometry_center = [0, 0]
