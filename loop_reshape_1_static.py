@@ -13,6 +13,7 @@
 
 
 # store data of one formation for the target
+# option to store the formation data
 
 
 # show all the evolution of the preferability of all nodes
@@ -20,13 +21,69 @@
 
 
 import pygame
-import math, random, numpy
+import math, random, numpy, sys
 from formation_functions import *
+
+# Read simulation options from passed arguments, the structure is:
+# 1st argument decides whether initial formation is from random generation or file
+    # 'initial_gen' is for random generation, 'initial_read' is for read from file
+# If 1st argument is 'initial_read', 2nd argument will be the filename for the formation
+# Next argument decides whether target formation is from random generation or file
+    # 'target_gen' is for random generation, 'target_read' is for read from file
+# If last argument is 'target_read', next argument will be the filename for the formation
+# All the formation data will be read from folder 'loop-data' under same directory
+# Any randomly generated formation will be saved as a file under folder 'loop-data'.
+form_opts = [0,0]  # variable for the results parsed from arguments
+    # first value for initial formation, second for target
+    # '0' for from random generation, '1' for read from file
+form_files = [0,0]  # filename for the formation if read from file
+# start to read initial formation option
+# start with argv[1], argv[0] is for the filename of this script when run in command line
+initial_option = sys.argv[1]
+if initial_option == 'initial_gen':
+    form_opts[0] = 0
+elif initial_option == 'initial_read':
+    form_opts[0] = 1
+    # get the filename for the initial formation
+    form_files[0] = sys.argv[2]
+else:
+    # unrecognized argument for initial formation
+    print "argument {} for initial formation can not be recognized".format(initial_option)
+    sys.exit()
+# continue to read target formation option
+target_option = 0
+if form_opts[0] == 0:
+    target_option = sys.argv[2]
+else:
+    target_option = sys.argv[3]
+if target_option == 'target_gen':
+    form_opts[1] = 0
+elif target_option == 'target_read':
+    form_opts[1] = 1
+    # get the filename for the target formation
+    if form_opts[0] == 0:
+        form_files[1] = sys.argv[3]
+    else:
+        form_files[1] = sys.argv[4]
+else:
+    # unregocnized argument for target formation
+    print "argument {} for target formation can not be recognized".format(target_option)
+    sys.exit()
+
+
+
+# store the formation as an array of interior angles, independent of side length
+# examine the sum of interior angles, and number of sides
+
+target_option = 
+
+
 
 pygame.init()
 
 # parameters for display, window origin is at left up corner
-screen_size = (800, 600)  # width and height
+screen_size = (600, 800)  # width and height in pixels
+    # top half for initial formation, bottom half for target formation
 background_color = (0,0,0)  # black background
 robot_color = (255,0,0)  # red for robot and the line segments
 robot_color_s = (255,153,153)  # pink for the start robot
