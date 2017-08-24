@@ -19,7 +19,7 @@ def world_to_display(input_pos, world_size, display_size):
     return pos_display
 
 # return date and time in a string, connected with dash, for filename
-def get_data_time():
+def get_date_time():
     return (time.strftime('%Y') + '-' +
             time.strftime('%m') + '-' +
             time.strftime('%d') + '-' +

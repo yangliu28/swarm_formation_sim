@@ -19,6 +19,9 @@
 
 
 # an extra program to read loop formation and visualize it, for organizing loop data
+# another option to not save any formation, or save all generated formation
+# same filename problem, because generated too fast
+
 
 
 import pygame
@@ -83,8 +86,6 @@ else:
 # Filename is the time stamp when generating this file, there is no file extention.
 
 
-# examine the sum of interior angles, and check if number of sides is as required
-
 # file read/write needs to be tested under both windows and ubuntu
 
 
@@ -120,10 +121,10 @@ int_angle_dev = (int_angle_reg - math.pi/3)/5
 
 # instantiate the robots variable for the positions
 nodes = [[],[]]  # node positions for two formation, index is the robot's identification
-nodes[0][0] = [0, 0]  # first node starts at origin
-nodes[0][1] = [loop_space, 0]  # second node is loop space away on the right
-nodes[1][0] = [0, 0]
-nodes[1][1] = [loop_space, 0]
+nodes[0].append([0, 0])  # first node starts at origin
+nodes[0].append([loop_space, 0])  # second node is loop space away on the right
+nodes[1].append([0, 0])
+nodes[1].append([loop_space, 0])
 for i in range(2, poly_n):
     nodes[0].append([0, 0])  # filled with [0,0]
     nodes[1].append([0, 0])
@@ -137,7 +138,7 @@ for i in range(2):
         int_final = []  # interior angles to be saved later in file
         while not poly_success:
             trial_count = trial_count + 1
-            print "trial {}: ".format(trial_count),
+            # print "trial {}: ".format(trial_count),
             # continue trying until all the guesses can forming the desired polygon
             # stage 1: guessing all the free interior angles
             dof = poly_n-3  # number of free interior angles to be randomly generated
@@ -163,7 +164,7 @@ for i in range(2):
                                               vect_temp[1]*vect_temp[1])
                         if dist_temp < loop_space:
                             no_irregular = False
-                            print "node {} is too close to node {}".format(j, k)
+                            # print "node {} is too close to node {}".format(j, k)
                             break
                     if not no_irregular:
                         break
@@ -182,7 +183,7 @@ for i in range(2):
             # check distance between node n-2 and 0 to see if a convex triangle is possible
             # the situation that whether node n-2 and 0 are too close has been excluded
             if dist_temp > 2*loop_space:
-                print("second last node is too far away from the starting node")
+                # print("second last node is too far away from the starting node")
                 continue
             else:
                 # calculate the position of the last node
@@ -201,11 +202,15 @@ for i in range(2):
                                           vect_temp[1]*vect_temp[1])
                     if dist_temp < loop_space:
                         no_irregular = False
-                        print "last node is too close to node {}".format(j)
+                        # print "last node is too close to node {}".format(j)
                         break
                 if no_irregular:
                     poly_success = True  # reverse the flag
-                    print("successful!")
+                    if i == 0:  # for print message
+                        print "initial formation generated at trial {}".format(trial_count)
+                    else:
+                        print "target formation generated at trial {}".format(trial_count)
+                    # print("successful!")
         # if here, a polygon has been successfully generated, save any new formation
         new_filename = get_date_time()
         new_filepath = os.path.join(os.getcwd(), 'loop-data', new_filename)
@@ -214,6 +219,11 @@ for i in range(2):
         for j in int_final:  # only recorded guessed interior angles
             f.write(str(j) + '\n')  # convert float to string
         f.close()
+        # message for a file has been saved
+        if i == 0:
+            print('initial formation saved as "' + new_filename + '"')
+        else:
+            print('target formation saved as "' + new_filename + '"')
     else:  # option to read formation from file
         new_filepath = os.path.join(os.getcwd(), 'loop-data', form_files[i])
         f = open(new_filepath, 'r')  # read only
@@ -225,48 +235,66 @@ for i in range(2):
             while len(new_line) != 0:  # not the end of the file yet
                 int_angles.append(float(new_line))  # add the new angle
             # check if this file has the number of interior angles as it promised
-            if len(int_angles) != poly_n-3  # these many angles can determine the polygon
+            if len(int_angles) != poly_n-3:  # these many angles will determine the polygon
                 # the number of sides is not consistent inside the file
                 print "file {} has inconsistent number of sides of polygon".format(form_files[i])
                 sys.exit()
             # construct the polygon from these interior angles
+            ori_current = 0  # orientation of current line segment
             for j in range(2, poly_n-1):
-
-                ############################### programming goes here
-
+                int_angle_t = int_angles[j-2]  # interior angle of previous node
+                ori_current = reset_radian(ori_current + (math.pi - int_angle_t))
+                nodes[i][j][0] = nodes[i][j-1][0] + loop_space*math.cos(ori_current)
+                nodes[i][j][1] = nodes[i][j-1][1] + loop_space*math.sin(ori_current)
+                # no need to check any irregularities
+            vect_temp = [nodes[i][0][0]-nodes[i][poly_n-2][0],
+                         nodes[i][0][1]-nodes[i][poly_n-2][1]]  # from node n-2 to 0
+            dist_temp = math.sqrt(vect_temp[0]*vect_temp[0]+
+                                  vect_temp[1]*vect_temp[1])
+            midpoint = [(nodes[i][poly_n-2][0]+nodes[i][0][0])/2,
+                        (nodes[i][poly_n-2][1]+nodes[i][0][1])/2]
+            perp_dist = math.sqrt(loop_space*loop_space - dist_temp*dist_temp/4)
+            perp_ori = math.atan2(vect_temp[1], vect_temp[0])
+            nodes[i][poly_n-1][0] = midpoint[0] + perp_dist*math.cos(perp_ori)
+            nodes[i][poly_n-1][1] = midpoint[1] + perp_dist*math.sin(perp_ori)
         else:
             # the number of sides is not the same with poly_n specified here
             print "file {} has incorrect number of sides of polygon".format(form_files[i])
             sys.exit()
 
+# shift the two polygon to the top and bottom halves
+for i in range(2):
+    # calculate the geometry center of current polygon
+    geometry_center = [0, 0]
+    for j in range(poly_n):
+        geometry_center[0] = geometry_center[0] + nodes[i][j][0]
+        geometry_center[1] = geometry_center[1] + nodes[i][j][1]
+    geometry_center[0] = geometry_center[0]/poly_n
+    geometry_center[1] = geometry_center[1]/poly_n
+    # shift the polygon to the middle of the screen
+    for j in range(poly_n):
+        nodes[i][j][0] = nodes[i][j][0] - geometry_center[0] + world_size[0]/2
+        if i == 0:  # initial formation shift to top half
+            nodes[i][j][1] = nodes[i][j][1] - geometry_center[1] + 3*world_size[1]/4
+        else:  # target formation shift to bottom half
+            nodes[i][j][1] = nodes[i][j][1] - geometry_center[1] + world_size[1]/4
 
-# calculate the geometry center of current polygon
-geometry_center = [0, 0]
-for i in range(poly_n):
-    geometry_center[0] = geometry_center[0] + nodes[i][0]
-    geometry_center[1] = geometry_center[1] + nodes[i][1]
-geometry_center[0] = geometry_center[0]/poly_n
-geometry_center[1] = geometry_center[1]/poly_n
-# shift the polygon to the middle of the screen
-for i in range(poly_n):
-    nodes[i][0] = nodes[i][0] - geometry_center[0] + world_size[0]/2
-    nodes[i][1] = nodes[i][1] - geometry_center[1] + world_size[1]/2
-
-# draw the polygon
+# draw the two polygons
 screen.fill(background_color)
-# draw the nodes and line segments
-disp_pos = [[0,0] for i in range(poly_n)]
-# pink color for the first robot
-disp_pos[0] = world_to_display(nodes[0], world_size, screen_size)
-pygame.draw.circle(screen, robot_color_s, disp_pos[0], robot_size, 0)
-# red color for the rest robots and line segments
-for i in range(1, poly_n):
-    disp_pos[i] = world_to_display(nodes[i], world_size, screen_size)
-    pygame.draw.circle(screen, robot_color, disp_pos[i], robot_size, 0)
-for i in range(poly_n-1):
-    pygame.draw.line(screen, robot_color, disp_pos[i], disp_pos[i+1])
-pygame.draw.line(screen, robot_color, disp_pos[poly_n-1], disp_pos[0])
-pygame.display.update()
+for i in range(2):
+    # draw the nodes and line segments
+    disp_pos = [[0,0] for j in range(poly_n)]
+    # pink color for the first robot
+    disp_pos[0] = world_to_display(nodes[i][0], world_size, screen_size)
+    pygame.draw.circle(screen, robot_color_s, disp_pos[0], robot_size, 0)
+    # red color for the rest robots and line segments
+    for j in range(1, poly_n):
+        disp_pos[j] = world_to_display(nodes[i][j], world_size, screen_size)
+        pygame.draw.circle(screen, robot_color, disp_pos[j], robot_size, 0)
+    for j in range(poly_n-1):
+        pygame.draw.line(screen, robot_color, disp_pos[j], disp_pos[j+1])
+    pygame.draw.line(screen, robot_color, disp_pos[poly_n-1], disp_pos[0])
+    pygame.display.update()
 
 sim_exit = False  # simulation exit flag
 while not sim_exit:
@@ -277,4 +305,5 @@ while not sim_exit:
         if event.type == pygame.KEYUP:
             if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
                 sim_exit = True  # exit with ESC key or Q key
+
 
