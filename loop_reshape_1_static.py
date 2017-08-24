@@ -1,5 +1,15 @@
 # static version of the probabilistic approach for the loop reshape formation
 
+# command line arguments passing format:
+    # ex1: "gen_save initial_gen target_gen"
+        # ex1 will generate two formations, and save both to files.
+    # ex2: "gen_discard initial_gen target_read target_filename"
+        # ex2 will generate initial formation, and read target formation from file
+        # generated formation will be discarded
+    # ex3: "gen_save initial_read initial_filename target_gen"
+        # ex3 will read initial formation from file, and generate target formation
+        # generated target formation will be saved
+
 # Random equilateral polygon generating method:
 # Given all the side length of a n-side polygon, it can still varies in shape. The number of
 # degree of freedom is (n-3). Equilateral polygon also has fixed side length, the way to
@@ -16,64 +26,67 @@
 # plot the graph in histogram with matplotlib
 
 
-
-
-# an extra program to read loop formation and visualize it, for organizing loop data
-# another option to not save any formation, or save all generated formation
-# same filename problem, because generated too fast
-
-
-
 import pygame
 import math, random, numpy
 import sys, time, os
 from formation_functions import *
 
 # Read simulation options from passed arguments, the structure is:
-# 1st argument decides whether initial formation is from random generation or file
+# 1st argument decides whether to save all or none of generated formations.
+    # 'gen_save' will save all generated formations, 'gen_discard' will discard them
+# 2nd argument decides whether initial formation is from random generation or file
     # 'initial_gen' is for random generation, 'initial_read' is for read from file
-# If 1st argument is 'initial_read', 2nd argument will be the filename for the formation
+# If 2nd argument is 'initial_read', 3rd argument will be the filename for the formation
 # Next argument decides whether target formation is from random generation or file
     # 'target_gen' is for random generation, 'target_read' is for read from file
-# If last argument is 'target_read', next argument will be the filename for the formation
-# All the formation data will be read from folder 'loop-data' under same directory
-# Any randomly generated formation will be saved as a file under folder 'loop-data'.
+# If previous argument is 'target_read', next argument will be the corresponding filename.
+# All the formation data will be read from folder 'loop-data'.
+# Any generated formation will be saved as a file under folder 'loop-data'.
+save_opt = True  # variable indicating if need to save generated formations
 form_opts = [0,0]  # variable for the results parsed from arguments
     # first value for initial formation, second for target
     # '0' for randomly generated
     # '1' for read from file
 form_files = [0,0]  # filename for the formation if read from file
-# start to read initial formation option
+# following starts to read initial formation option
 # start with argv[1], argv[0] is for the filename of this script when run in command line
-initial_option = sys.argv[1]
+save_option = sys.argv[1]
+if save_option == 'gen_save':
+    save_opt = True
+elif save_option == 'gen_discard':
+    save_opt = False
+else:
+    # unregognized argument for saving formations
+    print 'arg "{}" for saving generated formations is invalid'.format(save_option)
+initial_option = sys.argv[2]
 if initial_option == 'initial_gen':
     form_opts[0] = 0
 elif initial_option == 'initial_read':
     form_opts[0] = 1
     # get the filename for the initial formation
-    form_files[0] = sys.argv[2]
+    form_files[0] = sys.argv[3]
 else:
     # unrecognized argument for initial formation
-    print "arg {} for initial formation can not be recognized".format(initial_option)
+    print 'arg "{}" for initial formation is invalid'.format(initial_option)
     sys.exit()
 # continue to read target formation option
 target_option = 0
 if form_opts[0] == 0:
-    target_option = sys.argv[2]
-else:
     target_option = sys.argv[3]
+else:
+    target_option = sys.argv[4]
 if target_option == 'target_gen':
     form_opts[1] = 0
 elif target_option == 'target_read':
     form_opts[1] = 1
     # get the filename for the target formation
     if form_opts[0] == 0:
-        form_files[1] = sys.argv[3]
-    else:
         form_files[1] = sys.argv[4]
+    else:
+        form_files[1] = sys.argv[5]
 else:
     # unregocnized argument for target formation
-    print "arg {} for target formation can not be recognized".format(target_option)
+    print 'arg "{}" for target formation is invalid'.format(target_option)
     sys.exit()
 
 # The file structure for the loop formation data:
@@ -84,9 +97,6 @@ else:
 # Not all interior angles are recorded, only the first (n-3) are. Since the polygon is
 # equilateral, (n-3) of interior angles are enough to determine the shape.
 # Filename is the time stamp when generating this file, there is no file extention.
-
-
-# file read/write needs to be tested under both windows and ubuntu
 
 
 # initialize the pygame
@@ -212,8 +222,12 @@ for i in range(2):
                         print "target formation generated at trial {}".format(trial_count)
                     # print("successful!")
         # if here, a polygon has been successfully generated, save any new formation
+        if not save_opt: continue  # skip following if option is not to save it
         new_filename = get_date_time()
         new_filepath = os.path.join(os.getcwd(), 'loop-data', new_filename)
+        if os.path.isfile(new_filepath):
+            new_filename = new_filename + '-(1)'  # add a suffix to avoid overwrite
+            new_filepath = new_filepath + '-(1)'
         f = open(new_filepath, 'w')
         f.write(str(poly_n) + '\n')  # first line is the number of sides of the polygon
         for j in int_final:  # only recorded guessed interior angles
@@ -234,11 +248,17 @@ for i in range(2):
             new_line = f.readline()
             while len(new_line) != 0:  # not the end of the file yet
                 int_angles.append(float(new_line))  # add the new angle
+                new_line = f.readline()
             # check if this file has the number of interior angles as it promised
             if len(int_angles) != poly_n-3:  # these many angles will determine the polygon
                 # the number of sides is not consistent inside the file
-                print "file {} has inconsistent number of sides of polygon".format(form_files[i])
+                print 'file "{}" has inconsistent number of sides of polygon'.format(form_files[i])
                 sys.exit()
+            # if here the data file is all fine, print message for this
+            if i == 0:
+                print 'initial formation read from file "{}"'.format(form_files[i])
+            else:
+                print 'target formation read from file "{}"'.format(form_files[i])
             # construct the polygon from these interior angles
             ori_current = 0  # orientation of current line segment
             for j in range(2, poly_n-1):
@@ -254,12 +274,12 @@ for i in range(2):
             midpoint = [(nodes[i][poly_n-2][0]+nodes[i][0][0])/2,
                         (nodes[i][poly_n-2][1]+nodes[i][0][1])/2]
             perp_dist = math.sqrt(loop_space*loop_space - dist_temp*dist_temp/4)
-            perp_ori = math.atan2(vect_temp[1], vect_temp[0])
+            perp_ori = math.atan2(vect_temp[1], vect_temp[0]) - math.pi/2
             nodes[i][poly_n-1][0] = midpoint[0] + perp_dist*math.cos(perp_ori)
             nodes[i][poly_n-1][1] = midpoint[1] + perp_dist*math.sin(perp_ori)
         else:
             # the number of sides is not the same with poly_n specified here
-            print "file {} has incorrect number of sides of polygon".format(form_files[i])
+            print 'file "{}" has incorrect number of sides of polygon'.format(form_files[i])
             sys.exit()
 
 # shift the two polygon to the top and bottom halves
