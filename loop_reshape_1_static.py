@@ -255,7 +255,7 @@ for i in range(2):
             # check if this file has the number of interior angles as it promised
             if len(int_angles) != poly_n-3:  # these many angles will determine the polygon
                 # the number of sides is not consistent inside the file
-                print 'file "{}" has inconsistent number of interior angles'.format(form_files[i])
+                print 'file "{}" has incorrect number of interior angles'.format(form_files[i])
                 sys.exit()
             # if here the data file is all fine, print message for this
             if i == 0:
