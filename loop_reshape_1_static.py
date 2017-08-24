@@ -102,6 +102,9 @@ else:
 # initialize the pygame
 pygame.init()
 
+# name of the folder under save directory that stores loop formation files
+loop_folder = 'loop-data'
+
 # parameters for display, window origin is at left up corner
 screen_size = (600, 800)  # width and height in pixels
     # top half for initial formation, bottom half for target formation
@@ -129,7 +132,7 @@ int_angle_reg = math.pi - 2*math.pi/poly_n  # interior angle of regular polygon
 # standard deviation of the normal distribution of the guesses
 int_angle_dev = (int_angle_reg - math.pi/3)/5
 
-# instantiate the robots variable for the positions
+# instantiate the node positions variable
 nodes = [[],[]]  # node positions for two formation, index is the robot's identification
 nodes[0].append([0, 0])  # first node starts at origin
 nodes[0].append([loop_space, 0])  # second node is loop space away on the right
@@ -224,7 +227,7 @@ for i in range(2):
         # if here, a polygon has been successfully generated, save any new formation
         if not save_opt: continue  # skip following if option is not to save it
         new_filename = get_date_time()
-        new_filepath = os.path.join(os.getcwd(), 'loop-data', new_filename)
+        new_filepath = os.path.join(os.getcwd(), loop_folder, new_filename)
         if os.path.isfile(new_filepath):
             new_filename = new_filename + '-(1)'  # add a suffix to avoid overwrite
             new_filepath = new_filepath + '-(1)'
@@ -239,7 +242,7 @@ for i in range(2):
         else:
             print('target formation saved as "' + new_filename + '"')
     else:  # option to read formation from file
-        new_filepath = os.path.join(os.getcwd(), 'loop-data', form_files[i])
+        new_filepath = os.path.join(os.getcwd(), loop_folder, form_files[i])
         f = open(new_filepath, 'r')  # read only
         # check if the loop has the same number of side
         if int(f.readline()) == poly_n:
@@ -252,7 +255,7 @@ for i in range(2):
             # check if this file has the number of interior angles as it promised
             if len(int_angles) != poly_n-3:  # these many angles will determine the polygon
                 # the number of sides is not consistent inside the file
-                print 'file "{}" has inconsistent number of sides of polygon'.format(form_files[i])
+                print 'file "{}" has inconsistent number of interior angles'.format(form_files[i])
                 sys.exit()
             # if here the data file is all fine, print message for this
             if i == 0:
