@@ -24,7 +24,6 @@
 # Another check during the polygon generating is there should be no collapse or intersecting
 # inside the polygon. That is, any non-neighbor nodes should not be closer than loop space.
 
-
 import pygame
 import math, random, numpy, time
 import sys, time, os
@@ -99,6 +98,8 @@ else:
 # equilateral, (n-3) of interior angles are enough to determine the shape.
 # Filename is the time stamp when generating this file, there is no file extention.
 
+
+########################### start of section 1 ###########################
 
 # initialize the pygame
 pygame.init()
@@ -320,9 +321,16 @@ for i in range(2):
     pygame.draw.line(screen, robot_color, disp_pos[poly_n-1], disp_pos[0])
 pygame.display.update()
 
+
+########################### start of section 2 ###########################
+
+# adjust the figure size here when changing the polygon size
+fig = plt.figure(figsize=(), tight_layout=True)
+gs = gridspec.GridSpec(5, 6, width)
+
 # calculate the interior angles of the two formations
-# It's not necessary to re-do the calculation, but may have this part ready
-# for the dynamic version of this loop reshape simulation.
+# It's not necessary to do the calculation again, but may have this part ready
+# for the dynamic version of the program for the loop reshape simulation.
 inter_ang = [[0 for j in range(poly_n)] for i in range(2)]
 for i in range(2):
     for j in range(poly_n):
@@ -354,12 +362,17 @@ std_dev = [0 for i in range(poly_n)]
 for i in range(poly_n):
     # the angle difference of inter_init[i] to all angles in inter_targ
     ang_diff = [0 for j in range(poly_n)]
+    ang_diff_sum = 0
     for j in range(poly_n):
         # angle difference represents the effort of change between two angles
         # the more effort, the less the preferability, so take reciprocal
         ang_diff[j] = 1/abs(inter_init[i]-inter_targ[j])
-
-
+        # summation of ang_diff
+        ang_diff_sum = ang_diff_sum + ang_diff[j]
+    # convert to preferability distribution
+    for j in range(poly_n):
+        # linearize all probabilities such that sum(pref_dist[i])=1
+        pref_dist[i][j] = ang_diff[j]/ang_diff_sum
 
 sim_exit = False  # simulation exit flag
 sim_pause = True  # simulation pause flag
@@ -379,13 +392,51 @@ while not sim_exit:
     # skip the rest of the loop if paused
     if sim_pause: continue
 
-    # calculate the modified standard deviation of current distribution
+    # calculate the modified standard deviation as a measure of unipolarity
+    for i in range(poly_n):
+        std_dev_t = [0 for j in range(poly_n)]  # temporary standard deviation
+            # the j-th value is the modified standard deviation that takes
+            # j-th value in pref_dist[i] as the middle
+        for j in range(poly_n):
+            vari_sum = 0  # variable for the summation of the variance
+            for k in range(poly_n):
+                # get the closer index distance of k to j on the loop
+                index_dist = min((j-k)%poly_n, (k-j)%poly_n)
+                vari_sum = vari_sum + pref_dist[i][k]*(index_dist*index_dist)
+            std_dev_t[j] = math.sqrt(vari_sum)
+        # find the minimum in the std_dev_t, as node i's best possible deviation
+        std_dev_min = std_dev_t[0]  # initialize with first one
+        for j in range(1, poly_n):
+            if std_dev_t[j] < std_dev_min:
+                std_dev_min = std_dev_t[j]
+        # the minimum standard deviation is the desired one
+        std_dev[i] = std_dev_min
 
-
-
-# data structure for the preferability distribution
-# decide to use the linear deviation angle difference to measure the preferability
-
+    # evolution of preferability distribution, combine neighbor's opinions
+    for i in range(poly_n):
+        i_l = (i-1)%poly_n  # index of neighbor on the left
+        i_r = (i+1)%poly_n  # index of neighbor on the right
+        # shifted distribution from left neighbor
+        dist_l = [pref_dist[i_l][-1]]
+        for j in range(poly_n-1):
+            dist_l.append(pref_dist[i_l][j])
+        # shifted distribution from right neighbor
+        dist_r = []
+        for j in range(1, poly_n):
+            dist_r.append(pref_dist[i_r][j])
+        dist_r.append(pref_dist[i_r][0])
+        # combine the three distributions
+        dist_sum = 0  # summation of the distribution
+        for j in range(poly_n):
+            # the smaller the standard deviation, the better it should stand out
+            # so use the reciprocal of the standard deviation
+            pref_dist[i][j] = (dist_l[j]/std_dev[i_l]+
+                               pref_dist[i][j]/std_dev[i]+
+                               dist_r[j]/std_dev[i_r])
+            dist_sum = dist_sum + pref_dist[i][j]
+        # linearize the distribution here
+        for j in range(poly_n):
+            pref_dist[i][j] = pref_dist[i][j]/dist_sum
 
 
 
