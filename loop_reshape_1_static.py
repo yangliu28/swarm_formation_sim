@@ -341,6 +341,7 @@ for i in range(2):
         # the result interior angles should be in range of [0, 2*pi)
 
 # rename the interior angle variables to be used in the second part
+# use interior angle instead of deviation angle because they should be equivalent
 inter_init = inter_ang[0][:]  # interior angles of initial setup formation
 inter_targ = inter_ang[1][:]  # interior angles of target formation
 # variable for the preferability distribution
@@ -351,8 +352,14 @@ std_dev = [0 for i in range(poly_n)]
 
 # calculate the preferability distribution of the initial formation
 for i in range(poly_n):
+    # the angle difference of inter_init[i] to all angles in inter_targ
+    ang_diff = [0 for j in range(poly_n)]
     for j in range(poly_n):
-        
+        # angle difference represents the effort of change between two angles
+        # the more effort, the less the preferability, so take reciprocal
+        ang_diff[j] = 1/abs(inter_init[i]-inter_targ[j])
+
+
 
 sim_exit = False  # simulation exit flag
 sim_pause = True  # simulation pause flag
