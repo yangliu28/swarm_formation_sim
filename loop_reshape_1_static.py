@@ -25,8 +25,8 @@
 # inside the polygon. That is, any non-neighbor nodes should not be closer than loop space.
 
 import pygame
-import math, random, numpy, time
-import sys, time, os
+import math, random, numpy
+import sys, os
 from formation_functions import *
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
@@ -325,8 +325,10 @@ pygame.display.update()
 ########################### start of section 2 ###########################
 
 # adjust the figure size here when changing the polygon size
-fig = plt.figure(figsize=(), tight_layout=True)
-gs = gridspec.GridSpec(5, 6, width)
+fig = plt.figure(figsize=(18,12), tight_layout=True)
+gs = gridspec.GridSpec(5, 6)
+ax = [fig.add_subplot(gs[i]) for i in range(poly_n)]
+x_pos = range(poly_n)
 
 # calculate the interior angles of the two formations
 # It's not necessary to do the calculation again, but may have this part ready
@@ -375,16 +377,14 @@ for i in range(poly_n):
         pref_dist[i][j] = ang_diff[j]/ang_diff_sum
 
 sim_exit = False  # simulation exit flag
-sim_pause = True  # simulation pause flag
-timer_last = pygame.time.get_ticks()  # number of milliseconds after pygame.init()
-timer_now = timer_last  # initialize it with timer_last
+sim_pause = False  # simulation pause flag
 while not sim_exit:
     # exit the program by close window button, or Esc or Q on keyboard
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sim_exit = True  # exit with the close window button
         if event.type == pygame.KEYUP:
-            if event.key = pygame.K_SPACE:
+            if event.key == pygame.K_SPACE:
                 sim_pause = not sim_pause  # reverse the pause flag
             if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
                 sim_exit = True  # exit with ESC key or Q key
@@ -438,6 +438,12 @@ while not sim_exit:
         for j in range(poly_n):
             pref_dist[i][j] = pref_dist[i][j]/dist_sum
 
-
+    # distribution visualization
+    for i in range(poly_n):
+        ax[i].clear()
+        ax[i].bar(x_pos, pref_dist[i], align='center')
+    fig.canvas.draw()
+    fig.show()
+    # time.sleep(0.5)
 
 
