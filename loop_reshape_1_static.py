@@ -1,4 +1,7 @@
 # static version of the probabilistic approach for the loop reshape formation
+# There are two sections of this program, first section generates two formations,
+# one for initial setup formation, one for target formation; second section
+# illustrates the dynamics of the preferability distribution of all nodes.
 
 # command line arguments passing format:
     # ex1: "gen_save initial_gen target_gen"
@@ -22,14 +25,12 @@
 # inside the polygon. That is, any non-neighbor nodes should not be closer than loop space.
 
 
-# show all the evolution of the preferability of all nodes
-# plot the graph in histogram with matplotlib
-
-
 import pygame
-import math, random, numpy
+import math, random, numpy, time
 import sys, time, os
 from formation_functions import *
+import matplotlib.pyplot as plt
+from matplotlib import gridspec
 
 # Read simulation options from passed arguments, the structure is:
 # 1st argument decides whether to save all or none of generated formations.
@@ -317,16 +318,35 @@ for i in range(2):
     for j in range(poly_n-1):
         pygame.draw.line(screen, robot_color, disp_pos[j], disp_pos[j+1])
     pygame.draw.line(screen, robot_color, disp_pos[poly_n-1], disp_pos[0])
-    pygame.display.update()
+pygame.display.update()
+
+# variables for the preferability distribution
+pref_dist = [[0 for j in range(poly_n)] for i in range(poly_n)]
+# modified standard deviation of each preferability distribution, acts as weights
+std_dev = [0 for i in range(poly_n)]
 
 sim_exit = False  # simulation exit flag
+sim_pause = True  # simulation pause flag
+timer_last = pygame.time.get_ticks()  # number of milliseconds after pygame.init()
+timer_now = timer_last  # initialize it with timer_last
 while not sim_exit:
     # exit the program by close window button, or Esc or Q on keyboard
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sim_exit = True  # exit with the close window button
         if event.type == pygame.KEYUP:
+            if event.key = pygame.K_SPACE:
+                sim_pause = not sim_pause  # reverse the pause flag
             if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
                 sim_exit = True  # exit with ESC key or Q key
+
+    # skip the rest of the loop if paused
+    if sim_pause: continue
+
+# data structure for the preferability distribution
+# decide to use the linear deviation angle difference to measure the preferability
+
+
+
 
 
