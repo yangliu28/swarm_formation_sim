@@ -320,10 +320,39 @@ for i in range(2):
     pygame.draw.line(screen, robot_color, disp_pos[poly_n-1], disp_pos[0])
 pygame.display.update()
 
-# variables for the preferability distribution
+# calculate the interior angles of the two formations
+# It's not necessary to re-do the calculation, but may have this part ready
+# for the dynamic version of this loop reshape simulation.
+inter_ang = [[0 for j in range(poly_n)] for i in range(2)]
+for i in range(2):
+    for j in range(poly_n):
+        # for the interior angles of initial setup formation
+        node_m = nodes[i][j]  # node in the moddle
+        node_l = nodes[i][(j-1)%poly_n]  # node on the left
+        node_r = nodes[i][(j+1)%poly_n]  # node on the right
+        vect_l = [node_l[0]-node_m[0], node_l[1]-node_m[1]]  # from middle to left
+        vect_r = [node_r[0]-node_m[0], node_r[1]-node_m[1]]  # from middle to right
+        # get the angle rotating from vect_r to vect_l
+        inter_ang[i][j] = math.acos((vect_l[0]*vect_r[0] + vect_l[1]*vect_r[1])/
+                                    (loop_space*loop_space))
+        if (vect_l[0]*vect_r[1] - vect_l[1]*vect_r[0]) < 0:
+            # vect_l is not on the left of vect_r
+            inter_ang[i][j] = 2*math.pi - inter_ang[i][j]
+        # the result interior angles should be in range of [0, 2*pi)
+
+# rename the interior angle variables to be used in the second part
+inter_init = inter_ang[0][:]  # interior angles of initial setup formation
+inter_targ = inter_ang[1][:]  # interior angles of target formation
+# variable for the preferability distribution
 pref_dist = [[0 for j in range(poly_n)] for i in range(poly_n)]
-# modified standard deviation of each preferability distribution, acts as weights
+# modified standard deviation of each preferability distribution
+# act as a measure of the unipolarity of the distribution
 std_dev = [0 for i in range(poly_n)]
+
+# calculate the preferability distribution of the initial formation
+for i in range(poly_n):
+    for j in range(poly_n):
+        
 
 sim_exit = False  # simulation exit flag
 sim_pause = True  # simulation pause flag
@@ -342,6 +371,10 @@ while not sim_exit:
 
     # skip the rest of the loop if paused
     if sim_pause: continue
+
+    # calculate the modified standard deviation of current distribution
+
+
 
 # data structure for the preferability distribution
 # decide to use the linear deviation angle difference to measure the preferability
