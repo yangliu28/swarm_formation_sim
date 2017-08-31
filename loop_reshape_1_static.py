@@ -324,12 +324,6 @@ pygame.display.update()
 
 ########################### start of section 2 ###########################
 
-# adjust the figure size here when changing the polygon size
-fig = plt.figure(figsize=(18,12), tight_layout=True)
-gs = gridspec.GridSpec(5, 6)
-ax = [fig.add_subplot(gs[i]) for i in range(poly_n)]
-x_pos = range(poly_n)
-
 # calculate the interior angles of the two formations
 # It's not necessary to do the calculation again, but may have this part ready
 # for the dynamic version of the program for the loop reshape simulation.
@@ -376,8 +370,25 @@ for i in range(poly_n):
         # linearize all probabilities such that sum(pref_dist[i])=1
         pref_dist[i][j] = ang_diff[j]/ang_diff_sum
 
+# adjust the figure size here when changing the polygon size
+fig = plt.figure(figsize=(18,12), tight_layout=True)
+fig.canvas.set_window_title('Evolution of Preferability Distribution')
+gs = gridspec.GridSpec(5, 6)
+ax = [fig.add_subplot(gs[i]) for i in range(poly_n)]
+rects = []  # bar chart subplot rectangle handler
+x_pos = range(poly_n)
+for i in range(poly_n):
+    rects.append(ax[i].bar(x_pos, pref_dist[i], align='center'))
+    ax[i].set_xlim(-1, poly_n)
+    ax[i].set_ylim(0.0, 1.0)
+
+# def animate(i):
+    
+
 sim_exit = False  # simulation exit flag
 sim_pause = False  # simulation pause flag
+iter_count = 0
+graph_iters = 10  # draw the distribution graphs every these many iterations
 while not sim_exit:
     # exit the program by close window button, or Esc or Q on keyboard
     for event in pygame.event.get():
@@ -438,12 +449,15 @@ while not sim_exit:
         for j in range(poly_n):
             pref_dist[i][j] = pref_dist[i][j]/dist_sum
 
-    # distribution visualization
-    for i in range(poly_n):
-        ax[i].clear()
-        ax[i].bar(x_pos, pref_dist[i], align='center')
-    fig.canvas.draw()
-    fig.show()
-    # time.sleep(0.5)
+    print("current iteration count {}".format(iter_count))
+    if iter_count%graph_iters == 0:
+        # distribution visualization
+        for i in range(poly_n):
+            for j in range(poly_n):
+                rects[i][j].set_height(pref_dist[i][j])
+                ax[i].set_title('{} -> {:.4f}'.format(i, std_dev[i]))
+        fig.canvas.draw()
+        fig.show()
+    iter_count = iter_count + 1  # update iteration count
 
 
