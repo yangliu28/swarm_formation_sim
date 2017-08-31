@@ -24,6 +24,17 @@
 # Another check during the polygon generating is there should be no collapse or intersecting
 # inside the polygon. That is, any non-neighbor nodes should not be closer than loop space.
 
+# the bar graph animation form matplotlib runs more smoothly in linux than in windows
+
+# this is already the less effort animation possible, only set the heights of the bars
+# not redrawing the entire graph, not efficient enough?
+
+# try: save background, load background, blit only the rectangles
+
+
+# matlab interface for only updating the bar graphs
+
+
 import pygame
 import math, random, numpy
 import sys, os
@@ -379,11 +390,7 @@ rects = []  # bar chart subplot rectangle handler
 x_pos = range(poly_n)
 for i in range(poly_n):
     rects.append(ax[i].bar(x_pos, pref_dist[i], align='center'))
-    ax[i].set_xlim(-1, poly_n)
-    # ax[i].set_ylim(0.0, 1.0)
-
-# def animate(i):
-    
+    ax[i].set_xlim(-1, poly_n)  # y limit depends on data set
 
 sim_exit = False  # simulation exit flag
 sim_pause = False  # simulation pause flag
