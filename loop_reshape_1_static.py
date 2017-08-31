@@ -380,7 +380,7 @@ x_pos = range(poly_n)
 for i in range(poly_n):
     rects.append(ax[i].bar(x_pos, pref_dist[i], align='center'))
     ax[i].set_xlim(-1, poly_n)
-    ax[i].set_ylim(0.0, 1.0)
+    # ax[i].set_ylim(0.0, 1.0)
 
 # def animate(i):
     
@@ -451,13 +451,22 @@ while not sim_exit:
 
     print("current iteration count {}".format(iter_count))
     if iter_count%graph_iters == 0:
+        # find the largest y data in all distributions as y limit in graphs
+        y_lim = 0
+        for i in range(poly_n):
+            for j in range(poly_n):
+                if pref_dist[i][j] > y_lim:
+                    y_lim = pref_dist[i][j]
+        y_lim = min(1.0, y_lim*1.2)  # leave some gap
         # distribution visualization
         for i in range(poly_n):
             for j in range(poly_n):
                 rects[i][j].set_height(pref_dist[i][j])
                 ax[i].set_title('{} -> {:.4f}'.format(i, std_dev[i]))
+                ax[i].set_ylim(0.0, y_lim)
         fig.canvas.draw()
         fig.show()
     iter_count = iter_count + 1  # update iteration count
+
 
 
