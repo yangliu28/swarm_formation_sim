@@ -32,7 +32,7 @@
 # try: save background, load background, blit only the rectangles
 
 
-# matlab interface for only updating the bar graphs
+# matlab interface for only the visualization part, updating the graphs
 
 
 import pygame
