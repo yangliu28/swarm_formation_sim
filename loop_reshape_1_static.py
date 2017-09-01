@@ -24,15 +24,16 @@
 # Another check during the polygon generating is there should be no collapse or intersecting
 # inside the polygon. That is, any non-neighbor nodes should not be closer than loop space.
 
-# the bar graph animation form matplotlib runs more smoothly in linux than in windows
+# Comments on bar graph animation:
+# Two animation methods are tried here, one is using matplotlib library, the other is using
+# matlab engine to plot the graphs. Since animation results from both are not smooth enough,
+# I'll try to bear with what I can get.
+# The bar graph animation form matplotlib runs a little better in linux than in windows. I am
+# already using the less effort way possible, only set the heights of the bars instead of
+# redrawing the entire graph. The matplotlib.animation.FuncAnimation may work no better than
+# my method right now.
 
-# this is already the less effort animation possible, only set the heights of the bars
-# not redrawing the entire graph, not efficient enough?
 
-# try: save background, load background, blit only the rectangles
-
-
-# matlab interface for only the visualization part, updating the graphs
 
 
 import pygame
@@ -41,6 +42,7 @@ import sys, os
 from formation_functions import *
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
+import matlab.engine
 
 # Read simulation options from passed arguments, the structure is:
 # 1st argument decides whether to save all or none of generated formations.
