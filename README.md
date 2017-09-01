@@ -12,7 +12,7 @@ All the formation control algorithms simulated here agree on a few conditions of
 
 ## Run the simulations
 
-Install corresponding Pygame version for your Python, optional dependencies include numpy, matplotlib. See the header of the '.py' to find what dependencies are needed.
+Install corresponding Pygame version for your Python, optional dependencies include numpy, matplotlib. See the header of the '.py' you want to run to find what dependencies are needed.
 
 Line formation simulation with climbing method:
 

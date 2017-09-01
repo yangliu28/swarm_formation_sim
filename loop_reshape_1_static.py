@@ -32,8 +32,8 @@
 # already using the less effort way possible, only set the heights of the bars instead of
 # redrawing the entire graph. The matplotlib.animation.FuncAnimation may work no better than
 # my method right now.
-# Comment and uncomment two sections related to graphics in the following to choose whether
-# matplotlib or matlab engine will be used.
+# Comment and uncomment two chunks of code related to graphics in the following to choose
+# whether matplotlib or matlab engine will be used.
 
 
 import pygame
@@ -482,7 +482,7 @@ while not sim_exit:
                 if pref_dist[i][j] > y_lim:
                     y_lim = pref_dist[i][j]
         y_lim = min(1.0, y_lim*1.1)  # leave some gap
-        
+
         ### comment and uncomment following two chunks of code to choose graphics method
         # be consistent with previous choice
 
