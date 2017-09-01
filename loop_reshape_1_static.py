@@ -32,8 +32,8 @@
 # already using the less effort way possible, only set the heights of the bars instead of
 # redrawing the entire graph. The matplotlib.animation.FuncAnimation may work no better than
 # my method right now.
-
-
+# Comment and uncomment two sections related to graphics in the following to choose whether
+# matplotlib or matlab engine will be used.
 
 
 import pygame
@@ -383,7 +383,9 @@ for i in range(poly_n):
         # linearize all probabilities such that sum(pref_dist[i])=1
         pref_dist[i][j] = ang_diff[j]/ang_diff_sum
 
-# adjust the figure size here when changing the polygon size
+### comment and uncomment following two chunks of code to choose graphics method
+
+# 1.matplotlib method of bar graph animation, adjust figure and grid size here
 fig = plt.figure(figsize=(18,12), tight_layout=True)
 fig.canvas.set_window_title('Evolution of Preferability Distribution')
 gs = gridspec.GridSpec(5, 6)
@@ -394,6 +396,14 @@ for i in range(poly_n):
     rects.append(ax[i].bar(x_pos, pref_dist[i], align='center'))
     ax[i].set_xlim(-1, poly_n)  # y limit depends on data set
 
+# # 2.matlab method of bar graph animation
+# print("starting matlab engine ...")
+# eng = matlab.engine.start_matlab()
+# print("matlab engine is started")
+# eng.figure('name', 'Evolution of Preferability Distribution', nargout=0)
+# x_pos = eng.linspace(0.0, 29.0, 30.0)
+
+# the loop
 sim_exit = False  # simulation exit flag
 sim_pause = False  # simulation pause flag
 iter_count = 0
@@ -406,11 +416,16 @@ while not sim_exit:
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_SPACE:
                 sim_pause = not sim_pause  # reverse the pause flag
+                if sim_pause: pause_print = True  # need to print pause msg once
             if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
                 sim_exit = True  # exit with ESC key or Q key
 
     # skip the rest of the loop if paused
-    if sim_pause: continue
+    if sim_pause:
+        if pause_print:
+            print('iteration paused')
+            pause_print = False
+        continue
 
     # calculate the modified standard deviation as a measure of unipolarity
     for i in range(poly_n):
@@ -461,13 +476,17 @@ while not sim_exit:
     print("current iteration count {}".format(iter_count))
     if iter_count%graph_iters == 0:
         # find the largest y data in all distributions as y limit in graphs
-        y_lim = 0
+        y_lim = 0.0
         for i in range(poly_n):
             for j in range(poly_n):
                 if pref_dist[i][j] > y_lim:
                     y_lim = pref_dist[i][j]
-        y_lim = min(1.0, y_lim*1.2)  # leave some gap
-        # distribution visualization
+        y_lim = min(1.0, y_lim*1.1)  # leave some gap
+        
+        ### comment and uncomment following two chunks of code to choose graphics method
+        # be consistent with previous choice
+
+        # 1.matplotlib method
         for i in range(poly_n):
             for j in range(poly_n):
                 rects[i][j].set_height(pref_dist[i][j])
@@ -475,6 +494,15 @@ while not sim_exit:
                 ax[i].set_ylim(0.0, y_lim)
         fig.canvas.draw()
         fig.show()
+
+        # # 2.matlab method
+        # for i in range(poly_n):
+        #     eng.subplot(5.0, 6.0, eng.double(i+1))
+        #     eng.bar(x_pos, eng.cell2mat(pref_dist[i]))
+        #     eng.xlim(eng.cell2mat([-1, poly_n]), nargout=0)
+        #     eng.ylim(eng.cell2mat([0.0, y_lim]), nargout=0)
+        #     eng.title("{} -> {:.4f}".format(i, std_dev[i]))
+
     iter_count = iter_count + 1  # update iteration count
 
 
