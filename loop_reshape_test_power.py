@@ -10,7 +10,7 @@ import random, time, os, sys
 # get the exponent from passing parameter
 exponent = float(sys.argv[1])
 
-N = 50  # number of probabilities in the distribution
+N = 50  # number of columns in the distribution
 
 x_data = np.array(range(N))
 y_data = np.array([random.random() for i in range(N)])
@@ -39,4 +39,5 @@ while True:
     fig.show()
 
     time.sleep(0.3)
+
 

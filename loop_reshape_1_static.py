@@ -47,12 +47,13 @@
 
 
 import pygame
-import math, random, numpy
-import sys, os
 from formation_functions import *
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import matlab.engine
+
+import sys, os, math, random
+import numpy as np
 
 # Read simulation options from passed arguments, the structure is:
 # 1st argument decides whether to save all or none of generated formations.
@@ -182,7 +183,7 @@ for i in range(2):
             dof = poly_n-3  # number of free interior angles to be randomly generated
             if dof > 0:  # only continue guessing if at least one free interior angle
                 # generate all the guesses from a normal distribution
-                int_guesses = numpy.random.normal(int_angle_reg, int_angle_dev, dof).tolist()
+                int_guesses = np.random.normal(int_angle_reg, int_angle_dev, dof).tolist()
                 ori_current = 0  # orientation of the line segment
                 no_irregular = True  # flag indicating if the polygon is irregular or not
                     # example for irregular cases are intersecting of line segments
@@ -372,10 +373,15 @@ for i in range(2):
 inter_init = inter_ang[0][:]  # interior angles of initial setup formation
 inter_targ = inter_ang[1][:]  # interior angles of target formation
 # variable for the preferability distribution
-pref_dist = [[0 for j in range(poly_n)] for i in range(poly_n)]
+pref_dist = np.zeros((poly_n, poly_n))
 # modified standard deviation of each preferability distribution
-# act as a measure of the unipolarity of the distribution
+# act as one way of measuring unipolarity of the distribution
 std_dev = [0 for i in range(poly_n)]
+# exponent of the power function in the preferability distribution evolution
+exponent = 2
+# largest probability in each distributions
+# act as one way of measuring unipolarity of the distribution
+larg_dist = [0 for i in range(poly_n)]
 
 # calculate the preferability distribution of the initial formation
 for i in range(poly_n):
@@ -418,7 +424,7 @@ for i in range(poly_n):
 sim_exit = False  # simulation exit flag
 sim_pause = False  # simulation pause flag
 iter_count = 0
-graph_iters = 10  # draw the distribution graphs every these many iterations
+graph_iters = 1  # draw the distribution graphs every these many iterations
 while not sim_exit:
     # exit the program by close window button, or Esc or Q on keyboard
     for event in pygame.event.get():
@@ -438,55 +444,91 @@ while not sim_exit:
             pause_print = False
         continue
 
-    # calculate the modified standard deviation as a measure of unipolarity
-    for i in range(poly_n):
-        std_dev_t = [0 for j in range(poly_n)]  # temporary standard deviation
-            # the j-th value is the modified standard deviation that takes
-            # j-th value in pref_dist[i] as the middle
-        for j in range(poly_n):
-            vari_sum = 0  # variable for the summation of the variance
-            for k in range(poly_n):
-                # get the closer index distance of k to j on the loop
-                index_dist = min((j-k)%poly_n, (k-j)%poly_n)
-                vari_sum = vari_sum + pref_dist[i][k]*(index_dist*index_dist)
-            std_dev_t[j] = math.sqrt(vari_sum)
-        # find the minimum in the std_dev_t, as node i's best possible deviation
-        std_dev_min = std_dev_t[0]  # initialize with first one
-        for j in range(1, poly_n):
-            if std_dev_t[j] < std_dev_min:
-                std_dev_min = std_dev_t[j]
-        # the minimum standard deviation is the desired one
-        std_dev[i] = std_dev_min
+    # # method 1 for measuring unipolarity, the modified standard deviation
+    # for i in range(poly_n):
+    #     std_dev_t = [0 for j in range(poly_n)]  # temporary standard deviation
+    #         # the j-th value is the modified standard deviation that takes
+    #         # j-th value in pref_dist[i] as the middle
+    #     for j in range(poly_n):
+    #         vari_sum = 0  # variable for the summation of the variance
+    #         for k in range(poly_n):
+    #             # get the closer index distance of k to j on the loop
+    #             index_dist = min((j-k)%poly_n, (k-j)%poly_n)
+    #             vari_sum = vari_sum + pref_dist[i][k]*(index_dist*index_dist)
+    #         std_dev_t[j] = math.sqrt(vari_sum)
+    #     # find the minimum in the std_dev_t, as node i's best possible deviation
+    #     std_dev_min = std_dev_t[0]  # initialize with first one
+    #     for j in range(1, poly_n):
+    #         if std_dev_t[j] < std_dev_min:
+    #             std_dev_min = std_dev_t[j]
+    #     # the minimum standard deviation is the desired one
+    #     std_dev[i] = std_dev_min
 
-    # evolution of preferability distribution, combine neighbor's opinions
+    # method 2 of measuring unipolarity, simply the largest probability in the distribution
+    for i in range(poly_n):
+        larg_dist[i] = np.max(pref_dist[i])
+
+    # # method 1 of preferability distribution evolution
+    # # combine three distributions linearly, with unipolarity as coefficient
+    # pref_dist_t = np.copy(pref_dist)  # deep copy the 'pref_dist', intermediate variable
+    # for i in range(poly_n):
+    #     i_l = (i-1)%poly_n  # index of neighbor on the left
+    #     i_r = (i+1)%poly_n  # index of neighbor on the right
+    #     # shifted distribution from left neighbor
+    #     dist_l = [pref_dist_t[i_l][-1]]
+    #     for j in range(poly_n-1):
+    #         dist_l.append(pref_dist_t[i_l][j])
+    #     # shifted distribution from right neighbor
+    #     dist_r = []
+    #     for j in range(1, poly_n):
+    #         dist_r.append(pref_dist_t[i_r][j])
+    #     dist_r.append(pref_dist_t[i_r][0])
+    #     # combine the three distributions
+    #     dist_sum = 0  # summation of the distribution
+    #     for j in range(poly_n):
+    #         # the smaller the standard deviation, the more it should stand out
+    #         # so use the reciprocal of the standard deviation
+    #         pref_dist[i][j] = (dist_l[j]/std_dev[i_l]+
+    #                            pref_dist[i][j]/std_dev[i]+
+    #                            dist_r[j]/std_dev[i_r])
+    #         dist_sum = dist_sum + pref_dist[i][j]
+    #     # linearize the distribution here
+    #     pref_dist[i] = pref_dist[i]/dist_sum
+
+    # method 2 of preferability distribution evolution
+    # combine distributions using power funciton, with coefficients
+    pref_dist_t = np.copy(pref_dist)
+    pref_dist_t = np.power(pref_dist_t, exponent)
+    for i in range(poly_n):
+        dist_sum = np.sum(pref_dist_t[i])
+        pref_dist_t[i] = pref_dist_t[i]/dist_sum
     for i in range(poly_n):
         i_l = (i-1)%poly_n  # index of neighbor on the left
         i_r = (i+1)%poly_n  # index of neighbor on the right
         # shifted distribution from left neighbor
-        dist_l = [pref_dist[i_l][-1]]
+        dist_l = [pref_dist_t[i_l][-1]]
         for j in range(poly_n-1):
-            dist_l.append(pref_dist[i_l][j])
+            dist_l.append(pref_dist_t[i_l][j])
         # shifted distribution from right neighbor
         dist_r = []
         for j in range(1, poly_n):
-            dist_r.append(pref_dist[i_r][j])
-        dist_r.append(pref_dist[i_r][0])
-        # combine the three distributions
-        dist_sum = 0  # summation of the distribution
+            dist_r.append(pref_dist_t[i_r][j])
+        dist_r.append(pref_dist_t[i_r][0])
+        # combine three distributions using power method
         for j in range(poly_n):
-            # the smaller the standard deviation, the better it should stand out
+            # the smaller the standard deviation, the more it should stand out
             # so use the reciprocal of the standard deviation
-            pref_dist[i][j] = (dist_l[j]/std_dev[i_l]+
-                               pref_dist[i][j]/std_dev[i]+
-                               dist_r[j]/std_dev[i_r])
-            dist_sum = dist_sum + pref_dist[i][j]
+            pref_dist[i][j] = (larg_dist[i_l]*dist_l[j]+
+                               larg_dist[i]*pref_dist_t[i][j]+
+                               larg_dist[i_r]*dist_r[j])
+        dist_sum = np.sum(pref_dist[i])  # summation of the distribution
         # linearize the distribution here
-        for j in range(poly_n):
-            pref_dist[i][j] = pref_dist[i][j]/dist_sum
+        pref_dist[i] = pref_dist[i]/dist_sum
 
+    # the graphics
     print("current iteration count {}".format(iter_count))
     if iter_count%graph_iters == 0:
-        # find the largest y data in all distributions as y limit in graphs
+        # find the largest y data in all distributions as up limit in graphs
         y_lim = 0.0
         for i in range(poly_n):
             for j in range(poly_n):
