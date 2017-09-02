@@ -35,6 +35,16 @@
 # Comment and uncomment two chunks of code related to graphics in the following to choose
 # whether matplotlib or matlab engine will be used.
 
+# Comments on linear distribution summation method:
+# The last step in the iteration is to combine the host node's distribution and two neighbors'
+# distributions linearly, with a measure of unipolarity being the coefficients. The simulation
+# result is that distributions of all nodes will always converge to the same one. But the one
+# they converge to often does not have a very good unipolarity, sometimes far from the ideal
+# one-pole-all-rest-zero distribution. The final distribution is limited by the best in the
+# initial distributions, because the linear distribution summation will compromise between
+# all distribution, it will not intentionally seek better distributions.
+
+
 
 import pygame
 import math, random, numpy
@@ -385,7 +395,8 @@ for i in range(poly_n):
 
 ### comment and uncomment following two chunks of code to choose graphics method
 
-# 1.matplotlib method of bar graph animation, adjust figure and grid size here
+# 1.matplotlib method of bar graph animation (preferred)
+# adjust figure and grid size here
 fig = plt.figure(figsize=(18,12), tight_layout=True)
 fig.canvas.set_window_title('Evolution of Preferability Distribution')
 gs = gridspec.GridSpec(5, 6)
@@ -486,7 +497,7 @@ while not sim_exit:
         ### comment and uncomment following two chunks of code to choose graphics method
         # be consistent with previous choice
 
-        # 1.matplotlib method
+        # 1.matplotlib method (preferred)
         for i in range(poly_n):
             for j in range(poly_n):
                 rects[i][j].set_height(pref_dist[i][j])
