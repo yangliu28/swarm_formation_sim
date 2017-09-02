@@ -1,5 +1,7 @@
-# demo of how power function increases the unipolarity of a random distribution
+# demo of how power function can increase the unipolarity of a random distribution
+
 # pass the exponent of the power function in the command line
+# ex: 'python loop_reshape_test_power.py 1.3'
 
 import matplotlib.pyplot as plt
 import numpy as np
