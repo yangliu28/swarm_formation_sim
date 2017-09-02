@@ -1,7 +1,7 @@
 # a program dedicated to read stored loop formation data file, visualize it in pygame
 
 # pass the filename of the loop formation file, it should be placed under 'loop-data'
-# ex: "python loop_reader.py loop-filename"
+# ex: "python loop_reshape_reader.py loop-filename"
 
 import pygame
 import sys, os
