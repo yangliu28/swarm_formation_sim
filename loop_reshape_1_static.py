@@ -378,7 +378,7 @@ pref_dist = np.zeros((poly_n, poly_n))
 # act as one way of measuring unipolarity of the distribution
 std_dev = [0 for i in range(poly_n)]
 # exponent of the power function in the preferability distribution evolution
-exponent = 1.0
+exponent = 1.05
 # largest probability in each distributions
 # act as one way of measuring unipolarity of the distribution
 larg_dist = [0 for i in range(poly_n)]
