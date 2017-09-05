@@ -37,13 +37,21 @@
 
 # Comments on linear distribution summation method:
 # The last step in the iteration is to combine the host node's distribution and two neighbors'
-# distributions linearly, with a measure of unipolarity being the coefficients. The simulation
-# result is that distributions of all nodes will always converge to the same one. But the one
-# they converge to often does not have a very good unipolarity, sometimes far from the ideal
-# one-pole-all-rest-zero distribution. The final distribution is limited by the best in the
-# initial distributions, because the linear distribution summation will compromise between
-# all distribution, it will not intentionally seek better distributions.
+# distributions linearly, with a measure of unipolarity being the coefficients. The result of
+# simulation is that distributions of all nodes will always converge to the same one. But the
+# distribution they converge to often does not have a very good unipolarity, sometimes even far
+# from the ideal one-pole-all-rest-zero distribution. The quality of final distribution is
+# limited by the best in the starting distributions, because the linear distribution summation
+# will compromise between all distribution, it will not intentionally seek better distributions.
 
+# Comments on power method summation method:
+# Power function with exponent higher than 1 will increase the unipolarity of a distribution.
+# The higher the exponent, the faster the unipolarity increase. This aims to improve the quality
+# of the final converged distribution, because it will intentionally optimized local
+# distributions.
+# See the 'loop_reshape_test_power.py' for how power function increase unipolarity.
+# The problem with this method is that, the unipolarity increases so fast that often times best
+# unipolarity will appear locally and fight each other, so the evolution won't converge.
 
 
 import pygame
