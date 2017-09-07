@@ -49,7 +49,7 @@
 # The higher the exponent, the faster the unipolarity increase. This aims to improve the quality
 # of the final converged distribution, because it will intentionally optimized local
 # distributions.
-# See the 'loop_reshape_test_power.py' for how power function increase unipolarity.
+# Find the 'loop_reshape_test_power.py' to see how power function increase unipolarity.
 # The problem with this method is that, the unipolarity increases so fast that often times best
 # unipolarity will appear locally and fight each other, so the evolution won't converge.
 
