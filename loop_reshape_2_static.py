@@ -98,7 +98,7 @@ robot_size = 5  # robot modeled as dot, number of pixels for radius
 icon = pygame.image.load("icon_geometry_art.jpg")
 pygame.display.set_icon(icon)
 screen = pygame.display.set_mode(screen_size)
-pygame.display.set_caption("Loop Reshape (static version)")
+pygame.display.set_caption("Loop Reshape 2 (static version)")
 
 # for physics, continuous world, origin is at left bottom corner, starting (0, 0),
 # with x axis pointing right, y axis pointing up.
@@ -328,9 +328,18 @@ inter_init = inter_ang[0][:]  # interior angles of initial setup formation
 inter_targ = inter_ang[1][:]  # interior angles of target formation
 # variable for the preferability distribution
 pref_dist = np.zeros((poly_n, poly_n))
+# variable indicating which target node has largest probability in the distributions
+# this also represents which node it mostly prefers
+domi_node = [0 for i in range(poly_n)]  # dominant node in the distributions
+# divide nodes on loop to subgroups based on dominant node
+# only adjacent block of nodes are in same subgroup if they agree on dominant node
+subgroups = []  # lists of adjacent nodes inside
+# variable indicating how many nodes are there in the same subgroup with host node
+sub_size = []  # size of the subgroup the host node is in
+# overflow threshold for the distribution difference
+dist_diff_thres = 0.3
 
-
-# calculate the preferability distribution of the initial formation
+# calculate the initial preferability distribution and dominant nodes
 for i in range(poly_n):
     # the angle difference of inter_init[i] to all angles in inter_targ
     ang_diff = [0 for j in range(poly_n)]
@@ -383,25 +392,80 @@ while not sim_exit:
             print_pause = False
         continue
 
-    # method 1 for measuring unipolarity, the modified standard deviation
+    # prepare information for the preferability distribution evolution
+    # find the dominant node in each of the distributions
     for i in range(poly_n):
-        std_dev_t = [0 for j in range(poly_n)]  # temporary standard deviation
-            # the j-th value is the modified standard deviation that takes
-            # j-th value in pref_dist[i] as the middle
-        for j in range(poly_n):
-            vari_sum = 0  # variable for the summation of the variance
-            for k in range(poly_n):
-                # get the closer index distance of k to j on the loop
-                index_dist = min((j-k)%poly_n, (k-j)%poly_n)
-                vari_sum = vari_sum + pref_dist[i][k]*(index_dist*index_dist)
-            std_dev_t[j] = math.sqrt(vari_sum)
-        # find the minimum in the std_dev_t, as node i's best possible deviation
-        std_dev_min = std_dev_t[0]  # initialize with first one
+        domi_node_t = 0  # initialize the dominant node with the first one
+        domi_prob_t = pref_dist[i][0]
         for j in range(1, poly_n):
-            if std_dev_t[j] < std_dev_min:
-                std_dev_min = std_dev_t[j]
-        # the minimum standard deviation is the desired one
-        std_dev[i] = std_dev_min
+            if pref_dist[i][j] > domi_prob_t:
+                domi_node_t = j
+                domi_prob_t = pref_dist[i][j]
+        domi_node[i] = domi_node_t
+    # update the subgroups
+    subgroups = [[0]]  # initialize with a node 0 robot
+    for i in range(1, poly_n):
+        if (domi_node[i-1]+1)%poly_n == domi_node[i]:  # i-1 and i agree on dominant node
+            # simply add i to same group with i-1
+            subgroups[-1].append(i)
+        else:
+            # add a new group for node i in subgroups
+            subgroups.append([i])
+    # check if starting and ending robots should be in same subgroups
+    if (domi_node[poly_n-1]+1)%poly_n == domi_node[0]:
+        # add the first subgroup to the last subgroup
+        for i in subgroups[0]:
+            subgroups[-1].append(i)
+        subgroups.pop(0)  # pop out the first subgroup
+    # update subgroup size
+    sub_size = [0 for i in range(poly_n)]  # initialize with all 0
+    for sub in subgroups:
+        sub_size_t = len(sub)
+        for i in sub:
+            sub_size[i] = sub_size_t
+
+    # preferability distribution evolution
+    pref_dist_t = np.copy(pref_dist)  # deep copy the 'pref_dist', intermediate variable
+    for i in range(poly_n):
+        i_l = (i-1)%poly_n  # index of neighbor on the left
+        i_r = (i+1)%poly_n  # index of neighbor on the right        
+        # shifted distribution from left neighbor
+        dist_l = [pref_dist_t[i_l][-1]]
+        for j in range(poly_n-1):
+            dist_l.append(pref_dist_t[i_l][j])
+        # shifted distribution from right neighbor
+        dist_r = []
+        for j in range(1, poly_n):
+            dist_r.append(pref_dist_t[i_r][j])
+        dist_r.append(pref_dist_t[i_r][0])
+        # calculating if two neighbors have converged ideas with host robot
+        converge_l = False
+        if (domi_node[i_l]+1)%poly_n == domi_node[i]: converge_l = True
+        converge_r = False
+        if (domi_node[i_r]-1)%poly_n == domi_node[i]: converge_l = True
+        # weighted averaging depending on subgroup property
+        if converge_l and converge_r:  # all three neighbors are in the same subgroup
+            # step 1: take equal weighted average on all three distributions
+            dist_sum = 0
+            for j in range(poly_n):
+                pref_dist[i][j] = dist_l[j] + pref_dist[i][j] + dist_r[j]
+                dist_sum = dist_sum + pref_dist[i][j]
+            # linearize the distribution
+            pref_dist[i] = pref_dist[i]/dist_sum
+            # step 2: increase the unipolarity by applying the linear multiplier
+            # first find the largest difference in two of the three distributions
+            dist_diff = [0, 0, 0]  # variable for difference of three distribution
+            # difference of left and host
+            for j in range(poly_n):
+                dist_diff[0] = dist_diff[0] + abs(dist_l[j]-pref_dist_t[i][j])
+            for j in range(poly_n):
+                dist_diff[1] = dist_diff[1] + abs(pref_dist_t[i][j]-dist_r[j])
+            for j in range(poly_n):
+                dist_diff[2] = dist_diff[2] + abs(dist_l[j]-dist_r[j])
+            # 
+
+
+
 
     # preferability distribution evolution
     # combine three distributions linearly, with unipolarity as coefficient
