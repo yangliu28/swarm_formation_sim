@@ -12,6 +12,26 @@
         # ex3 will read initial formation from file, and generate target formation
         # generated target formation will be saved
 
+# Revised algorithm in the second section:
+# New algorithm combines weighted averaging, linear multiplier and power function methods.
+# Since equal weighted averaging method can guarantee convergence(although unipolarity of
+# resulting distribution can be very poor), a revised weighted averaging method was
+# implemented here to ensure as much convergence as possible. Each node is given a new
+# piece of information, that is how many nodes in the adjacent block agree on which target
+# node they should be. (This adjacent block is referred as a subgroup.) This information
+# will help to resolve any conflict on the boundary of two subgroups. And ideally, the
+# subgroup with higher number of nodes should win. With this conflict resolving mechanism,
+# the linear multiplier method is used to improve the unipolarity of the distributions. This
+# method has similar effect of previous power function method with bigger than 1 exponent,
+# but in a slower and constant growing rate. The linear multiplier is only used when two
+# neighbors converges with the host on the formation. How much the unipolarity should grow
+# depends on the largest difference of distributions when using averaging method. The larger
+# the difference, the less the unipolarity should grow. A power function method with exponent
+# smaller than 1 is used to slow down the increasing rate of the unipolarity.
+
+# Node moving strategy in the reshape process:
+
+
 import pygame
 from formation_functions import *
 import matplotlib.pyplot as plt
@@ -113,6 +133,7 @@ loop_space = 4.0  # side length of the equilateral polygon
 int_angle_reg = math.pi - 2*math.pi/poly_n  # interior angle of regular polygon
 # standard deviation of the normal distribution of the guesses
 int_angle_dev = (int_angle_reg - math.pi/3)/5
+
 
 # instantiate the node positions variable
 nodes = [[],[]]  # node positions for two formation, index is the robot's identification
