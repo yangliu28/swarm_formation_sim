@@ -341,6 +341,8 @@ dist_diff_thres = 0.3
 # variable for ratio of distribution difference to threshold, for tuning growing rate
 # in range of [0,1], higher the ratio, slower it grows
 dist_diff_ratio = [0 for i in range(poly_n)]
+# exponent of the power function to map the ratio to a slower growing value
+dist_diff_power = 0.3
 
 # calculate the initial preferability distribution and dominant nodes
 for i in range(poly_n):
@@ -472,10 +474,10 @@ while not sim_exit:
                 # linear multiplier is generated from the smallest and largest probabilities
                 # the smaller end is linearly mapped from largest distribution difference
                 # '1.0/poly_n' is the average of the linear multiplier
-                small_end = 1.0/poly_n * dist_diff_max/dist_diff_thres
+                small_end = 1.0/poly_n * np.power(dist_diff_max/dist_diff_thres, dist_diff_power)
                 large_end = 2.0/poly_n - small_end
                 # sort the magnitude of processed distribution
-                dist_t = pref_dist[i][:]  # temporary distribution
+                dist_t = np.copy(pref_dist[i])  # temporary distribution
                 sort_index = range(poly_n)
                 for j in range(poly_n-1):  # bubble sort, ascending order
                     for k in range(poly_n-1-j):
