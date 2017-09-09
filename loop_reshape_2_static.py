@@ -91,8 +91,9 @@ screen_size = (600, 800)  # width and height in pixels
     # top half for initial formation, bottom half for target formation
 background_color = (0,0,0)  # black background
 robot_color = (255,0,0)  # red for robot and the line segments
-robot_color_s = (255,153,153)  # pink for the start robot
+robot_color_p = (255,153,153)  # pink for the start robot
 robot_size = 5  # robot modeled as dot, number of pixels for radius
+sub_thick = 3  # thickness of line segments for connections in the subgroups
 
 # set up the simulation window and surface object
 icon = pygame.image.load("icon_geometry_art.jpg")
@@ -288,13 +289,13 @@ screen.fill(background_color)
 for i in range(2):
     # draw the nodes and line segments
     disp_pos = [[0,0] for j in range(poly_n)]
-    # pink color for the first robot
-    disp_pos[0] = world_to_display(nodes[i][0], world_size, screen_size)
-    pygame.draw.circle(screen, robot_color_s, disp_pos[0], robot_size, 0)
-    # red color for the rest robots and line segments
-    for j in range(1, poly_n):
+    # calculate the display pos for all nodes, draw them as red dots
+    for j in range(0, poly_n):
         disp_pos[j] = world_to_display(nodes[i][j], world_size, screen_size)
         pygame.draw.circle(screen, robot_color, disp_pos[j], robot_size, 0)
+    # draw an outer circle to mark the starting node
+    pygame.draw.circle(screen, robot_color, disp_pos[0], int(robot_size*1.5), 1)
+    # line segments for connecitons on the loop
     for j in range(poly_n-1):
         pygame.draw.line(screen, robot_color, disp_pos[j], disp_pos[j+1])
     pygame.draw.line(screen, robot_color, disp_pos[poly_n-1], disp_pos[0])
@@ -514,9 +515,11 @@ while not sim_exit:
                 dist_sum = dist_sum + pref_dist[i][j]
             pref_dist[i] = pref_dist[i]/dist_sum
 
-    # the graphics
+    # graphics update
     print("current iteration count {}".format(iter_count))
     if iter_count%graph_iters == 0:
+        
+        # graphics update for the bar graph
         # find the largest y data in all distributions as up limit in graphs
         y_lim = 0.0
         for i in range(poly_n):
@@ -532,6 +535,37 @@ while not sim_exit:
                 ax[i].set_ylim(0.0, y_lim)
         fig.canvas.draw()
         fig.show()
+
+        # graphics update for the pygame window
+        screen.fill(background_color)
+        for i in range(2):
+            # draw the nodes and line segments
+            disp_pos = [[0,0] for j in range(poly_n)]
+            # calculate the display pos for all nodes, draw them as red dots
+            for j in range(0, poly_n):
+                disp_pos[j] = world_to_display(nodes[i][j], world_size, screen_size)
+                pygame.draw.circle(screen, robot_color, disp_pos[j], robot_size, 0)
+            # draw an outer circle to mark the starting node
+            pygame.draw.circle(screen, robot_color, disp_pos[0], int(robot_size*1.5), 1)
+            for j in range(poly_n-1):
+                pygame.draw.line(screen, robot_color, disp_pos[j], disp_pos[j+1])
+            pygame.draw.line(screen, robot_color, disp_pos[poly_n-1], disp_pos[0])
+            # draw a thicker line if two neighbors are in same subgroup
+            for sub in subgroups:
+                for j in range(len(sub)-1):
+                    pair_l = sub[j]
+                    pair_r = sub[j+1]
+                    # use thick pink lines for connecitons in subgroups
+                    pygame.draw.line(screen, robot_color_p, disp_pos[pair_l],
+                                     disp_pos[pair_r], sub_thick)
+            if len(subgroups) == 1:
+                # draw extra segment for starting and end node
+                pair_l = subgroups[0][-1]
+                pair_r = subgroups[0][0]
+                pygame.draw.line(screen, robot_color_p, disp_pos[pair_l],
+                                 disp_pos[pair_r], sub_thick)
+
+        pygame.display.update()
 
     iter_count = iter_count + 1  # update iteration count
 
