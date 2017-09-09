@@ -338,6 +338,9 @@ subgroups = []  # lists of adjacent nodes inside
 sub_size = []  # size of the subgroup the host node is in
 # overflow threshold for the distribution difference
 dist_diff_thres = 0.3
+# variable for ratio of distribution difference to threshold, for tuning growing rate
+# in range of [0,1], higher the ratio, slower it grows
+dist_diff_ratio = [0 for i in range(poly_n)]
 
 # calculate the initial preferability distribution and dominant nodes
 for i in range(poly_n):
@@ -370,7 +373,6 @@ for i in range(poly_n):
 # the loop
 sim_exit = False  # simulation exit flag
 sim_pause = False  # simulation pause flag
-print_pause = False  # print message for paused simulation
 iter_count = 0
 graph_iters = 1  # draw the distribution graphs every these many iterations
 while not sim_exit:
@@ -381,16 +383,11 @@ while not sim_exit:
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_SPACE:
                 sim_pause = not sim_pause  # reverse the pause flag
-                if sim_pause: print_pause = True  # need to print pause msg once
             if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
                 sim_exit = True  # exit with ESC key or Q key
 
-    # skip the rest of the loop if paused
-    if sim_pause:
-        if print_pause:
-            print('iteration paused')
-            print_pause = False
-        continue
+    # skip the rest if paused
+    if sim_pause: continue
 
     # prepare information for the preferability distribution evolution
     # find the dominant node in each of the distributions
@@ -430,51 +427,53 @@ while not sim_exit:
         i_l = (i-1)%poly_n  # index of neighbor on the left
         i_r = (i+1)%poly_n  # index of neighbor on the right        
         # shifted distribution from left neighbor
-        dist_l = [pref_dist_t[i_l][-1]]
+        dist_l = [pref_dist_t[i_l][-1]]  # first one copied from one at end
         for j in range(poly_n-1):
             dist_l.append(pref_dist_t[i_l][j])
         # shifted distribution from right neighbor
         dist_r = []
         for j in range(1, poly_n):
             dist_r.append(pref_dist_t[i_r][j])
-        dist_r.append(pref_dist_t[i_r][0])
+        dist_r.append(pref_dist_t[i_r][0])  # last one copied from one at starting
         # calculating if two neighbors have converged ideas with host robot
         converge_l = False
         if (domi_node[i_l]+1)%poly_n == domi_node[i]: converge_l = True
         converge_r = False
-        if (domi_node[i_r]-1)%poly_n == domi_node[i]: converge_l = True
+        if (domi_node[i_r]-1)%poly_n == domi_node[i]: converge_r = True
         # weighted averaging depending on subgroup property
         if converge_l and converge_r:  # all three neighbors are in the same subgroup
             # step 1: take equal weighted average on all three distributions
             dist_sum = 0
             for j in range(poly_n):
-                pref_dist[i][j] = dist_l[j] + pref_dist[i][j] + dist_r[j]
+                pref_dist[i][j] = dist_l[j] + pref_dist_t[i][j] + dist_r[j]
                 dist_sum = dist_sum + pref_dist[i][j]
             # linearize the distribution
             pref_dist[i] = pref_dist[i]/dist_sum
             # step 2: increase the unipolarity by applying the linear multiplier
+            # (step 2 is only for when both neighbors have converged opinions)
             # first find the largest difference in two of the three distributions
             dist_diff = [0, 0, 0]  # variable for difference of three distribution
-            # difference of left neighbor and host
+            # distribution difference of left neighbor and host
             for j in range(poly_n):
                 # difference of two distributions is sum of absolute individual differences
                 # use current step's distribution for distribution difference
                 dist_diff[0] = dist_diff[0] + abs(dist_l[j]-pref_dist_t[i][j])
-            # difference of host and right neighbor
+            # distribution difference of host and right neighbor
             for j in range(poly_n):
                 dist_diff[1] = dist_diff[1] + abs(pref_dist_t[i][j]-dist_r[j])
-            # difference of left and right neighbors
+            # distribution difference of left and right neighbors
             for j in range(poly_n):
                 dist_diff[2] = dist_diff[2] + abs(dist_l[j]-dist_r[j])
             # maximum distribution differences
             dist_diff_max = max(dist_diff)
             if dist_diff_max < dist_diff_thres:
+                dist_diff_ratio[i] = dist_diff_max/dist_diff_thres  # for debugging
                 # will skip step 2 if maximum difference is larger than the threshold
                 # linear multiplier is generated from the smallest and largest probabilities
                 # the smaller end is linearly mapped from largest distribution difference
                 # '1.0/poly_n' is the average of the linear multiplier
-                small_end = dist_diff_max/dist_diff_thres * 1.0/poly_n
-                large_end = 2*1.0/poly_n - small_end
+                small_end = 1.0/poly_n * dist_diff_max/dist_diff_thres
+                large_end = 2.0/poly_n - small_end
                 # sort the magnitude of processed distribution
                 dist_t = pref_dist[i][:]  # temporary distribution
                 sort_index = range(poly_n)
@@ -490,10 +489,17 @@ while not sim_exit:
                             sort_index[k] = sort_index[k+1]
                             sort_index[k+1] = temp
                 # applying the linear multiplier
+                dist_sum = 0
                 for j in range(poly_n):
-                    pref_dist[sort_index[j]] = (small_end + 
-                                                j/(poly_n-1) * (large_end - small_end))
+                    multiplier = small_end +  float(j)/(poly_n-1) * (large_end-small_end)
+                    pref_dist[i][sort_index[j]] = pref_dist[i][sort_index[j]] * multiplier
+                    dist_sum = dist_sum + pref_dist[i][sort_index[j]]
+                # linearize the distribution
+                pref_dist[i] = pref_dist[i]/dist_sum
+            else:
+                dist_diff_ratio[i] = 1.0  # for debugging, ratio overflowed
         else:  # at least one side has not converged yet
+            dist_diff_ratio[i] = -1.0  # indicating linear multiplier was not used
             # take unequal weight in the averaging process based on subgroup property
             sub_size_l = sub_size[i_l]
             sub_size_r = sub_size[i_r]
@@ -520,7 +526,7 @@ while not sim_exit:
         for i in range(poly_n):
             for j in range(poly_n):
                 rects[i][j].set_height(pref_dist[i][j])
-                ax[i].set_title('{} -> {}'.format(i, sub_size[i]))
+                ax[i].set_title('{} -> {} -> {:.2f}'.format(i, sub_size[i], dist_diff_ratio[i]))
                 ax[i].set_ylim(0.0, y_lim)
         fig.canvas.draw()
         fig.show()
