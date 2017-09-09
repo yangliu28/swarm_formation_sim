@@ -363,7 +363,7 @@ for i in range(poly_n):
 
 # matplotlib method of bar graph animation
 # adjust figure and grid size here
-fig = plt.figure(figsize=(18,12), tight_layout=True)
+fig = plt.figure(figsize=(16,12), tight_layout=True)
 fig.canvas.set_window_title('Evolution of Preferability Distribution')
 gs = gridspec.GridSpec(5, 6)
 ax = [fig.add_subplot(gs[i]) for i in range(poly_n)]
@@ -551,6 +551,7 @@ while not sim_exit:
                 pygame.draw.line(screen, robot_color, disp_pos[j], disp_pos[j+1])
             pygame.draw.line(screen, robot_color, disp_pos[poly_n-1], disp_pos[0])
             # draw a thicker line if two neighbors are in same subgroup
+            if i == 1: continue  # skip subgroup visualization for target formation
             for sub in subgroups:
                 for j in range(len(sub)-1):
                     pair_l = sub[j]
@@ -564,8 +565,8 @@ while not sim_exit:
                 pair_r = subgroups[0][0]
                 pygame.draw.line(screen, robot_color_p, disp_pos[pair_l],
                                  disp_pos[pair_r], sub_thick)
-
         pygame.display.update()
 
     iter_count = iter_count + 1  # update iteration count
+
 
