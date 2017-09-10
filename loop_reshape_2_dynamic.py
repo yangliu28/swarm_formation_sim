@@ -555,7 +555,8 @@ while not sim_exit:
         # distance of the two neighbors
         dist_rl = math.sqrt(vect_rl[0]*vect_rl[0]+vect_rl[1]*vect_rl[1])
         vect_rl = [vect_rl[0]/dist_rl, vect_rl[1]/dist_rl]  # become unit vector
-        vect_ax = [-vect_rl[1], vect_rl[0]]  # central axis pointing outwords
+        vect_ax = [-vect_rl[1], vect_rl[0]]  # central axis pointing outwords the polygon
+        vect_ang = math.atan2(vect_ax[1], vect_ax[0])
         # all destinations will be measured as how much distance it goes along the axis
 
         # find the target destination that satisfies desired interior angle
@@ -582,8 +583,7 @@ while not sim_exit:
             # provisional final destination, balance between interior angle and loop space
             final_dist = (targ_dist+stab_dist)/2
             # set final destination to limiting positions if exceeding them
-            if final_dist > range_upper: final_dist = range_upper  # exceed upper limit
-            elif final_dist < -range_upper: final_dist = -range_upper  # exceed lower limit
+            final_dist = max(min(final_dist, range_upper), -range_upper)
         elif dist_rl >= 2*space_lower and dist_rl < 2*loop_space:
             # the final destination still has only one range
             # but two stable destinations, will choose one closer to target destination
@@ -597,17 +597,31 @@ while not sim_exit:
                 # closer to stable destination at negative side
                 final_dist = (targ_dist-stab_dist)/2
             # set final destination to limiting positions if exceeding them
-            if final_dist > range_upper: final_dist = range_upper  # exceed upper limit
-            elif final_dist < -range_upper: final_dist = -range_upper  # exceed lower limit
+            final_dist = max(min(final_dist, range_upper), -range_upper)
         elif dist_rl < 2*space_lower:
             # final destination has two possible ranges
             # will choose the range on the side where the node is currently at
             stab_dist = math.sqrt(loop_space*loop_space-dist_rl*dist_rl/4)
             range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
             range_lower = math.sqrt(space_lower*space_lower-dist_rl*dist_rl/4)
-            # find out the side the node is at
-            
-
+            # find out the side the node is located
+            vect_lr = [-vect_rl[0], -vect_rl[1]]  # vector from left neighbor to right
+            vect_lh = [node_h[0]-node_l[0], node_h[1]-node_l[1]]  # from left to host
+            # cross product of vect_lh and vect_lr
+            vect_cross = vect_lh[0]*vect_lr[1]-vect_lh[1]*vect_lr[0]
+            if vect_cross >= 0:
+                # host node is at positive side
+                final_dist = (targ_dist+stab_dist)/2
+                # avoid overflow in range [range_lower, range_upper]
+                final_dist = max(min(final_dist, range_upper), range_lower)
+            else:
+                # host node is at negative side
+                final_dist = (targ_dist-stab_dist)
+                # avoid overflow in range [-range_upper, -range_lower]
+                final_dist = max(min(final_dist, -range_lower), -range_upper)
+        # calculate the position of the final destination, where the node desires to move to
+        final_des = [pos_m[0] + final_dist*math.cos(vect_ang),
+                     pos_m[1] + final_dist*math.sin(vect_ang)]
 
 
 
