@@ -34,7 +34,7 @@ Loop reshape simulation, static version: (see more parameter options in the head
 
 `python loop_reshape_1_static.py gen_discard initial_gen target_gen`
 
-Loop reshape simulation, dynamic version: (same parameter setting to previous one)
+Loop reshape simulation, dynamic version: (same parameter options)
 
 `python loop_reshape_2_dynamic.py gen_discard initial_gen target_gen`
 
