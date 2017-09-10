@@ -10,6 +10,10 @@ All the formation control algorithms simulated here agree on a few conditions of
 
 *loop_formation.py* uses same merging method to form a loop, the formation starts with a pair of robots, then a triangle formation as the initial loop.
 
+*loop_rehsape_1_static.py* is the algorithm exploration on the consensus problem of target allocation. Goal is to reshape the loop to target formation while remaining node connections, this program is the static version focusing on the distribution convergence.
+
+*loop_reshape_2_dynamic.py* is the dynamic version of the loop reshape simulation. A new conflict tolerant algorithm is implemented to guarantee maximum distribution convergence.
+
 ## Run the simulations
 
 Install corresponding Pygame version for your Python, optional dependencies include numpy, matplotlib. See the header of the '.py' you want to run to find what dependencies are needed.
@@ -29,4 +33,8 @@ Loop formation simulation:
 Loop reshape simulation, static version: (see more parameter options in the header comments of the file)
 
 `python loop_reshape_1_static.py gen_discard initial_gen target_gen`
+
+Loop reshape simulation, dynamic version: (same parameter setting to previous one)
+
+`python loop_reshape_2_dynamic.py gen_discard initial_gen target_gen`
 

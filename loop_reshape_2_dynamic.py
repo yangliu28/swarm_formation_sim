@@ -134,6 +134,8 @@ comm_range = loop_space/0.7
 # upper and lower limits have equal difference to the desired loop space
 space_upper = comm_range*0.9  # close but not equal to whole comm_range
 space_lower = comm_range*0.5
+# ratio of speed to the distance difference
+vel_dist_ratio = 1.0
 # for the guessing of the free interior angles
 int_angle_reg = math.pi - 2*math.pi/poly_n  # interior angle of regular polygon
 # standard deviation of the normal distribution of the guesses
@@ -543,7 +545,6 @@ while not sim_exit:
 # comments on the physics update
 # balance between desired interior angle, and desired loop space
 
-
     # physics update, including pos, vel, and ori
     for i in range(poly_n):
         node_h = nodes[0][i]  # position of host node
@@ -622,6 +623,14 @@ while not sim_exit:
         # calculate the position of the final destination, where the node desires to move to
         final_des = [pos_m[0] + final_dist*math.cos(vect_ang),
                      pos_m[1] + final_dist*math.sin(vect_ang)]
+
+        # calculate the velocity and orientation based on the calculate final destination
+        vect_des = [final_des[0]-node_h[0], final_des[1]-node_h[1]]  # from host to des
+        vect_des_dist = math.sqrt(vect_des[0]*vect_des[0] + vect_des[1]*vect_des[1])
+        # velocity is proportional to the distance to the moving destination
+        vel = vel_dist_ratio*vect_des_dist
+        ori = math.atan2(vect_des[1], vect_des[0])
+
 
 
 
