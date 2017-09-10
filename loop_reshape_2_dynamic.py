@@ -552,7 +552,8 @@ while not sim_exit:
         # find the central axis between the two neighbors
         pos_m = [(node_l[0]+node_r[0])/2, (node_l[1]+node_r[1])/2]
         vect_rl = [node_l[0]-node_r[0], node_l[1]-node_r[1]]  # from node_r to node_l
-        dist_rl = math.atan2(vect_rl[1]. vect_rl[0])  # distance of two neighbors
+        # distance of the two neighbors
+        dist_rl = math.sqrt(vect_rl[0]*vect_rl[0]+vect_rl[1]*vect_rl[1])
         vect_rl = [vect_rl[0]/dist_rl, vect_rl[1]/dist_rl]  # become unit vector
         vect_ax = [-vect_rl[1], vect_rl[0]]  # central axis pointing outwords
         # all destinations will be measured as how much distance it goes along the axis
@@ -572,22 +573,41 @@ while not sim_exit:
             # no need to compare with target destination, ensure connection first
             final_dist = 0  # final destination is at origin
         elif dist_rl >= 2*loop_space and dist_rl < 2*space_upper:
-            # the final destination has a very tight range
+            # the final destination has a tight single range
             # and stable destination is fixed at origin
             stab_dist = 0
             # calculate the range for the final destination
-            # there is no lower range, lower range is just 0
+            # the range is half range and symmetric, lower range is just 0
             range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
-            # calculate the provisional final destination
-            # balance between interior angle and loop space
+            # provisional final destination, balance between interior angle and loop space
             final_dist = (targ_dist+stab_dist)/2
-            # set final destination to limiting position if exceeding limits
+            # set final destination to limiting positions if exceeding them
             if final_dist > range_upper: final_dist = range_upper  # exceed upper limit
             elif final_dist < -range_upper: final_dist = -range_upper  # exceed lower limit
         elif dist_rl >= 2*space_lower and dist_rl < 2*loop_space:
+            # the final destination still has only one range
+            # but two stable destinations, will choose one closer to target destination
+            stab_dist = math.sqrt(loop_space*loop_space-dist_rl*dist_rl/4)
+            range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
+            # check which stable destination the target destination is closer to
+            if (targ_dist-stab_dist) < (targ_dist+stab_dist):
+                # closer to stable destination at positive side
+                final_dist = (targ_dist+stab_dist)/2  # provisional final destination
+            else:
+                # closer to stable destination at negative side
+                final_dist = (targ_dist-stab_dist)/2
+            # set final destination to limiting positions if exceeding them
+            if final_dist > range_upper: final_dist = range_upper  # exceed upper limit
+            elif final_dist < -range_upper: final_dist = -range_upper  # exceed lower limit
+        elif dist_rl < 2*space_lower:
+            # final destination has two possible ranges
+            # will choose the range on the side where the node is currently at
+            stab_dist = math.sqrt(loop_space*loop_space-dist_rl*dist_rl/4)
+            range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
+            range_lower = math.sqrt(space_lower*space_lower-dist_rl*dist_rl/4)
+            # find out the side the node is at
+            
 
-        stab_dist = math.sqrt(loop_space*loop_space-dist_rl*dist_rl/4)
-        # find which side current
 
 
 
