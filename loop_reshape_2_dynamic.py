@@ -540,6 +540,10 @@ while not sim_exit:
                 dist_sum = dist_sum + pref_dist[i][j]
             pref_dist[i] = pref_dist[i]/dist_sum
 
+# comments on the physics update
+# balance between desired interior angle, and desired loop space
+
+
     # physics update, including pos, vel, and ori
     for i in range(poly_n):
         node_h = nodes[0][i]  # position of host node
@@ -551,13 +555,39 @@ while not sim_exit:
         dist_rl = math.atan2(vect_rl[1]. vect_rl[0])  # distance of two neighbors
         vect_rl = [vect_rl[0]/dist_rl, vect_rl[1]/dist_rl]  # become unit vector
         vect_ax = [-vect_rl[1], vect_rl[0]]  # central axis pointing outwords
-        # all destination will be measured as how much distance it goes along the line
-        # find the desired destination satisfies current target interior angle
+        # all destinations will be measured as how much distance it goes along the axis
+
+        # find the target destination that satisfies desired interior angle
         ang_targ = inter_targ[domi_node[i]]  # dynamic target interior angle
-        targ_dist = loop_space*
-        if ang_targ < math.pi:
+        # distance of target position along the axis
+        targ_dist = loop_space*math.cos(ang_targ/2)
+        # reverse distance if interior angle is over pi
+        if ang_targ > math.pi: targ_dist = -targ_dist
 
+        # find the stable destination that satisfies desired loop space
+        # and decide the final destination by comparing with target destination
+        final_dist = 0  # variable for final destination
+        if dist_rl >= 2*space_upper:
+            # two neighbors are too far away, over the upper space limit the host can reach
+            # no need to compare with target destination, ensure connection first
+            final_dist = 0  # final destination is at origin
+        elif dist_rl >= 2*loop_space and dist_rl < 2*space_upper:
+            # the final destination has a very tight range
+            # and stable destination is fixed at origin
+            stab_dist = 0
+            # calculate the range for the final destination
+            # there is no lower range, lower range is just 0
+            range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
+            # calculate the provisional final destination
+            # balance between interior angle and loop space
+            final_dist = (targ_dist+stab_dist)/2
+            # set final destination to limiting position if exceeding limits
+            if final_dist > range_upper: final_dist = range_upper  # exceed upper limit
+            elif final_dist < -range_upper: final_dist = -range_upper  # exceed lower limit
+        elif dist_rl >= 2*space_lower and dist_rl < 2*loop_space:
 
+        stab_dist = math.sqrt(loop_space*loop_space-dist_rl*dist_rl/4)
+        # find which side current
 
 
 
