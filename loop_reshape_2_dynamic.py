@@ -29,7 +29,7 @@
 # the difference, the less the unipolarity should grow. A power function method with exponent
 # smaller than 1 is used to slow down the increasing rate of the unipolarity.
 
-# Node moving strategy in the reshape process:
+# Node moving strategy during the reshape process:
 
 
 import pygame
@@ -129,11 +129,15 @@ world_size = (100.0, 100.0 * screen_size[1]/screen_size[0])
 # variables to configure the simulation
 poly_n = 30  # number of nodes for the polygon, also the robot quantity, at least 3
 loop_space = 4.0  # side length of the equilateral polygon
-# the following are for the guessing of the free interior angles
+# desired loop space is a little over half of communication range
+comm_range = loop_space/0.7
+# upper and lower limits have equal difference to the desired loop space
+space_upper = comm_range*0.9  # close but not equal to whole comm_range
+space_lower = comm_range*0.5
+# for the guessing of the free interior angles
 int_angle_reg = math.pi - 2*math.pi/poly_n  # interior angle of regular polygon
 # standard deviation of the normal distribution of the guesses
 int_angle_dev = (int_angle_reg - math.pi/3)/5
-
 
 # instantiate the node positions variable
 nodes = [[],[]]  # node positions for two formation, index is the robot's identification
@@ -346,7 +350,7 @@ for i in range(2):
 
 # rename the interior angle variables to be used later
 # use interior angle instead of deviation angle because they should be equivalent
-inter_init = inter_ang[0][:]  # interior angles of initial setup formation
+inter_curr = inter_ang[0][:]  # interior angles of initial(dynamic) setup formation
 inter_targ = inter_ang[1][:]  # interior angles of target formation
 # variable for the preferability distribution
 pref_dist = np.zeros((poly_n, poly_n))
@@ -368,13 +372,13 @@ dist_diff_power = 0.3
 
 # calculate the initial preferability distribution and dominant nodes
 for i in range(poly_n):
-    # the angle difference of inter_init[i] to all angles in inter_targ
+    # the angle difference of inter_curr[i] to all angles in inter_targ
     ang_diff = [0 for j in range(poly_n)]
     ang_diff_sum = 0
     for j in range(poly_n):
         # angle difference represents the effort of change between two angles
         # the more effort, the less the preferability, so take reciprocal
-        ang_diff[j] = 1/abs(inter_init[i]-inter_targ[j])
+        ang_diff[j] = 1/abs(inter_curr[i]-inter_targ[j])
         # summation of ang_diff
         ang_diff_sum = ang_diff_sum + ang_diff[j]
     # convert to preferability distribution
@@ -535,6 +539,27 @@ while not sim_exit:
                                    dist_r[j]*sub_size_r)
                 dist_sum = dist_sum + pref_dist[i][j]
             pref_dist[i] = pref_dist[i]/dist_sum
+
+    # physics update, including pos, vel, and ori
+    for i in range(poly_n):
+        node_h = nodes[0][i]  # position of host node
+        node_l = nodes[0][(i-1)%poly_n]  # position of left neighbor
+        node_r = nodes[0][(i+1)%poly_n]  # position of right neighbor
+        # find the central axis between the two neighbors
+        pos_m = [(node_l[0]+node_r[0])/2, (node_l[1]+node_r[1])/2]
+        vect_rl = [node_l[0]-node_r[0], node_l[1]-node_r[1]]  # from node_r to node_l
+        dist_rl = math.atan2(vect_rl[1]. vect_rl[0])  # distance of two neighbors
+        vect_rl = [vect_rl[0]/dist_rl, vect_rl[1]/dist_rl]  # become unit vector
+        vect_ax = [-vect_rl[1], vect_rl[0]]  # central axis pointing outwords
+        # all destination will be measured as how much distance it goes along the line
+        # find the desired destination satisfies current target interior angle
+        ang_targ = inter_targ[domi_node[i]]  # dynamic target interior angle
+        targ_dist = loop_space*
+        if ang_targ < math.pi:
+
+
+
+
 
     # graphics update
     print("current iteration count {}".format(iter_count))
