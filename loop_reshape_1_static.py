@@ -371,8 +371,7 @@ for i in range(2):
         # get the angle rotating from vect_r to vect_l
         inter_ang[i][j] = math.acos((vect_l[0]*vect_r[0] + vect_l[1]*vect_r[1])/
                                     (loop_space*loop_space))
-        if (vect_l[0]*vect_r[1] - vect_l[1]*vect_r[0]) < 0:
-            # vect_l is not on the left of vect_r
+        if (vect_r[0]*vect_l[1] - vect_r[1]*vect_l[0]) < 0:
             inter_ang[i][j] = 2*math.pi - inter_ang[i][j]
         # the result interior angles should be in range of [0, 2*pi)
 

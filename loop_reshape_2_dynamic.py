@@ -31,6 +31,9 @@
 
 # Node moving strategy during the reshape process:
 
+# comments on the physics update
+# balance between desired interior angle, and desired loop space
+
 
 import pygame
 from formation_functions import *
@@ -119,7 +122,7 @@ sub_thick = 3  # thickness of line segments for connections in the subgroups
 icon = pygame.image.load("icon_geometry_art.jpg")
 pygame.display.set_icon(icon)
 screen = pygame.display.set_mode(screen_size)
-pygame.display.set_caption("Loop Reshape 2 (static version)")
+pygame.display.set_caption("Loop Reshape 2 (dynamic version)")
 
 # for physics, continuous world, origin is at left bottom corner, starting (0, 0),
 # with x axis pointing right, y axis pointing up.
@@ -132,10 +135,13 @@ loop_space = 4.0  # side length of the equilateral polygon
 # desired loop space is a little over half of communication range
 comm_range = loop_space/0.7
 # upper and lower limits have equal difference to the desired loop space
-space_upper = comm_range*0.9  # close but not equal to whole comm_range
+space_upper = comm_range*0.9  # close but not equal to whole communication range
 space_lower = comm_range*0.5
 # ratio of speed to the distance difference
 vel_dist_ratio = 1.0
+# period for calculating new positions
+# updating is not in real time, because bar graph animation takes too much time
+physics_period = 500/1000.0  # second
 # for the guessing of the free interior angles
 int_angle_reg = math.pi - 2*math.pi/poly_n  # interior angle of regular polygon
 # standard deviation of the normal distribution of the guesses
@@ -337,16 +343,16 @@ inter_ang = [[0 for j in range(poly_n)] for i in range(2)]
 for i in range(2):
     for j in range(poly_n):
         # for the interior angles of initial setup formation
-        node_m = nodes[i][j]  # node in the moddle
+        node_h = nodes[i][j]  # host node
         node_l = nodes[i][(j-1)%poly_n]  # node on the left
         node_r = nodes[i][(j+1)%poly_n]  # node on the right
-        vect_l = [node_l[0]-node_m[0], node_l[1]-node_m[1]]  # from middle to left
-        vect_r = [node_r[0]-node_m[0], node_r[1]-node_m[1]]  # from middle to right
+        vect_l = [node_l[0]-node_h[0], node_l[1]-node_h[1]]  # from host to left
+        vect_r = [node_r[0]-node_h[0], node_r[1]-node_h[1]]  # from host to right
         # get the angle rotating from vect_r to vect_l
         inter_ang[i][j] = math.acos((vect_l[0]*vect_r[0] + vect_l[1]*vect_r[1])/
                                     (loop_space*loop_space))
-        if (vect_l[0]*vect_r[1] - vect_l[1]*vect_r[0]) < 0:
-            # vect_l is not on the left of vect_r
+        if (vect_r[0]*vect_l[1] - vect_r[1]*vect_l[0]) < 0:
+            # cross product of vect_r to vect_l is smaller than 0
             inter_ang[i][j] = 2*math.pi - inter_ang[i][j]
         # the result interior angles should be in range of [0, 2*pi)
 
@@ -354,6 +360,7 @@ for i in range(2):
 # use interior angle instead of deviation angle because they should be equivalent
 inter_curr = inter_ang[0][:]  # interior angles of initial(dynamic) setup formation
 inter_targ = inter_ang[1][:]  # interior angles of target formation
+print(inter_targ)
 # variable for the preferability distribution
 pref_dist = np.zeros((poly_n, poly_n))
 # variable indicating which target node has largest probability in the distributions
@@ -404,7 +411,7 @@ for i in range(poly_n):
 sim_exit = False  # simulation exit flag
 sim_pause = False  # simulation pause flag
 iter_count = 0
-graph_iters = 1  # draw the distribution graphs every these many iterations
+graph_iters = 10  # draw the distribution graphs every these many iterations
 while not sim_exit:
     # exit the program by close window button, or Esc or Q on keyboard
     for event in pygame.event.get():
@@ -542,9 +549,6 @@ while not sim_exit:
                 dist_sum = dist_sum + pref_dist[i][j]
             pref_dist[i] = pref_dist[i]/dist_sum
 
-# comments on the physics update
-# balance between desired interior angle, and desired loop space
-
     # physics update, including pos, vel, and ori
     for i in range(poly_n):
         node_h = nodes[0][i]  # position of host node
@@ -568,7 +572,7 @@ while not sim_exit:
         if ang_targ > math.pi: targ_dist = -targ_dist
 
         # find the stable destination that satisfies desired loop space
-        # and decide the final destination by comparing with target destination
+        # then decide the final destination by comparing with target destination
         final_dist = 0  # variable for final destination
         if dist_rl >= 2*space_upper:
             # two neighbors are too far away, over the upper space limit the host can reach
@@ -591,7 +595,7 @@ while not sim_exit:
             stab_dist = math.sqrt(loop_space*loop_space-dist_rl*dist_rl/4)
             range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
             # check which stable destination the target destination is closer to
-            if (targ_dist-stab_dist) < (targ_dist+stab_dist):
+            if abs(targ_dist-stab_dist) < abs(targ_dist+stab_dist):
                 # closer to stable destination at positive side
                 final_dist = (targ_dist+stab_dist)/2  # provisional final destination
             else:
@@ -631,7 +635,9 @@ while not sim_exit:
         vel = vel_dist_ratio*vect_des_dist
         ori = math.atan2(vect_des[1], vect_des[0])
 
-
+        # carry out one step update on the position
+        nodes[0][i] = [node_h[0] + vel*physics_period*math.cos(ori),
+                       node_h[1] + vel*physics_period*math.sin(ori)]
 
 
     # graphics update
