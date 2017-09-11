@@ -133,10 +133,10 @@ world_size = (100.0, 100.0 * screen_size[1]/screen_size[0])
 poly_n = 30  # number of nodes for the polygon, also the robot quantity, at least 3
 loop_space = 4.0  # side length of the equilateral polygon
 # desired loop space is a little over half of communication range
-comm_range = loop_space/0.7
+comm_range = loop_space/0.6
 # upper and lower limits have equal difference to the desired loop space
 space_upper = comm_range*0.9  # close but not equal to whole communication range
-space_lower = comm_range*0.5
+space_lower = comm_range*0.3
 # ratio of speed to the distance difference
 vel_dist_ratio = 1.0
 # period for calculating new positions
@@ -360,7 +360,6 @@ for i in range(2):
 # use interior angle instead of deviation angle because they should be equivalent
 inter_curr = inter_ang[0][:]  # interior angles of initial(dynamic) setup formation
 inter_targ = inter_ang[1][:]  # interior angles of target formation
-print(inter_targ)
 # variable for the preferability distribution
 pref_dist = np.zeros((poly_n, poly_n))
 # variable indicating which target node has largest probability in the distributions
@@ -549,20 +548,20 @@ while not sim_exit:
                 dist_sum = dist_sum + pref_dist[i][j]
             pref_dist[i] = pref_dist[i]/dist_sum
 
-    # physics update, including pos, vel, and ori
+    # physics update, carry out one iteration of position update
     for i in range(poly_n):
         node_h = nodes[0][i]  # position of host node
         node_l = nodes[0][(i-1)%poly_n]  # position of left neighbor
         node_r = nodes[0][(i+1)%poly_n]  # position of right neighbor
         # find the central axis between the two neighbors
-        pos_m = [(node_l[0]+node_r[0])/2, (node_l[1]+node_r[1])/2]
+        pos_m = [(node_l[0]+node_r[0])/2, (node_l[1]+node_r[1])/2]  # the origin on the axis
         vect_rl = [node_l[0]-node_r[0], node_l[1]-node_r[1]]  # from node_r to node_l
         # distance of the two neighbors
         dist_rl = math.sqrt(vect_rl[0]*vect_rl[0]+vect_rl[1]*vect_rl[1])
         vect_rl = [vect_rl[0]/dist_rl, vect_rl[1]/dist_rl]  # become unit vector
-        vect_ax = [-vect_rl[1], vect_rl[0]]  # central axis pointing outwords the polygon
-        vect_ang = math.atan2(vect_ax[1], vect_ax[0])
-        # all destinations will be measured as how much distance it goes along the axis
+        vect_ax = [-vect_rl[1], vect_rl[0]]  # central axis pointing outwords of the polygon
+        vect_ax_ang = math.atan2(vect_ax[1], vect_ax[0])
+        # all destinations will be defined as how much distance to pos_m along the axis
 
         # find the target destination that satisfies desired interior angle
         ang_targ = inter_targ[domi_node[i]]  # dynamic target interior angle
@@ -571,77 +570,84 @@ while not sim_exit:
         # reverse distance if interior angle is over pi
         if ang_targ > math.pi: targ_dist = -targ_dist
 
-        # find the stable destination that satisfies desired loop space
+        # find the stable destination that satisfies the desired loop space
         # then decide the final destination by comparing with target destination
-        final_dist = 0  # variable for final destination
+        final_dist = 0  # variable for the final destination
+        # Following discussion is based on the range of dist_rl being divided into four
+        # regions by three points, they are 2*space_upper, 2*loop_space, and 2*space_lower.
         if dist_rl >= 2*space_upper:
             # two neighbors are too far away, over the upper space limit the host can reach
             # no need to compare with target destination, ensure connection first
             final_dist = 0  # final destination is at origin
         elif dist_rl >= 2*loop_space and dist_rl < 2*space_upper:
-            # the final destination has a tight single range
-            # and stable destination is fixed at origin
+            # the final destination has a tight single range, stable destination is at origin
             stab_dist = 0
-            # calculate the range for the final destination
-            # the range is half range and symmetric, lower range is just 0
+            # calculate the half range for the final destination
+            # the rangeis symmetric about the origin, lower range is negative of upper range
             range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
             # provisional final destination, balance between interior angle and loop space
-            final_dist = (targ_dist+stab_dist)/2
+            # final_dist = (targ_dist+stab_dist)/2
+            final_dist = targ_dist*0.618 + stab_dist*0.382
             # set final destination to limiting positions if exceeding them
             final_dist = max(min(final_dist, range_upper), -range_upper)
         elif dist_rl >= 2*space_lower and dist_rl < 2*loop_space:
-            # the final destination still has only one range
+            # the final destination has only one range
             # but two stable destinations, will choose one closer to target destination
             stab_dist = math.sqrt(loop_space*loop_space-dist_rl*dist_rl/4)
             range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
             # check which stable destination the target destination is closer to
             if abs(targ_dist-stab_dist) < abs(targ_dist+stab_dist):
                 # closer to stable destination at positive side
-                final_dist = (targ_dist+stab_dist)/2  # provisional final destination
+                # final_dist = (targ_dist+stab_dist)/2
+                final_dist = targ_dist*0.618 + stab_dist*0.382
             else:
                 # closer to stable destination at negative side
-                final_dist = (targ_dist-stab_dist)/2
+                # final_dist = (targ_dist-stab_dist)/2
+                final_dist = targ_dist*0.618 + (-stab_dist)*0.382
             # set final destination to limiting positions if exceeding them
             final_dist = max(min(final_dist, range_upper), -range_upper)
         elif dist_rl < 2*space_lower:
-            # final destination has two possible ranges
-            # will choose the range on the side where the node is currently at
+            # final destination has two possible ranges to choose from
+            # will take one on the side where the node is currently located
             stab_dist = math.sqrt(loop_space*loop_space-dist_rl*dist_rl/4)
             range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
             range_lower = math.sqrt(space_lower*space_lower-dist_rl*dist_rl/4)
-            # find out the side the node is located
+            # find out the current side of the node
             vect_lr = [-vect_rl[0], -vect_rl[1]]  # vector from left neighbor to right
             vect_lh = [node_h[0]-node_l[0], node_h[1]-node_l[1]]  # from left to host
             # cross product of vect_lh and vect_lr
-            vect_cross = vect_lh[0]*vect_lr[1]-vect_lh[1]*vect_lr[0]
-            if vect_cross >= 0:
+            if vect_lh[0]*vect_lr[1]-vect_lh[1]*vect_lr[0] >= 0:
                 # host node is at positive side
-                final_dist = (targ_dist+stab_dist)/2
+                # final_dist = (targ_dist+stab_dist)/2
+                final_dist = targ_dist*0.618 + stab_dist*0.382
                 # avoid overflow in range [range_lower, range_upper]
                 final_dist = max(min(final_dist, range_upper), range_lower)
             else:
                 # host node is at negative side
-                final_dist = (targ_dist-stab_dist)
+                # final_dist = (targ_dist-stab_dist)/2
+                final_dist = targ_dist*0.618 + (-stab_dist)*0.382
                 # avoid overflow in range [-range_upper, -range_lower]
                 final_dist = max(min(final_dist, -range_lower), -range_upper)
         # calculate the position of the final destination, where the node desires to move to
-        final_des = [pos_m[0] + final_dist*math.cos(vect_ang),
-                     pos_m[1] + final_dist*math.sin(vect_ang)]
+        final_des = [pos_m[0] + final_dist*math.cos(vect_ax_ang),
+                     pos_m[1] + final_dist*math.sin(vect_ax_ang)]
 
-        # calculate the velocity and orientation based on the calculate final destination
+        # calculate the velocity and orientation based on the final destination
         vect_des = [final_des[0]-node_h[0], final_des[1]-node_h[1]]  # from host to des
         vect_des_dist = math.sqrt(vect_des[0]*vect_des[0] + vect_des[1]*vect_des[1])
-        # velocity is proportional to the distance to the moving destination
+        # velocity is proportional to the distance to the final destination
         vel = vel_dist_ratio*vect_des_dist
         ori = math.atan2(vect_des[1], vect_des[0])
 
-        # carry out one step update on the position
+        # carry out one step of update on the position
         nodes[0][i] = [node_h[0] + vel*physics_period*math.cos(ori),
                        node_h[1] + vel*physics_period*math.sin(ori)]
 
+    # iteration count update
+    print("current iteration count {}".format(iter_count))
+    iter_count = iter_count + 1  # update iteration count
 
     # graphics update
-    print("current iteration count {}".format(iter_count))
     if iter_count%graph_iters == 0:
         
         # graphics update for the bar graph
@@ -691,7 +697,5 @@ while not sim_exit:
                 pygame.draw.line(screen, robot_color_p, disp_pos[pair_l],
                                  disp_pos[pair_r], sub_thick)
         pygame.display.update()
-
-    iter_count = iter_count + 1  # update iteration count
 
 
