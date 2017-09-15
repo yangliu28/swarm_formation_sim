@@ -410,7 +410,7 @@ for i in range(poly_n):
 sim_exit = False  # simulation exit flag
 sim_pause = False  # simulation pause flag
 iter_count = 0
-graph_iters = 10  # draw the distribution graphs every these many iterations
+graph_iters = 1  # draw the distribution graphs every these many iterations
 while not sim_exit:
     # exit the program by close window button, or Esc or Q on keyboard
     for event in pygame.event.get():
