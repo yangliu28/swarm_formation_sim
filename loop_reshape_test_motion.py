@@ -33,6 +33,7 @@ for i in range(2):
 poly_n = 0  # will be decided when reading formation files
 loop_space = 4.0  # side length of the equilateral polygon
 
+
 # construct the polygons from formation data from file
 nodes = [[], []]  # node positions for the two formation, index is the robot's ID
 nodes[0].append([0, 0])  # first node starts at origin
@@ -89,17 +90,52 @@ for i in range(2):
     else:  # target formation shift to bottom half
         nodes[i,:,1] = nodes[i,:,1] - geometry_center[1] + world_size[1]/4
 
-# calculate the interior angles of the two formations
-inter_ang = [[9 for j in range(poly_n)] for i in range(2)]
-for i in range(2):
-    for j in range(poly_n):
-        node_h = nodes[i][j]  # host node
-        node_l = nodes[i][(j-1)%poly_n]  # node on the left
-        node_r = nodes[i][(j+1)%poly_n]  # node on the right
-        vect_l = [node_l[0]-node_h[0], node_l[1]-node_h[1]]  # from host to left
-        vect_r = [node_r[0]-node_h[0], node_r[1]-node_h[1]]  # from host to right
-        # get the angle rotating from vect_r to vect_l
-        inter_ang[i][j] = math.
+# calculate the interior angles of the target formation
+inter_targ = [0 for i in range(poly_n)]
+for i in range(poly_n):
+    node_h = nodes[1][i]  # host node
+    node_l = nodes[1][(i-1)%poly_n]  # node on the left
+    node_r = nodes[1][(i+1)%poly_n]  # node on the right
+    vect_l = [node_l[0]-node_h[0], node_l[1]-node_h[1]]  # from host to left
+    vect_r = [node_r[0]-node_h[0], node_r[1]-node_h[1]]  # from host to right
+    # get the small angle between vect_l and vect_r
+    inter_targ[j] = math.acos((vect_l[0]*vect_r[0] + vect_l[1]*vect_r[1])/
+                              (loop_space*loop_space))
+    if (vect_r[0]*vect_l[1] - vect_r[1]*vect_l[0]) < 0:
+        # cross product of vect_r to vect_l is smaller than 0
+        # the resulting interior angle should be in range of [0, 2*pi)
+        inter_targ[i] = 2*math.pi - inter_ang[i]
+
+# loop for the physical motion update
+sim_exit = False
+sim_pause = False
+frame_period = 500  # updating period of the simulation and graphics, in millisecond
+timer_last = pygame.time.get_ticks()
+timer_now = timer_last
+# the interior angle of initial formation will be updated dynamically
+inter_curr = [0 for i in range(poly_n)]
+# the variable for the neighboring robots on loop
+dist_neigh = [0 for i in range(poly_n)]
+while not sim_exit:
+    # exit the program by close window button, or Esc or Q on keyboard
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sim_exit = True  # exit with the close window button
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE:
+                sim_pause = not sim_pause  # reverse the pause flag
+            if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
+                sim_exit = True  # exit with ESC key or Q key
+    # skip the rest if paused
+    if sim_pause: continue
+
+    timer_now = pygame.time.get_ticks()
+    if (timer_now - timer_last) > frame_period:
+        timer_last = timer_now  # reset timer
+
+        # update the distance data for neighboring robots on loop
+
+        # update the interior angles of the loop
 
 
 
