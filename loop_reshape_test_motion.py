@@ -1,4 +1,4 @@
-# program for testing only the physical motion control algorithm of the loop reshape process
+# program for only testing the physical motion control algorithm of the loop reshape process
     # a new SMA algorithm inspired by the behavior of shape memory alloy
 # the starting and ending formations will be read from file
 # the goal is to reshape the initial loop to the shape of target loop
@@ -7,6 +7,32 @@
 # initial loop formation, second for target formation. The loop formation files should be
 # located under 'loop-data' folder. A third argument is optional, specifying the shift of
 # which node it prefers in the target formation, 0 is default if not specified.
+    # ex1: 'python loop_reshape_test_motion.py 30-3 30-4'
+    # ex2: 'python loop_reshape_test_motion.py 30-9 30-12 15'
+
+# comments on first algorithm test:
+# First algorithm focusing on the idea of influencing neighbors. The motion of a node is
+# controller by external effects. One part of the effects is the pulling or pushing when
+# the neighbor distance is larger or smaller than desired loop space, this is modelled as
+# as a linear spring with relative large spring constant. Second part of the effects is the
+# bending force driven by the desired interior angle of neighbor nodes.If a neighbor wants
+# smaller interior angle, it exerts a bending force on host node inward the polygon, with
+# direction perpendicular to the connecting line. And larger interior angle will produce
+# bending force outward the polygon.
+# The simulation results that the polygon is always bending part of nodes inward and curling
+# up the whole loop.
+# Presumption: the perpendicular bending force may produce unwanted motion that curls up
+# the loop, make the bending force just along the central axis.
+
+# comments on second algorithm test:
+# A revision based on first algorithm test has been made, that the bending force is only
+# along the central axis. The second algorithm presumes all motion effects are initialed
+# by the host node itself. It judges the two neighbor distances, and calculate the force
+# from the linear springs. It finds the difference to the desired interior angle, and
+# produce the force along the central axis. All motion effects are proportional to the
+# driven factors.
+# The simulation result is just what I have been expecting for a while. It could really
+# reshape the loop in a very fast way.
 
 import pygame
 from formation_functions import *
@@ -177,6 +203,7 @@ while not sim_exit:
                 # the resulting interior angle should be in range of [0, 2*pi)
                 inter_curr[i] = 2*math.pi - inter_curr[i]
 
+        # # first algorithm test, failed
         # # variable for feedback from all spring effects
         # fb_vect = [np.zeros([1,2]) for i in range(poly_n)]
         # for i in range(poly_n):
@@ -206,6 +233,7 @@ while not sim_exit:
         #     # update one step of position
         #     nodes[0][i] = nodes[0][i] + disp_coef * fb_vect[i]
 
+        # second algorithm test
         # variable for feedback from all spring effects
         fb_vect = [np.zeros([1,2]) for i in range(poly_n)]
         for i in range(poly_n):
