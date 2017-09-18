@@ -33,7 +33,7 @@ for i in range(2):
 # try to get another argument for shift in desired node
 targ_shift = 0  # default
 try:
-    targ_shift = sys.argv[3]
+    targ_shift = int(sys.argv[3])
 except: pass
 
 pygame.init()  # initialize the pygame
@@ -56,8 +56,10 @@ poly_n = 0  # will be decided when reading formation files
 loop_space = 4.0  # side length of the equilateral polygon
 # linear spring constant modeling the pulling and pushing effect of neighbor nodes
 linear_const = 1.0
-# angular spring constant modeling the bending effect of neighbor nodes
-angular_const = 0.2
+# # angular spring constant modeling the bending effect of neighbor nodes
+# angular_const = 0.2
+# bending spring constant modeling the bending initial by the host node itself
+bend_const = 1.0
 disp_coef = 0.5  # coefficient from feedback vector to displacement
 
 # construct the polygons from formation data from file
@@ -175,6 +177,35 @@ while not sim_exit:
                 # the resulting interior angle should be in range of [0, 2*pi)
                 inter_curr[i] = 2*math.pi - inter_curr[i]
 
+        # # variable for feedback from all spring effects
+        # fb_vect = [np.zeros([1,2]) for i in range(poly_n)]
+        # for i in range(poly_n):
+        #     # get feedback from pulling and pushing of the linear spring
+        #     i_l = (i-1)%poly_n  # index of left neighbor
+        #     i_r = (i+1)%poly_n  # index of right neighbor
+        #     # unit vector from host to left
+        #     vect_l = (nodes[0][i_l]-nodes[0][i])/dist_neigh[i_l]
+        #     # unit vector bending host node toward inside the polygon from left neighbor
+        #     vect_lb = np.array([vect_l[1], -vect_l[0]])  # rotate vect_l cw for pi/2
+        #     # unit vector from host to right
+        #     vect_r = (nodes[0][i_r]-nodes[0][i])/dist_neigh[i]
+        #     # unit vector bending host node toward inside the polygon from right neighbor
+        #     vect_rb = np.array([-vect_r[1], vect_r[0]])  # rotate vect_r ccw for pi/2
+            
+        #     # add the pulling or pushing effect from left neighbor
+        #     fb_vect[i] = fb_vect[i] + (dist_neigh[i_l]-loop_space) * linear_const * vect_l
+        #     # add the pulling or pushing effect from right neighbor
+        #     fb_vect[i] = fb_vect[i] + (dist_neigh[i]-loop_space) * linear_const * vect_r
+        #     # add the bending effect from left neighbor
+        #     fb_vect[i] = fb_vect[i] + ((inter_curr[i_l] - inter_targ[(i_l+targ_shift)%poly_n])*
+        #                                angular_const * vect_lb)
+        #     # add the bending effect from right neighbor
+        #     fb_vect[i] = fb_vect[i] + ((inter_curr[i_r] - inter_targ[(i_r+targ_shift)%poly_n])*
+        #                                angular_const * vect_rb)
+
+        #     # update one step of position
+        #     nodes[0][i] = nodes[0][i] + disp_coef * fb_vect[i]
+
         # variable for feedback from all spring effects
         fb_vect = [np.zeros([1,2]) for i in range(poly_n)]
         for i in range(poly_n):
@@ -183,23 +214,20 @@ while not sim_exit:
             i_r = (i+1)%poly_n  # index of right neighbor
             # unit vector from host to left
             vect_l = (nodes[0][i_l]-nodes[0][i])/dist_neigh[i_l]
-            # unit vector bending host node toward inside the polygon from left neighbor
-            vect_lb = np.array([vect_l[1], -vect_l[0]])  # rotate vect_l cw for pi/2
             # unit vector from host to right
             vect_r = (nodes[0][i_r]-nodes[0][i])/dist_neigh[i]
-            # unit vector bending host node toward inside the polygon from right neighbor
-            vect_rb = np.array([-vect_r[1], vect_r[0]])  # rotate vect_r ccw for pi/2
-            
+            # unit vector along central axis pointing inside the polygon
+            vect_lr = nodes[0][i_r]-nodes[0][i_l]  # vector from left neighbor to right
+            dist_temp = math.sqrt(vect_lr[0]*vect_lr[0]+vect_lr[1]*vect_lr[1])
+            vect_in = np.array([-vect_lr[1]/dist_temp, vect_lr[0]/dist_temp])  # rotate ccw pi/2
+
             # add the pulling or pushing effect from left neighbor
             fb_vect[i] = fb_vect[i] + (dist_neigh[i_l]-loop_space) * linear_const * vect_l
             # add the pulling or pushing effect from right neighbor
             fb_vect[i] = fb_vect[i] + (dist_neigh[i]-loop_space) * linear_const * vect_r
-            # add the bending effect from left neighbor
-            fb_vect[i] = fb_vect[i] + ((inter_curr[i_l] - inter_targ[(i_l+targ_shift)%poly_n])*
-                                       angular_const * vect_lb)
-            # add the bending effect from right neighbor
-            fb_vect[i] = fb_vect[i] + ((inter_curr[i_r] - inter_targ[(i_r+targ_shift)%poly_n])*
-                                       angular_const * vect_rb)
+            # add the bending effect initialize by the host node itself
+            fb_vect[i] = fb_vect[i] + ((inter_targ[(i+targ_shift)%poly_n]-inter_curr[i])*
+                                       bend_const * vect_in)
 
             # update one step of position
             nodes[0][i] = nodes[0][i] + disp_coef * fb_vect[i]
