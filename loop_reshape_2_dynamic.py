@@ -31,8 +31,7 @@
 
 # Node moving strategy during the reshape process:
 
-# comments on the physics update
-# balance between desired interior angle, and desired loop space
+
 
 
 import pygame
@@ -40,7 +39,7 @@ from formation_functions import *
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 
-import sys, os, math, random
+import sys, os, math, random, time
 import numpy as np
 
 # Read simulation options from passed arguments, the structure is:
@@ -301,21 +300,16 @@ for i in range(2):
             sys.exit()
 
 # shift the two polygon to the top and bottom halves
+nodes = np.array(nodes)  # convert to numpy array
 for i in range(2):
     # calculate the geometry center of current polygon
-    geometry_center = [0, 0]
-    for j in range(poly_n):
-        geometry_center[0] = geometry_center[0] + nodes[i][j][0]
-        geometry_center[1] = geometry_center[1] + nodes[i][j][1]
-    geometry_center[0] = geometry_center[0]/poly_n
-    geometry_center[1] = geometry_center[1]/poly_n
-    # shift the polygon to the middle of the screen
-    for j in range(poly_n):
-        nodes[i][j][0] = nodes[i][j][0] - geometry_center[0] + world_size[0]/2
-        if i == 0:  # initial formation shift to top half
-            nodes[i][j][1] = nodes[i][j][1] - geometry_center[1] + 3*world_size[1]/4
-        else:  # target formation shift to bottom half
-            nodes[i][j][1] = nodes[i][j][1] - geometry_center[1] + world_size[1]/4
+    geometry_center = np.mean(nodes[i], axis=0)
+    # shift the polygon to the top or bottom half of the screen
+    nodes[i,:,0] = nodes[i,:,0] - geometry_center[0] + world_size[0]/2
+    if i == 0:  # initial formation shift to top half
+        nodes[i,:,1] = nodes[i,:,1] - geometry_center[1] + 3*world_size[1]/4
+    else:  # target formation shift to bottom half
+        nodes[i,:,1] = nodes[i,:,1] - geometry_center[1] + world_size[1]/4
 
 # draw the two polygons
 screen.fill(background_color)
@@ -377,6 +371,11 @@ dist_diff_thres = 0.3
 dist_diff_ratio = [0 for i in range(poly_n)]
 # exponent of the power function to map the ratio to a slower growing value
 dist_diff_power = 0.3
+# linear spring constant modeling the pulling and pushing effects of the neighbor nodes
+linear_const = 1.0
+# bending spring constant modeling the bending effect from host node itself
+bend_const = 0.8
+disp_coef = 0.5  # coefficient from feedback vector to displacement
 
 # calculate the initial preferability distribution and dominant nodes
 for i in range(poly_n):
@@ -548,100 +547,147 @@ while not sim_exit:
                 dist_sum = dist_sum + pref_dist[i][j]
             pref_dist[i] = pref_dist[i]/dist_sum
 
-    # physics update, carry out one iteration of position update
+    ##### previous motion strategy #####
+    # # physics update, and carry out one iteration of position update
+    # for i in range(poly_n):
+    #     node_h = nodes[0][i]  # position of host node
+    #     node_l = nodes[0][(i-1)%poly_n]  # position of left neighbor
+    #     node_r = nodes[0][(i+1)%poly_n]  # position of right neighbor
+    #     # find the central axis between the two neighbors
+    #     pos_m = [(node_l[0]+node_r[0])/2, (node_l[1]+node_r[1])/2]  # the origin on the axis
+    #     vect_rl = [node_l[0]-node_r[0], node_l[1]-node_r[1]]  # from node_r to node_l
+    #     # distance of the two neighbors
+    #     dist_rl = math.sqrt(vect_rl[0]*vect_rl[0]+vect_rl[1]*vect_rl[1])
+    #     vect_rl = [vect_rl[0]/dist_rl, vect_rl[1]/dist_rl]  # become unit vector
+    #     vect_ax = [-vect_rl[1], vect_rl[0]]  # central axis pointing outwords of the polygon
+    #     vect_ax_ang = math.atan2(vect_ax[1], vect_ax[0])
+    #     # all destinations will be defined as how much distance to pos_m along the axis
+
+    #     # find the target destination that satisfies desired interior angle
+    #     ang_targ = inter_targ[domi_node[i]]  # dynamic target interior angle
+    #     # distance of target position along the axis
+    #     targ_dist = loop_space*math.cos(ang_targ/2)
+    #     # reverse distance if interior angle is over pi
+    #     if ang_targ > math.pi: targ_dist = -targ_dist
+
+    #     # find the stable destination that satisfies the desired loop space
+    #     # then decide the final destination by comparing with target destination
+    #     final_dist = 0  # variable for the final destination
+    #     # Following discussion is based on the range of dist_rl being divided into four
+    #     # regions by three points, they are 2*space_upper, 2*loop_space, and 2*space_lower.
+    #     if dist_rl >= 2*space_upper:
+    #         # two neighbors are too far away, over the upper space limit the host can reach
+    #         # no need to compare with target destination, ensure connection first
+    #         final_dist = 0  # final destination is at origin
+    #     elif dist_rl >= 2*loop_space and dist_rl < 2*space_upper:
+    #         # the final destination has a tight single range, stable destination is at origin
+    #         stab_dist = 0
+    #         # calculate the half range for the final destination
+    #         # the rangeis symmetric about the origin, lower range is negative of upper range
+    #         range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
+    #         # provisional final destination, balance between interior angle and loop space
+    #         # final_dist = (targ_dist+stab_dist)/2
+    #         final_dist = targ_dist*0.618 + stab_dist*0.382
+    #         # set final destination to limiting positions if exceeding them
+    #         final_dist = max(min(final_dist, range_upper), -range_upper)
+    #     elif dist_rl >= 2*space_lower and dist_rl < 2*loop_space:
+    #         # the final destination has only one range
+    #         # but two stable destinations, will choose one closer to target destination
+    #         stab_dist = math.sqrt(loop_space*loop_space-dist_rl*dist_rl/4)
+    #         range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
+    #         # check which stable destination the target destination is closer to
+    #         if abs(targ_dist-stab_dist) < abs(targ_dist+stab_dist):
+    #             # closer to stable destination at positive side
+    #             # final_dist = (targ_dist+stab_dist)/2
+    #             final_dist = targ_dist*0.618 + stab_dist*0.382
+    #         else:
+    #             # closer to stable destination at negative side
+    #             # final_dist = (targ_dist-stab_dist)/2
+    #             final_dist = targ_dist*0.618 + (-stab_dist)*0.382
+    #         # set final destination to limiting positions if exceeding them
+    #         final_dist = max(min(final_dist, range_upper), -range_upper)
+    #     elif dist_rl < 2*space_lower:
+    #         # final destination has two possible ranges to choose from
+    #         # will take one on the side where the node is currently located
+    #         stab_dist = math.sqrt(loop_space*loop_space-dist_rl*dist_rl/4)
+    #         range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
+    #         range_lower = math.sqrt(space_lower*space_lower-dist_rl*dist_rl/4)
+    #         # find out the current side of the node
+    #         vect_lr = [-vect_rl[0], -vect_rl[1]]  # vector from left neighbor to right
+    #         vect_lh = [node_h[0]-node_l[0], node_h[1]-node_l[1]]  # from left to host
+    #         # cross product of vect_lh and vect_lr
+    #         if vect_lh[0]*vect_lr[1]-vect_lh[1]*vect_lr[0] >= 0:
+    #             # host node is at positive side
+    #             # final_dist = (targ_dist+stab_dist)/2
+    #             final_dist = targ_dist*0.618 + stab_dist*0.382
+    #             # avoid overflow in range [range_lower, range_upper]
+    #             final_dist = max(min(final_dist, range_upper), range_lower)
+    #         else:
+    #             # host node is at negative side
+    #             # final_dist = (targ_dist-stab_dist)/2
+    #             final_dist = targ_dist*0.618 + (-stab_dist)*0.382
+    #             # avoid overflow in range [-range_upper, -range_lower]
+    #             final_dist = max(min(final_dist, -range_lower), -range_upper)
+    #     # calculate the position of the final destination, where the node desires to move to
+    #     final_des = [pos_m[0] + final_dist*math.cos(vect_ax_ang),
+    #                  pos_m[1] + final_dist*math.sin(vect_ax_ang)]
+
+    #     # calculate the velocity and orientation based on the final destination
+    #     vect_des = [final_des[0]-node_h[0], final_des[1]-node_h[1]]  # from host to des
+    #     vect_des_dist = math.sqrt(vect_des[0]*vect_des[0] + vect_des[1]*vect_des[1])
+    #     # velocity is proportional to the distance to the final destination
+    #     vel = vel_dist_ratio*vect_des_dist
+    #     ori = math.atan2(vect_des[1], vect_des[0])
+
+    #     # carry out one step of update on the position
+    #     nodes[0][i] = [node_h[0] + vel*physics_period*math.cos(ori),
+    #                    node_h[1] + vel*physics_period*math.sin(ori)]
+
+    ##### new SMA motion algorithm based on 'loop_reshape_test_moiton.py' #####
+    # variable for the neighboring nodes on the loop
+    dist_neigh = [0 for i in range(poly_n)]
+    # update the dynamic neighbor distances of the loop
     for i in range(poly_n):
-        node_h = nodes[0][i]  # position of host node
-        node_l = nodes[0][(i-1)%poly_n]  # position of left neighbor
-        node_r = nodes[0][(i+1)%poly_n]  # position of right neighbor
-        # find the central axis between the two neighbors
-        pos_m = [(node_l[0]+node_r[0])/2, (node_l[1]+node_r[1])/2]  # the origin on the axis
-        vect_rl = [node_l[0]-node_r[0], node_l[1]-node_r[1]]  # from node_r to node_l
-        # distance of the two neighbors
-        dist_rl = math.sqrt(vect_rl[0]*vect_rl[0]+vect_rl[1]*vect_rl[1])
-        vect_rl = [vect_rl[0]/dist_rl, vect_rl[1]/dist_rl]  # become unit vector
-        vect_ax = [-vect_rl[1], vect_rl[0]]  # central axis pointing outwords of the polygon
-        vect_ax_ang = math.atan2(vect_ax[1], vect_ax[0])
-        # all destinations will be defined as how much distance to pos_m along the axis
+        vect_r = nodes[0][(i+1)%poly_n] - nodes[0][i]  # from host to right node
+        dist_neigh[i] = math.sqrt(vect_r[0]*vect_r[0] + vect_r[1]*vect_r[1])
+    # update the dynamic interior angles of the loop
+    for i in range(poly_n):
+        i_l = (i-1)%poly_n
+        i_r = (i+1)%poly_n
+        vect_l = nodes[0][i_l] - nodes[0][i]
+        vect_r = nodes[0][i_r] - nodes[0][i]
+        inter_curr[i] = math.acos((vect_l[0]*vect_r[0] + vect_l[1]*vect_r[1])/
+                                  (dist_neigh[i_l] * dist_neigh[i]))
+        if (vect_r[0]*vect_l[1] - vect_r[1]*vect_l[0]) < 0:
+            inter_curr[i] = 2*math.pi - inter_curr[i]
+    # the feedback from all spring effects
+    fb_vect = [np.zeros([1,2]) for i in range(poly_n)]
+    for i in range(poly_n):
+        i_l = (i-1)%poly_n
+        i_r = (i+1)%poly_n
+        # unit vector from host to left
+        vect_l = (nodes[0][i_l]-nodes[0][i])/dist_neigh[i_l]
+        # unit vector from host to right
+        vect_r = (nodes[0][i_r]-nodes[0][i])/dist_neigh[i]
+        # unit vector along central axis pointing inward the polygon
+        vect_lr = nodes[0][i_r]-nodes[0][i_l]  # from left neighbor to right
+        dist_temp = math.sqrt(vect_lr[0]*vect_lr[0]+vect_lr[1]*vect_lr[1])
+        vect_in = np.array([-vect_lr[1]/dist_temp, vect_lr[0]/dist_temp])  # rotate ccw pi/2
 
-        # find the target destination that satisfies desired interior angle
-        ang_targ = inter_targ[domi_node[i]]  # dynamic target interior angle
-        # distance of target position along the axis
-        targ_dist = loop_space*math.cos(ang_targ/2)
-        # reverse distance if interior angle is over pi
-        if ang_targ > math.pi: targ_dist = -targ_dist
+        # add the pulling or pushing effect from left neighbor
+        fb_vect[i] = fb_vect[i] + (dist_neigh[i_l]-loop_space) * linear_const * vect_l
+        # add the pulling or pushing effect from right neighbor
+        fb_vect[i] = fb_vect[i] + (dist_neigh[i]-loop_space) * linear_const * vect_r
+        # add the bending effect initialized by the host node itself
+        fb_vect[i] = fb_vect[i] + ((inter_targ[domi_node[i]]-inter_curr[i])*
+                                   bend_const * vect_in)
 
-        # find the stable destination that satisfies the desired loop space
-        # then decide the final destination by comparing with target destination
-        final_dist = 0  # variable for the final destination
-        # Following discussion is based on the range of dist_rl being divided into four
-        # regions by three points, they are 2*space_upper, 2*loop_space, and 2*space_lower.
-        if dist_rl >= 2*space_upper:
-            # two neighbors are too far away, over the upper space limit the host can reach
-            # no need to compare with target destination, ensure connection first
-            final_dist = 0  # final destination is at origin
-        elif dist_rl >= 2*loop_space and dist_rl < 2*space_upper:
-            # the final destination has a tight single range, stable destination is at origin
-            stab_dist = 0
-            # calculate the half range for the final destination
-            # the rangeis symmetric about the origin, lower range is negative of upper range
-            range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
-            # provisional final destination, balance between interior angle and loop space
-            # final_dist = (targ_dist+stab_dist)/2
-            final_dist = targ_dist*0.618 + stab_dist*0.382
-            # set final destination to limiting positions if exceeding them
-            final_dist = max(min(final_dist, range_upper), -range_upper)
-        elif dist_rl >= 2*space_lower and dist_rl < 2*loop_space:
-            # the final destination has only one range
-            # but two stable destinations, will choose one closer to target destination
-            stab_dist = math.sqrt(loop_space*loop_space-dist_rl*dist_rl/4)
-            range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
-            # check which stable destination the target destination is closer to
-            if abs(targ_dist-stab_dist) < abs(targ_dist+stab_dist):
-                # closer to stable destination at positive side
-                # final_dist = (targ_dist+stab_dist)/2
-                final_dist = targ_dist*0.618 + stab_dist*0.382
-            else:
-                # closer to stable destination at negative side
-                # final_dist = (targ_dist-stab_dist)/2
-                final_dist = targ_dist*0.618 + (-stab_dist)*0.382
-            # set final destination to limiting positions if exceeding them
-            final_dist = max(min(final_dist, range_upper), -range_upper)
-        elif dist_rl < 2*space_lower:
-            # final destination has two possible ranges to choose from
-            # will take one on the side where the node is currently located
-            stab_dist = math.sqrt(loop_space*loop_space-dist_rl*dist_rl/4)
-            range_upper = math.sqrt(space_upper*space_upper-dist_rl*dist_rl/4)
-            range_lower = math.sqrt(space_lower*space_lower-dist_rl*dist_rl/4)
-            # find out the current side of the node
-            vect_lr = [-vect_rl[0], -vect_rl[1]]  # vector from left neighbor to right
-            vect_lh = [node_h[0]-node_l[0], node_h[1]-node_l[1]]  # from left to host
-            # cross product of vect_lh and vect_lr
-            if vect_lh[0]*vect_lr[1]-vect_lh[1]*vect_lr[0] >= 0:
-                # host node is at positive side
-                # final_dist = (targ_dist+stab_dist)/2
-                final_dist = targ_dist*0.618 + stab_dist*0.382
-                # avoid overflow in range [range_lower, range_upper]
-                final_dist = max(min(final_dist, range_upper), range_lower)
-            else:
-                # host node is at negative side
-                # final_dist = (targ_dist-stab_dist)/2
-                final_dist = targ_dist*0.618 + (-stab_dist)*0.382
-                # avoid overflow in range [-range_upper, -range_lower]
-                final_dist = max(min(final_dist, -range_lower), -range_upper)
-        # calculate the position of the final destination, where the node desires to move to
-        final_des = [pos_m[0] + final_dist*math.cos(vect_ax_ang),
-                     pos_m[1] + final_dist*math.sin(vect_ax_ang)]
+        # update one step of position
+        nodes[0][i] = nodes[0][i] + disp_coef * fb_vect[i]
 
-        # calculate the velocity and orientation based on the final destination
-        vect_des = [final_des[0]-node_h[0], final_des[1]-node_h[1]]  # from host to des
-        vect_des_dist = math.sqrt(vect_des[0]*vect_des[0] + vect_des[1]*vect_des[1])
-        # velocity is proportional to the distance to the final destination
-        vel = vel_dist_ratio*vect_des_dist
-        ori = math.atan2(vect_des[1], vect_des[0])
-
-        # carry out one step of update on the position
-        nodes[0][i] = [node_h[0] + vel*physics_period*math.cos(ori),
-                       node_h[1] + vel*physics_period*math.sin(ori)]
+    # use delay to slow down the physics update when bar graph animation is skpped
+    # not clean buy quick way to adjust simulation pace
+    time.sleep(0.2)  # unit in second
 
     # iteration count update
     print("current iteration count {}".format(iter_count))
@@ -650,22 +696,23 @@ while not sim_exit:
     # graphics update
     if iter_count%graph_iters == 0:
         
-        # graphics update for the bar graph
-        # find the largest y data in all distributions as up limit in graphs
-        y_lim = 0.0
-        for i in range(poly_n):
-            for j in range(poly_n):
-                if pref_dist[i][j] > y_lim:
-                    y_lim = pref_dist[i][j]
-        y_lim = min(1.0, y_lim*1.1)  # leave some gap
-        # matplotlib method
-        for i in range(poly_n):
-            for j in range(poly_n):
-                rects[i][j].set_height(pref_dist[i][j])
-                ax[i].set_title('{} -> {} -> {:.2f}'.format(i, sub_size[i], dist_diff_ratio[i]))
-                ax[i].set_ylim(0.0, y_lim)
-        fig.canvas.draw()
-        fig.show()
+        # # comment this block if bar graph animation is not needed
+        # # graphics update for the bar graph
+        # # find the largest y data in all distributions as up limit in graphs
+        # y_lim = 0.0
+        # for i in range(poly_n):
+        #     for j in range(poly_n):
+        #         if pref_dist[i][j] > y_lim:
+        #             y_lim = pref_dist[i][j]
+        # y_lim = min(1.0, y_lim*1.1)  # leave some gap
+        # # matplotlib method
+        # for i in range(poly_n):
+        #     for j in range(poly_n):
+        #         rects[i][j].set_height(pref_dist[i][j])
+        #         ax[i].set_title('{} -> {} -> {:.2f}'.format(i, sub_size[i], dist_diff_ratio[i]))
+        #         ax[i].set_ylim(0.0, y_lim)
+        # fig.canvas.draw()
+        # fig.show()
 
         # graphics update for the pygame window
         screen.fill(background_color)
