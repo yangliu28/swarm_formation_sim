@@ -29,9 +29,15 @@
 # the difference, the less the unipolarity should grow. A power function method with exponent
 # smaller than 1 is used to slow down the increasing rate of the unipolarity.
 
-# Node moving strategy during the reshape process:
-
-
+# SMA motion control for the loop reshape process:
+# Inspired by the shape memory alloy, each node maintain desired loop space by modeling the
+# feedback from neighbors as stiff linear springs. Each node also trys to achived a certain
+# interior angle, the difference from current interior angle to target interior angle acts
+# as a potential energy, just like the memorized shape of the alloy. The node trys to
+# accomodate this effect by moving itself along the central axis, the effect can be exerted
+# from two neighbors, but they may have conflicting ideas, so it is simplier to just move
+# host node along central axis. This feedback is also modeled as a rotating spring. This two
+# combined spring force can reshape the loop to desired loop formation.
 
 
 import pygame
@@ -690,7 +696,7 @@ while not sim_exit:
     time.sleep(0.2)  # unit in second
 
     # iteration count update
-    print("current iteration count {}".format(iter_count))
+    print("iteration count {}".format(iter_count))
     iter_count = iter_count + 1  # update iteration count
 
     # graphics update

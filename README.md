@@ -12,7 +12,7 @@ All the formation control algorithms simulated here agree on a few conditions of
 
 *loop_rehsape_1_static.py* is the algorithm exploration on the consensus problem of target allocation. Goal is to reshape the loop to target formation while remaining node connections, this program is the static version focusing on the distribution convergence.
 
-*loop_reshape_2_dynamic.py* is the dynamic version of the loop reshape simulation. A new conflict tolerant algorithm is implemented to guarantee maximum distribution convergence.
+*loop_reshape_2_dynamic.py* is the dynamic version of the loop reshape simulation. A new weighted averaging method is implemented to tolerate the conflict between distribution convergence and better distribution unipolarity. A new SMA-inspired motion strategy is used for the physical motion control of the loop reshape process.
 
 ## Run the simulations
 
