@@ -16,7 +16,7 @@ All the formation control algorithms simulated here agree on a few conditions of
 
 ## Run the simulations
 
-Install corresponding Pygame version for your Python, optional dependencies include numpy, matplotlib. See the header of the '.py' you want to run to find what dependencies are needed.
+Install corresponding Pygame version for your Python, optional dependencies include numpy, matplotlib. See the header of the desired '.py' to find the necessary dependencies.
 
 Line formation simulation with climbing method:
 
@@ -34,7 +34,8 @@ Loop reshape simulation, static version: (see more parameter options in the head
 
 `python loop_reshape_1_static.py gen_discard initial_gen target_gen`
 
-Loop reshape simulation, dynamic version: (same parameter options)
+Loop reshape simulation, dynamic version: (same options for parameters)
 
-`python loop_reshape_2_dynamic.py gen_discard initial_gen target_gen`
+`python loop_reshape_2_dynamic.py gen_discard initial_read 30-1 target_gen`
+
 
