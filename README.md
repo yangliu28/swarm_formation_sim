@@ -10,8 +10,6 @@ All the formation control algorithms simulated here agree on a few conditions of
 
 *loop_formation.py* uses same merging method to form a loop, the formation starts with a pair of robots, then a triangle formation as the initial loop.
 
-*loop_rehsape_1_static.py* is the algorithm exploration on the consensus problem of target allocation. Goal is to reshape the loop to target formation while remaining node connections, this program is the static version focusing on the distribution convergence.
-
 *loop_reshape_2_dynamic.py* is the dynamic version of the loop reshape simulation. A new weighted averaging method is implemented to tolerate the conflict between distribution convergence and better distribution unipolarity. A new SMA-inspired motion strategy is used for the physical motion control of the loop reshape process.
 
 ## Run the simulations
@@ -30,11 +28,7 @@ Loop formation simulation:
 
 `python loop_formation.py`
 
-Loop reshape simulation, static version: (see more parameter options in the header comments of the file)
-
-`python loop_reshape_1_static.py gen_discard initial_gen target_gen`
-
-Loop reshape simulation, dynamic version: (same options for parameters)
+Loop reshape simulation, dynamic version: (see more parameter options in the header comments of the file)
 
 `python loop_reshape_2_dynamic.py gen_discard initial_read 30-1 target_gen`
 
