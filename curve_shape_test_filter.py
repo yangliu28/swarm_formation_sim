@@ -4,19 +4,22 @@
 # dof=N-2 for open curves, only nodes inside the curve can have deviation angle
 # dof=N-3 for closed loops, but all N deviation angles will be generated for filtering
 
-# also rotate the curves or loops so it look more randomly placed
-
 import pygame
 import math, random
 import numpy as np
-
 from formation_functions import *
 
-pygame.init()
+pygame.init()  # initialize pygame
 screen_size = (600, 800)
 background_color = (0,0,0)  # black background
 node_color = (255,0,0)  # red for nodes
 node_size = 5  # radius of dot in pixels in display coordinates
+
+# set up the simulation window
+icon = pygame.image.load("icon_geometry_art.jpg")
+pygame.display.set_icon(icon)
+screen = pygame.display.set_mode(screen_size)
+pygame.display.set_caption("Curve Shape Filter Test")
 
 # continuous world coordinates, origin at left bottom corner
 # x pointing right, y pointing up
@@ -37,8 +40,6 @@ nodes_f[1] = [node_space, 0]
 
 # change here to switch between open curve testing and closed loop testing
 simulation_mode = 0  # 0 for open curve, 1 for close loop
-
-
 
 if simulation_mode == 0:
 	# section for the filter test of the open curve
@@ -75,26 +76,55 @@ if simulation_mode == 0:
     for i in range(2, N):
         forward_ang = reset_radian(forward_ang + dev_ang_f[i-2])
         nodes_f[i] = nodes_f[i-1] + node_space*np.array([math.cos(forward_ang),
-                                                         maht.sin(forward_ang)])
+                                                         math.sin(forward_ang)])
 
     # shift the two curves to its geometric center, rotate a random angle
     # then shift the two curves again to top and bottom halves of the window
+    rot_ang = random.uniform(-math.pi, math.pi)  # two curves rotate same angle
+    rot = np.array([[math.cos(rot_ang), math.sin(rot_ang)],
+                    [-math.sin(rot_ang), math.cos(rot_ang)]])  # rotation matrix
+    # shift old curve to origin
     geometric_center = np.mean(nodes, axis=0)
-    nodes = nodes - geometry_center  # shift to its geometric center
-    rotate_ang = random.uniform(-math.pi, math.pi)
-
+    nodes = nodes - geometric_center  # shift to its geometric center
+    nodes = np.dot(nodes, rot)  # rotate curve in angle of rot_ang
+    # shift old curve to top halve of the window
+    nodes = nodes + np.array([world_size[0]/2, 3*world_size[1]/4])
+    # do all the above for the new filtered curve
+    geometric_center = np.mean(nodes, axis=0)
+    nodes_f = nodes_f - geometric_center  # shift to its geometric center
+    nodes_f = np.dot(nodes_f, rot)  # rotate curve in angle of rot_ang
+    nodes_f = nodes_f + np.array([world_size[0]/2, world_size[1]/4])  # to bottom half
 
     # visualize the result of the filter
     screen.fill(background_color)
     disp_pos = [[0,0] for i in range(N)]
     for i in range(N):
         disp_pos[i] = world_to_display(nodes[i], world_size, screen_size)
-        pygame.draw.circle(screen, node_color, disp_pos)
-
+        pygame.draw.circle(screen, node_color, disp_pos[i], node_size, 0)
+    pygame.draw.circle(screen, node_color, disp_pos[0], int(node_size*1.5), 1)
+    for i in range(N-1):
+        pygame.draw.line(screen, node_color, disp_pos[i], disp_pos[i+1])
+    # repeat above for the new filtered curve
+    for i in range(N):
+        disp_pos[i] = world_to_display(nodes_f[i], world_size, screen_size)
+        pygame.draw.circle(screen, node_color, disp_pos[i], node_size, 0)
+    pygame.draw.circle(screen, node_color, disp_pos[0], int(node_size*1.5), 1)
+    for i in range(N-1):
+        pygame.draw.line(screen, node_color, disp_pos[i], disp_pos[i+1])
 
 else:
 	# section for the filter test of close loops
+    pass
 
-
+# simulation exit control
+sim_exit = False  # simulation exit flag
+while not sim_exit:
+    # exit the program by close window button, or Esc or Q on keyboard
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sim_exit = True  # exit with the close window button
+        if event.type == pygame.KEYUP:
+            if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
+                sim_exit = True  # exit with ESC key or Q key
 
 
