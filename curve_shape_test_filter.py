@@ -4,6 +4,16 @@
 # dof=N-2 for open curves, only nodes inside the curve can have deviation angle
 # dof=N-3 for closed loops, but all N deviation angles will be generated for filtering
 
+# comments on effects of moving averaging filter on open curves and closed loops:
+# The moving averaging filter works by taking average of the deviation angle of host node
+# and two neighbors. It works well on open curves, but not on closed loop. The filtered
+# deviation angle won't even guarantee the loop to be closed again. Because the loop has
+# to be an equilateral polygon, not any combination of deviation angles can make a closed
+# loop.
+
+# another way of loop shape filter, just take the good old SMA algorithm
+
+
 import pygame
 import math, random
 import numpy as np
@@ -165,6 +175,7 @@ else:
         vect_f = nodes[0] - nodes[N-1]
         dev_ang.append(reset_radian(math.atan2(vect_f[1], vect_f[0]) -
                                     math.atan2(vect_b[1], vect_b[0])))
+        break  # finish the constructing the loop, break
 
     # the moving averaging filter
     dev_ang_f = np.array([0 for i in range(N)])
