@@ -6,13 +6,19 @@
 
 # comments on effects of moving averaging filter on open curves and closed loops:
 # The moving averaging filter works by taking average of the deviation angle of host node
-# and two neighbors. It works well on open curves, but not on closed loop. The filtered
-# deviation angle won't even guarantee the loop to be closed again. Because the loop has
+# and two neighbors. It works well on open curves, but not on closed loops. The filtered
+# deviation angle won't guarantee the loop to be closed again.
+
+# Because the loop has
 # to be an equilateral polygon, not any combination of deviation angles can make a closed
 # loop.
 
 # another way of loop shape filter, just take the good old SMA algorithm
-
+# a potential problem with this algorithm is that, in the result formation, the neighbor
+# distance is not strictly the preset distance, the error is very small but exist, the
+# accumulated error can potentially warp the polygon again, when reconstructing the loop
+# from interior angles again.
+# Need to test the method for polygons with increasing sides.
 
 import pygame
 import math, random
@@ -138,7 +144,7 @@ if simulation_mode == 0:
                     sim_exit = True  # exit with ESC key or Q key
 
 else:
-    # following commented block is a tested, not so successful algorithm
+    # following commented block is a failed test of loop shape filter
     # # section for the filter test of close loops
     # # A new way of generating deviation angle is used here. Since random generation
     # # has no guarantee the mean value will be close to the middle of the range, a normal
@@ -242,7 +248,13 @@ else:
     # pygame.draw.line(screen, node_color, disp_pos[N-1], disp_pos[0])
     # pygame.display.update()
 
-    
+    # section for the filter test of close loops
+    # The SMA algorithm is used here again to reshape the generated polygon to a better
+    # filtered shape. The problem with the failed method above is that, the interior angle
+    # summation rule is not the only constrait for equilaterial polygon. Not any combination
+    # of interior angles can guarantee a closed polygon. Since I wasn't able to generalize
+    # the hidden rule of interior angles for equilaterial polygon(what a shame, not happy),
+    # I'm giving SMA algorithm a try
 
 
 
