@@ -126,120 +126,124 @@ if simulation_mode == 0:
         pygame.draw.line(screen, node_color, disp_pos[i], disp_pos[i+1])
     pygame.display.update()
 
+    # simulation exit control
+    sim_exit = False  # simulation exit flag
+    while not sim_exit:
+        # exit the program by close window button, or Esc or Q on keyboard
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sim_exit = True  # exit with the close window button
+            if event.type == pygame.KEYUP:
+                if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
+                    sim_exit = True  # exit with ESC key or Q key
+
 else:
-	# section for the filter test of close loops
-    # A different way of generating deviation angle is used here. Since random generation
-    # has no guarantee the mean value will be close to the middle of the range, a normal
-    # distribution will do a better work here.
-    dev_ang = []
-    while True:  # keep on generating deviation angles until success
-        shape_good = True  # indicating if loop is still in good shape
-        dev_ang = np.random.normal(loop_dev_mid, loop_dev_std, N-3).tolist()
-        forward_ang = 0.0  # starting forward angle
-        for i in range(2, N-1):
-            forward_ang = reset_radian(forward_ang + dev_ang[i-2])
-            nodes[i] = nodes[i-1] + node_space*np.array([math.cos(forward_ang),
-                                                         math.sin(forward_ang)])
-            # check if new node is too close to previous nodes, except the one right before
-            for j in range(i-1):
-                if np.linalg.norm(nodes[i]-nodes[j]) < node_space:
-                    shape_good = False
-                    break
-            if not shape_good: break
-        if not shape_good: continue
-        # check if second last node is too far away from first node
-        vect_temp = nodes[0]-nodes[N-2]  # from last second node to first node
-        dist_temp = np.linalg.norm(vect_temp)
-        if dist_temp > 2*node_space: continue
-        # if here, the guess of deviation angles has been approved
-        # calculate position of the last node
-        forward_ang = math.atan2(vect_temp[1], vect_temp[0])
-        rot_ang = math.acos(dist_temp/2/node_space)
-        forward_ang = reset_radian(forward_ang - rot_ang)  # rotate cw of rot_ang
-        nodes[N-1] = nodes[N-2] + node_space*np.array([math.cos(forward_ang),
-                                                       math.sin(forward_ang)])
-        # adding all the missing deviation angles
-        # for deviation angle at node 0
-        vect_b = nodes[0] - nodes[N-1]  # back vector
-        vect_f = nodes[1] - nodes[0]  # front vector
-        new_dev = reset_radian(math.atan2(vect_f[1], vect_f[0]) -
-                               math.atan2(vect_b[1], vect_b[0]))
-        dev_ang.insert(0, new_dev)
-        # for deviation angle at node N-2
-        vect_b = nodes[N-2] - nodes[N-3]
-        vect_f = nodes[N-1] - nodes[N-2]
-        dev_ang.append(reset_radian(math.atan2(vect_f[1], vect_f[0]) -
-                                    math.atan2(vect_b[1], vect_b[0])))
-        # for deviation angle at node N-1
-        vect_b = nodes[N-1] - nodes[N-2]
-        vect_f = nodes[0] - nodes[N-1]
-        dev_ang.append(reset_radian(math.atan2(vect_f[1], vect_f[0]) -
-                                    math.atan2(vect_b[1], vect_b[0])))
-        break  # finish the constructing the loop, break
+    # following commented block is a tested, not so successful algorithm
+    # # section for the filter test of close loops
+    # # A new way of generating deviation angle is used here. Since random generation
+    # # has no guarantee the mean value will be close to the middle of the range, a normal
+    # # distribution will do a better work here.
+    # dev_ang = []
+    # while True:  # keep on generating deviation angles until success
+    #     shape_good = True  # indicating if loop is still in good shape
+    #     dev_ang = np.random.normal(loop_dev_mid, loop_dev_std, N-3).tolist()
+    #     forward_ang = 0.0  # starting forward angle
+    #     for i in range(2, N-1):
+    #         forward_ang = reset_radian(forward_ang + dev_ang[i-2])
+    #         nodes[i] = nodes[i-1] + node_space*np.array([math.cos(forward_ang),
+    #                                                      math.sin(forward_ang)])
+    #         # check if new node is too close to previous nodes, except the one right before
+    #         for j in range(i-1):
+    #             if np.linalg.norm(nodes[i]-nodes[j]) < node_space:
+    #                 shape_good = False
+    #                 break
+    #         if not shape_good: break
+    #     if not shape_good: continue
+    #     # check if second last node is too far away from first node
+    #     vect_temp = nodes[0]-nodes[N-2]  # from last second node to first node
+    #     dist_temp = np.linalg.norm(vect_temp)
+    #     if dist_temp > 2*node_space: continue
+    #     # if here, the guess of deviation angles has been approved
+    #     # calculate position of the last node
+    #     forward_ang = math.atan2(vect_temp[1], vect_temp[0])
+    #     rot_ang = math.acos(dist_temp/2/node_space)
+    #     forward_ang = reset_radian(forward_ang - rot_ang)  # rotate cw of rot_ang
+    #     nodes[N-1] = nodes[N-2] + node_space*np.array([math.cos(forward_ang),
+    #                                                    math.sin(forward_ang)])
+    #     # adding all the missing deviation angles
+    #     # for deviation angle at node 0
+    #     vect_b = nodes[0] - nodes[N-1]  # back vector
+    #     vect_f = nodes[1] - nodes[0]  # front vector
+    #     new_dev = reset_radian(math.atan2(vect_f[1], vect_f[0]) -
+    #                            math.atan2(vect_b[1], vect_b[0]))
+    #     dev_ang.insert(0, new_dev)
+    #     # for deviation angle at node N-2
+    #     vect_b = nodes[N-2] - nodes[N-3]
+    #     vect_f = nodes[N-1] - nodes[N-2]
+    #     dev_ang.append(reset_radian(math.atan2(vect_f[1], vect_f[0]) -
+    #                                 math.atan2(vect_b[1], vect_b[0])))
+    #     # for deviation angle at node N-1
+    #     vect_b = nodes[N-1] - nodes[N-2]
+    #     vect_f = nodes[0] - nodes[N-1]
+    #     dev_ang.append(reset_radian(math.atan2(vect_f[1], vect_f[0]) -
+    #                                 math.atan2(vect_b[1], vect_b[0])))
+    #     break  # finish the constructing the loop, break
 
-    # the moving averaging filter
-    dev_ang_f = np.array([0 for i in range(N)])
-    for i in range(N):
-        i_l = (i-1)%N  # neighbor on left
-        i_r = (i+1)%N  # neighbor on right
-        dev_ang_f[i] = (dev_ang[i_l] + dev_ang[i] + dev_ang[i_r])/3
-    # make sure the summation of deviation angles is 2*pi
-    dev_sum = np.sum(dev_ang_f)
-    dev_ang_f = dev_ang_f + (2*math.pi-dev_sum)/N
-    # construct the new loop with filtered deviation angles
-    forward_ang = 0.0
-    for i in range(2, N):
-        forward_ang = reset_radian(forward_ang + dev_ang_f[i-1])
-        nodes_f[i] = nodes_f[i-1] + node_space*np.array([math.cos(forward_ang),
-                                                         math.sin(forward_ang)])
+    # # the moving averaging filter
+    # dev_ang_f = np.array([0 for i in range(N)])
+    # for i in range(N):
+    #     i_l = (i-1)%N  # neighbor on left
+    #     i_r = (i+1)%N  # neighbor on right
+    #     dev_ang_f[i] = (dev_ang[i_l] + dev_ang[i] + dev_ang[i_r])/3
+    # # make sure the summation of deviation angles is 2*pi
+    # dev_sum = np.sum(dev_ang_f)
+    # dev_ang_f = dev_ang_f + (2*math.pi-dev_sum)/N
+    # # construct the new loop with filtered deviation angles
+    # forward_ang = 0.0
+    # for i in range(2, N):
+    #     forward_ang = reset_radian(forward_ang + dev_ang_f[i-1])
+    #     nodes_f[i] = nodes_f[i-1] + node_space*np.array([math.cos(forward_ang),
+    #                                                      math.sin(forward_ang)])
 
-    # shift the two loops to its geometric center, rotate a random angle
-    # then shift the two loops agian to top and bottom halves of the window
-    rot_ang = random.uniform(-math.pi, math.pi)  # two loops rotate the same angle
-    rot_mat = np.array([[math.cos(rot_ang), math.sin(rot_ang)],
-                        [-math.sin(rot_ang), math.cos(rot_ang)]])  # rotation matrix
-    # shift old loop to origin
-    geometric_center = np.mean(nodes, axis=0)
-    nodes = nodes - geometric_center  # shift to its geometric center
-    nodes = np.dot(nodes, rot_mat)  # rotate curve in angle of rot_ang
-    # shift old loop to top halve of the window
-    nodes = nodes + np.array([world_size[0]/2, 3*world_size[1]/4])
-    # do all the above for the new filtered curve
-    geometric_center = np.mean(nodes_f, axis=0)
-    nodes_f = nodes_f - geometric_center  # shift to its geometric center
-    nodes_f = np.dot(nodes_f, rot_mat)  # rotate loop in angle of rot_ang
-    nodes_f = nodes_f + np.array([world_size[0]/2, world_size[1]/4])  # to bottom half
+    # # shift the two loops to its geometric center, rotate a random angle
+    # # then shift the two loops agian to top and bottom halves of the window
+    # rot_ang = random.uniform(-math.pi, math.pi)  # two loops rotate the same angle
+    # rot_mat = np.array([[math.cos(rot_ang), math.sin(rot_ang)],
+    #                     [-math.sin(rot_ang), math.cos(rot_ang)]])  # rotation matrix
+    # # shift old loop to origin
+    # geometric_center = np.mean(nodes, axis=0)
+    # nodes = nodes - geometric_center  # shift to its geometric center
+    # nodes = np.dot(nodes, rot_mat)  # rotate curve in angle of rot_ang
+    # # shift old loop to top halve of the window
+    # nodes = nodes + np.array([world_size[0]/2, 3*world_size[1]/4])
+    # # do all the above for the new filtered curve
+    # geometric_center = np.mean(nodes_f, axis=0)
+    # nodes_f = nodes_f - geometric_center  # shift to its geometric center
+    # nodes_f = np.dot(nodes_f, rot_mat)  # rotate loop in angle of rot_ang
+    # nodes_f = nodes_f + np.array([world_size[0]/2, world_size[1]/4])  # to bottom half
 
-    # visualize the result of the filter
-    screen.fill(background_color)
-    disp_pos = [[0,0] for i in range(N)]
-    for i in range(N):
-        disp_pos[i] = world_to_display(nodes[i], world_size, screen_size)
-        pygame.draw.circle(screen, node_color, disp_pos[i], node_size, 0)
-    pygame.draw.circle(screen, node_color, disp_pos[0], int(node_size*1.5), 1)
-    for i in range(N-1):
-        pygame.draw.line(screen, node_color, disp_pos[i], disp_pos[i+1])
-    pygame.draw.line(screen, node_color, disp_pos[N-1], disp_pos[0])
-    # repeat above for the new filtered curve
-    for i in range(N):
-        disp_pos[i] = world_to_display(nodes_f[i], world_size, screen_size)
-        pygame.draw.circle(screen, node_color, disp_pos[i], node_size, 0)
-    pygame.draw.circle(screen, node_color, disp_pos[0], int(node_size*1.5), 1)
-    for i in range(N-1):
-        pygame.draw.line(screen, node_color, disp_pos[i], disp_pos[i+1])
-    pygame.draw.line(screen, node_color, disp_pos[N-1], disp_pos[0])
-    pygame.display.update()
+    # # visualize the result of the filter
+    # screen.fill(background_color)
+    # disp_pos = [[0,0] for i in range(N)]
+    # for i in range(N):
+    #     disp_pos[i] = world_to_display(nodes[i], world_size, screen_size)
+    #     pygame.draw.circle(screen, node_color, disp_pos[i], node_size, 0)
+    # pygame.draw.circle(screen, node_color, disp_pos[0], int(node_size*1.5), 1)
+    # for i in range(N-1):
+    #     pygame.draw.line(screen, node_color, disp_pos[i], disp_pos[i+1])
+    # pygame.draw.line(screen, node_color, disp_pos[N-1], disp_pos[0])
+    # # repeat above for the new filtered curve
+    # for i in range(N):
+    #     disp_pos[i] = world_to_display(nodes_f[i], world_size, screen_size)
+    #     pygame.draw.circle(screen, node_color, disp_pos[i], node_size, 0)
+    # pygame.draw.circle(screen, node_color, disp_pos[0], int(node_size*1.5), 1)
+    # for i in range(N-1):
+    #     pygame.draw.line(screen, node_color, disp_pos[i], disp_pos[i+1])
+    # pygame.draw.line(screen, node_color, disp_pos[N-1], disp_pos[0])
+    # pygame.display.update()
+
+    
 
 
-# simulation exit control
-sim_exit = False  # simulation exit flag
-while not sim_exit:
-    # exit the program by close window button, or Esc or Q on keyboard
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            sim_exit = True  # exit with the close window button
-        if event.type == pygame.KEYUP:
-            if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
-                sim_exit = True  # exit with ESC key or Q key
 
 
