@@ -25,7 +25,7 @@
 
 
 import pygame
-import math, random
+import math, random, sys
 import numpy as np
 from formation_functions import *
 
@@ -53,18 +53,18 @@ curve_dev_half = math.pi/2  # half range of randomly generated deviation angle f
 loop_dev_mid = 2*math.pi/N  # loop's middle point of deviation angle
 loop_dev_std = math.pi/8  # standard deviation of deviation angle for closed loop
 # moving filter weight of host node for loop reshape, two neighbors split the rest equaly
-filter_weig = 0.5  # should be larger than 1/3
-# SMA parameters
-linear_const = 2.0  # linear spring constant
-bend_const = 0.1  # bending spring constant
+filter_weig = 0.618  # should be larger than 1/3
+# SMA parameters, the spring constants should not be over 1.0, so the system can be stable
+linear_const = 1.0  # linear spring constant
+bend_const = 0.5  # bending spring constant
 disp_coef = 0.5  # coefficient from feedback to displacement
 
 # initialize the node positions variables
-nodes = np.array([[0,0] for i in range(N)])  # originally generated node positions
-nodes_f = np.array([[0,0] for i in range(N)])  # filtered node positions
+nodes = np.array([[0.0, 0.0] for i in range(N)])  # originally generated node positions
+nodes_f = np.array([[0.0, 0.0] for i in range(N)])  # filtered node positions
 # first node starts at origin, second node is node space away on the right
-nodes[1] = [node_space, 0]
-nodes_f[1] = [node_space, 0]
+nodes[1] = [node_space, 0.0]
+nodes_f[1] = [node_space, 0.0]
 
 # change here to switch between open curve testing and closed loop testing
 simulation_mode = 1  # 0 for open curve, 1 for close loop
@@ -154,7 +154,7 @@ if simulation_mode == 0:
                     sim_exit = True  # exit with ESC key or Q key
 
 else:
-    # following commented block is a failed test of loop shape filter
+    # # following commented block is a failed test of loop shape filter
     # # section for the filter test of close loops
     # # A new way of generating deviation angle is used here. Since random generation
     # # has no guarantee the mean value will be close to the middle of the range, a normal
@@ -179,13 +179,19 @@ else:
     #     vect_temp = nodes[0]-nodes[N-2]  # from last second node to first node
     #     dist_temp = np.linalg.norm(vect_temp)
     #     if dist_temp > 2*node_space: continue
-    #     # if here, the guess of deviation angles has been approved
     #     # calculate position of the last node
     #     forward_ang = math.atan2(vect_temp[1], vect_temp[0])
     #     rot_ang = math.acos(dist_temp/2/node_space)
     #     forward_ang = reset_radian(forward_ang - rot_ang)  # rotate cw of rot_ang
     #     nodes[N-1] = nodes[N-2] + node_space*np.array([math.cos(forward_ang),
     #                                                    math.sin(forward_ang)])
+    #     # check if last node is too close to previous nodes
+    #     for i in range(N-1):
+    #         if np.linalg.norm(nodes[N-1]-nodes[i]) < node_space:
+    #             shape_good = False
+    #             break
+    #     if not shape_good: continue
+    #     # if here, the guess of deviation angles has been approved
     #     # adding all the missing deviation angles
     #     # for deviation angle at node 0
     #     vect_b = nodes[0] - nodes[N-1]  # back vector
@@ -206,11 +212,11 @@ else:
     #     break  # finish the constructing the loop, break
 
     # # the moving averaging filter
-    # dev_ang_f = np.array([0 for i in range(N)])
+    # dev_ang_f = np.array([0.0 for i in range(N)])
     # for i in range(N):
-    #     i_l = (i-1)%N  # neighbor on left
-    #     i_r = (i+1)%N  # neighbor on right
-    #     dev_ang_f[i] = (dev_ang[i_l] + dev_ang[i] + dev_ang[i_r])/3
+    #     dev_ang_f[i] = ((1.0-filter_weig)/2.0 * dev_ang[(i-1)%N] +
+    #                     filter_weig * dev_ang[i] +
+    #                     (1.0-filter_weig)/2.0 * dev_ang[(i+1)%N])
     # # make sure the summation of deviation angles is 2*pi
     # dev_sum = np.sum(dev_ang_f)
     # dev_ang_f = dev_ang_f + (2*math.pi-dev_sum)/N
@@ -258,6 +264,17 @@ else:
     # pygame.draw.line(screen, node_color, disp_pos[N-1], disp_pos[0])
     # pygame.display.update()
 
+    # # simulation exit control
+    # sim_exit = False  # simulation exit flag
+    # while not sim_exit:
+    #     # exit the program by close window button, or Esc or Q on keyboard
+    #     for event in pygame.event.get():
+    #         if event.type == pygame.QUIT:
+    #             sim_exit = True  # exit with the close window button
+    #         if event.type == pygame.KEYUP:
+    #             if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
+    #                 sim_exit = True  # exit with ESC key or Q key
+
     # section for the filter test of close loops
     # The SMA algorithm is used here again to reshape the generated polygon to a better
     # filtered shape.
@@ -281,13 +298,19 @@ else:
         vect_temp = nodes[0]-nodes[N-2]  # from last second node to first node
         dist_temp = np.linalg.norm(vect_temp)
         if dist_temp > 2*node_space: continue
-        # if here, the guess of deviation angles has been approved
         # calculate position of the last node
         forward_ang = math.atan2(vect_temp[1], vect_temp[0])
         rot_ang = math.acos(dist_temp/2/node_space)
         forward_ang = reset_radian(forward_ang - rot_ang)  # rotate cw of rot_ang
         nodes[N-1] = nodes[N-2] + node_space*np.array([math.cos(forward_ang),
                                                        math.sin(forward_ang)])
+        # check if last node is too close to previous nodes
+        for i in range(N-1):
+            if np.linalg.norm(nodes[N-1]-nodes[i]) < node_space:
+                shape_good = False
+                break
+        if not shape_good: continue
+        # if here, the guess of deviation angles has been approved
         # adding all the missing deviation angles
         # for deviation angle at node 0
         vect_b = nodes[0] - nodes[N-1]  # back vector
@@ -308,11 +331,11 @@ else:
         break  # finish the constructing the loop, break
 
     # the moving averaging filter
-    dev_ang_f = np.array([0 for i in range(N)])
+    dev_ang_f = np.array([0.0 for i in range(N)])
     for i in range(N):
-        dev_ang_f[i] = ((1.0-filter_weig)/2 * dev_ang[(i-1)%N] +
+        dev_ang_f[i] = ((1.0-filter_weig)/2.0 * dev_ang[(i-1)%N] +
                         filter_weig * dev_ang[i] +
-                        (1.0-filter_weig)/2 * dev_ang[(i+1)%N])
+                        (1.0-filter_weig)/2.0 * dev_ang[(i+1)%N])
     # make sure the summation of deviation angles is 2*pi
     dev_sum = np.sum(dev_ang_f)
     dev_ang_f = dev_ang_f + (2*math.pi-dev_sum)/N
