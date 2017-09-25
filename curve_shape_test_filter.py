@@ -11,23 +11,24 @@
 # rule is not the only constraint for equilaterial polygon, Because the loop has to be an
 # equilateral polygon, not any combination of deviation angles can make a closed loop.
 
-
-
-# I wasn't able to generalize
-# the hidden rule of interior angles for equilaterial polygon.(what a shame, not happy)
-
-# another way of loop shape filter, just take the good old SMA algorithm
-# a potential problem with this algorithm is that, in the result formation, the neighbor
-# distance is not strictly the preset distance, the error is very small but exist, the
-# accumulated error can potentially warp the polygon again, when reconstructing the loop
-# from interior angles again.
-# Need to test the method for polygons with increasing sides.
-
+# comments on SMA shape filter for closed loops:
+# I could not be able to generalize the hidden rule of interior angles for equilaterial
+# polygon(what a shame, not happy), I gave the good old SMA algorithm a try, to use it as
+# a general shape filter as well. A potential problem with this algorithm is that, in the
+# result formation, the neighbor distance is not strictly the preset node distance. Errors
+# are small but exist, the accumulated effect can warp the polygon when reconstructing from
+# interior angles again.
+# But after basic testing, the SMA algorithm filters the polygon smoothly as expected. And
+# the reconstructed polygon is still in good shape, no sharp angle at last node, when number
+# of sides of the polygon is not too large.
 
 import pygame
 import math, random, sys
 import numpy as np
 from formation_functions import *
+
+# change here to switch between open curve testing and closed loop testing
+simulation_mode = 1  # 0 for open curve, 1 for close loop
 
 pygame.init()  # initialize pygame
 screen_size = (600, 900)
@@ -68,9 +69,7 @@ nodes_f = np.array([[0.0, 0.0] for i in range(N)])  # filtered node positions
 nodes[1] = np.array([node_space, 0.0])
 nodes_f[1] = np.array([node_space, 0.0])
 
-# change here to switch between open curve testing and closed loop testing
-simulation_mode = 1  # 0 for open curve, 1 for close loop
-
+# goes to either open curve or closed loop testing based on simulation mode setting
 if simulation_mode == 0:
 	# section for the filter test of the open curve
     dev_ang = [0 for i in range(N-2)]
