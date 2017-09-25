@@ -53,18 +53,19 @@ curve_dev_half = math.pi/2  # half range of randomly generated deviation angle f
 loop_dev_mid = 2*math.pi/N  # loop's middle point of deviation angle
 loop_dev_std = math.pi/8  # standard deviation of deviation angle for closed loop
 # moving filter weight of host node for loop reshape, two neighbors split the rest equaly
-filter_weig = 0.618  # should be larger than 1/3
+filter_weig = 0.618  # should be larger than 1/3, golden ratio seems like good
 # SMA parameters, the spring constants should not be over 1.0, so the system can be stable
 linear_const = 1.0  # linear spring constant
 bend_const = 0.5  # bending spring constant
 disp_coef = 0.5  # coefficient from feedback to displacement
 
+
 # initialize the node positions variables
 nodes = np.array([[0.0, 0.0] for i in range(N)])  # originally generated node positions
 nodes_f = np.array([[0.0, 0.0] for i in range(N)])  # filtered node positions
 # first node starts at origin, second node is node space away on the right
-nodes[1] = [node_space, 0.0]
-nodes_f[1] = [node_space, 0.0]
+nodes[1] = np.array([node_space, 0.0])
+nodes_f[1] = np.array([node_space, 0.0])
 
 # change here to switch between open curve testing and closed loop testing
 simulation_mode = 1  # 0 for open curve, 1 for close loop
@@ -330,18 +331,19 @@ else:
                                     math.atan2(vect_b[1], vect_b[0])))
         break  # finish the constructing the loop, break
 
-    # the moving averaging filter
-    dev_ang_f = np.array([0.0 for i in range(N)])
+    # the moving averaging filter, get the target deviation angles
+    dev_ang_t = np.array([0.0 for i in range(N)])
     for i in range(N):
-        dev_ang_f[i] = ((1.0-filter_weig)/2.0 * dev_ang[(i-1)%N] +
+        dev_ang_t[i] = ((1.0-filter_weig)/2.0 * dev_ang[(i-1)%N] +
                         filter_weig * dev_ang[i] +
                         (1.0-filter_weig)/2.0 * dev_ang[(i+1)%N])
     # make sure the summation of deviation angles is 2*pi
-    dev_sum = np.sum(dev_ang_f)
-    dev_ang_f = dev_ang_f + (2*math.pi-dev_sum)/N
+    dev_sum = np.sum(dev_ang_t)
+    dev_ang_t = dev_ang_t + (2*math.pi-dev_sum)/N
 
-    # copy the node positions of old loop to new node posiitons, for starting with
+    # copy the old node positions and deviation angles to new loop, for starting with
     nodes_f = np.copy(nodes)  # deep copy
+    dev_ang_f = np.copy(dev_ang)
 
     # shift the two loops to its geometric center, rotate a random angle
     # then shift the two loops agian to top and bottom halves of the window
@@ -386,9 +388,9 @@ else:
             vect_r = nodes_f[(i+1)%N] - nodes_f[i]
             inter_ang = math.acos((vect_l[0]*vect_r[0] + vect_l[1]*vect_r[1])/
                                   (dist_neigh[(i-1)%N] * dist_neigh[i]))
-            dev_ang[i] = math.pi - inter_ang  # from interior angle to deviation angle
+            dev_ang_f[i] = math.pi - inter_ang  # from interior angle to deviation angle
             if (vect_r[0]*vect_l[1] - vect_r[1]*vect_l[0]) < 0:
-                dev_ang[i] = -dev_ang[i]  # reverse side of deviation
+                dev_ang_f[i] = -dev_ang_f[i]  # reverse side of deviation
         # the feedback from all spring effects
         fb_vect = [np.zeros([1,2]) for i in range(N)]
         for i in range(N):
@@ -408,7 +410,7 @@ else:
             # add the pulling or pushing effect from right neighbor
             fb_vect[i] = fb_vect[i] + (dist_neigh[i]-node_space) * linear_const * vect_r
             # add the bending effect initialized by the host node itself
-            fb_vect[i] = fb_vect[i] + ((dev_ang[i]-dev_ang_f[i]) * bend_const * vect_in)
+            fb_vect[i] = fb_vect[i] + ((dev_ang_f[i]-dev_ang_t[i]) * bend_const * vect_in)
 
             # update one step of position
             nodes_f[i] = nodes_f[i] + disp_coef * fb_vect[i]
@@ -439,5 +441,65 @@ else:
             pygame.draw.line(screen, node_color, disp_pos[i], disp_pos[i+1])
         pygame.draw.line(screen, node_color, disp_pos[N-1], disp_pos[0])
         pygame.display.update()
+
+        # auto-exit mechanism, summation of motion is smaller than a threshold
+
+    # if exit from above loop, then reconstruct the polygon from SMA result
+    # update the neighbor distances
+    dist_neigh = [np.linalg.norm(nodes_f[(i+1)%N]-nodes_f[i]) for i in range(N)]
+    # calculate the resulting deviation angle set
+    for i in range(N):
+        vect_l = nodes_f[(i-1)%N] - nodes_f[i]
+        vect_r = nodes_f[(i+1)%N] - nodes_f[i]
+        inter_ang = math.acos((vect_l[0]*vect_r[0] + vect_l[1]*vect_r[1])/
+                              (dist_neigh[(i-1)%N] * dist_neigh[i]))
+        dev_ang_f[i] = math.pi - inter_ang  # from interior angle to deviation angle
+        if (vect_r[0]*vect_l[1] - vect_r[1]*vect_l[0]) < 0:
+            dev_ang_f[i] = -dev_ang_f[i]  # reverse side of deviation
+    # reconstruct the polygon
+    nodes_f[0] = np.array([0.0, 0.0])
+    nodes_f[1] = np.array([node_space, 0.0])
+    forward_ang = 0.0
+    for i in range(2, N):  # for posiiton of node i
+        forward_ang = reset_radian(forward_ang + dev_ang_f[i-1])
+        nodes_f[i] = nodes_f[i-1] + node_space*np.array([math.cos(forward_ang),
+                                                         math.sin(forward_ang)])
+
+    # position shift of this loop
+    geometric_center = np.mean(nodes_f, axis=0)
+    nodes_f = nodes_f - geometric_center  # shift to its geometric center
+    nodes_f = np.dot(nodes_f, rot_mat)  # use the same rotation angle from above
+    nodes_f = nodes_f + np.array([world_size[0]/2, world_size[1]/4])  # to bottom half
+
+    # graphics update
+    screen.fill(background_color)
+    disp_pos = [[0,0] for i in range(N)]
+    for i in range(N):
+        disp_pos[i] = world_to_display(nodes[i], world_size, screen_size)
+        pygame.draw.circle(screen, node_color, disp_pos[i], node_size, 0)
+    pygame.draw.circle(screen, node_color, disp_pos[0], int(node_size*1.5), 1)
+    for i in range(N-1):
+        pygame.draw.line(screen, node_color, disp_pos[i], disp_pos[i+1])
+    pygame.draw.line(screen, node_color, disp_pos[N-1], disp_pos[0])
+    # repeat above for the new filtered curve
+    for i in range(N):
+        disp_pos[i] = world_to_display(nodes_f[i], world_size, screen_size)
+        pygame.draw.circle(screen, node_color, disp_pos[i], node_size, 0)
+    pygame.draw.circle(screen, node_color, disp_pos[0], int(node_size*1.5), 1)
+    for i in range(N-1):
+        pygame.draw.line(screen, node_color, disp_pos[i], disp_pos[i+1])
+    pygame.draw.line(screen, node_color, disp_pos[N-1], disp_pos[0])
+    pygame.display.update()
+
+    # simulation exit control
+    sim_exit = False  # simulation exit flag
+    while not sim_exit:
+        # exit the program by close window button, or Esc or Q on keyboard
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sim_exit = True  # exit with the close window button
+            if event.type == pygame.KEYUP:
+                if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
+                    sim_exit = True  # exit with ESC key or Q key
 
 
