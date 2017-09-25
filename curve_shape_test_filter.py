@@ -58,7 +58,8 @@ filter_weig = 0.618  # should be larger than 1/3, golden ratio seems like good
 linear_const = 1.0  # linear spring constant
 bend_const = 0.5  # bending spring constant
 disp_coef = 0.5  # coefficient from feedback to displacement
-
+# exit threshold for the feedback summation in loop SMA reshape process
+fb_sum_threshold = 0.1
 
 # initialize the node positions variables
 nodes = np.array([[0.0, 0.0] for i in range(N)])  # originally generated node positions
@@ -416,7 +417,7 @@ else:
             nodes_f[i] = nodes_f[i] + disp_coef * fb_vect[i]
 
         # print and update iteration count
-        print("iteration count {}".format(iter_count))
+        print "iteration count {}, ".format(iter_count),
         iter_count = iter_count + 1
 
         # use delay to slow down loop frequency
@@ -442,9 +443,16 @@ else:
         pygame.draw.line(screen, node_color, disp_pos[N-1], disp_pos[0])
         pygame.display.update()
 
-        # auto-exit mechanism, summation of motion is smaller than a threshold
+        # auto-exit mechanism, summation of feedback is smaller than threshold
+        fb_sum = 0.0
+        for i in range(N): fb_sum = fb_sum + np.linalg.norm(fb_vect[i])
+        print("fb_sum {}".format(fb_sum))
+        if fb_sum < fb_sum_threshold:
+            print("exit SMA reshape filter")
+            break
 
-    # if exit from above loop, then reconstruct the polygon from SMA result
+    # if exit from above loop(forced exit from keyboard, or auto-exit condition satisfied)
+    # then reconstruct the polygon from SMA result
     # update the neighbor distances
     dist_neigh = [np.linalg.norm(nodes_f[(i+1)%N]-nodes_f[i]) for i in range(N)]
     # calculate the resulting deviation angle set
