@@ -2,7 +2,7 @@
 
 # will use deviation angle to characterize the shape of both open curve and closed loops
 # dof=N-2 for open curves, only nodes inside the curve can have deviation angle
-# dof=N-3 for closed loops, but all N deviation angles will be generated for filtering
+# dof=N-3 for closed loops, but all N deviation angles will be generated for the filter
 
 # comments on effects of moving averaging filter on open curves and closed loops:
 # The moving averaging filter works by taking average of the deviation angle of host node
@@ -28,7 +28,7 @@ import numpy as np
 from formation_functions import *
 
 # change here to switch between open curve testing and closed loop testing
-simulation_mode = 1  # 0 for open curve, 1 for close loop
+simulation_mode = 0  # 0 for open curve, 1 for close loop
 
 pygame.init()  # initialize pygame
 screen_size = (600, 900)
