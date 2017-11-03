@@ -25,9 +25,31 @@
 
 # relocate the network centroid to the middle of the graph
 
-import math, random
+import math, random, sys
+import matplotlib.pyplot as plt
+import getopt
+
+def main():
+    size = 0  # network size from input
+
+    # read command line options
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'n:')
+    except getopt.GetoptError as err:
+        print str(err)
+        sys.exit()
+    for o,a in opts:
+        if o == '-n':
+            size = int(a)
 
 
 
+
+
+
+
+
+if __name__ = '__main__':
+    main()
 
 
