@@ -26,6 +26,7 @@
 
 
 import math, random, sys
+import numpy.matlib
 import matplotlib.pyplot as plt
 import getopt
 
@@ -63,6 +64,34 @@ def main():
             # if none of the above, add to the available pool
             nodes_a.append(pos)
 
+    # generate the connection variable, 0 for not connected, 1 for connected
+    connections = [[0 for j in range(size)] for i in range(size)]  # populated with zeros
+    for i in range(size):
+        for j in range(i+1, size):
+            # find if nodes[i] and nodes[j] are neighbors
+            diff_x = nodes_t[i][0] - nodes_t[j][0]
+            diff_y = nodes_t[i][1] - nodes_t[j][1]
+            if abs(diff_x) + abs(diff_y) == 1 or diff_x * diff_y == -1:
+                # either one of the axis difference is 1, or combination of 1 and -1
+                connections[i][j] = 1
+                connections[j][i] = 1
+
+    # plot the network as dots and lines
+    fig = plt.figure()
+    splt = fig.add_subplot(1,1,1)
+    for i in range(size):
+        # draw the nodes as dots
+        splt.plot(nodes_t[i][0], nodes_t[i][1], 'or',
+                  markersize=10, markerfacecolor='red',
+                  markeredgecolor='black', markeredgewidth=2)
+        # draw the connections as lines
+        for j in range(i+1, size):
+            if connections[i][j] == 1:
+                splt.plot([nodes_t[i][0], nodes_t[j][0]], [nodes_t[i][1], nodes_t[j][1]], '-k')
+    fig.show()
+
+    while True:
+        pass
 
 # relocate the network centroid to the middle of the graph
 
@@ -78,7 +107,7 @@ def get_neighbors(pos):
             (x, y+1), (x, y-1),
             (x+1, y-1), (x-1, y+1)]
 
-if __name__ = '__main__':
+if __name__ == '__main__':
     main()
 
 
