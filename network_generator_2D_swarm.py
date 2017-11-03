@@ -78,16 +78,31 @@ def main():
 
     # plot the network as dots and lines
     fig = plt.figure()
+    fig.canvas.set_window_title('Randomly generated 2D swarm network')
     splt = fig.add_subplot(1,1,1)
+    splt.axis('equal')  # equal scale for x and y axis
+    splt.tick_params(axis='both',
+                     which='both',
+                     bottom='off',
+                     top='off',
+                     left='off',
+                     right='off',
+                     labelbottom='off',
+                     labelleft='off')  # turn off ticks and labels
+    # convert node positions from honeycomb grid to Cartesian coordinates, for plotting
+    nodes_t_plt = [honeycomb_to_cartesian(pos) for pos in nodes_t]
+    # draw the connections as lines
     for i in range(size):
-        # draw the nodes as dots
-        splt.plot(nodes_t[i][0], nodes_t[i][1], 'or',
-                  markersize=10, markerfacecolor='red',
-                  markeredgecolor='black', markeredgewidth=2)
-        # draw the connections as lines
         for j in range(i+1, size):
             if connections[i][j] == 1:
-                splt.plot([nodes_t[i][0], nodes_t[j][0]], [nodes_t[i][1], nodes_t[j][1]], '-k')
+                splt.plot([nodes_t_plt[i][0], nodes_t_plt[j][0]],
+                          [nodes_t_plt[i][1], nodes_t_plt[j][1]], '-k')
+    # draw the nodes as dots, origin node as red, rest blue
+    splt.plot(nodes_t_plt[0][0], nodes_t_plt[0][1], 'o',
+              markersize=10, markerfacecolor='red')
+    for i in range(1,size):
+        splt.plot(nodes_t_plt[i][0], nodes_t_plt[i][1], 'o',
+                  markersize=10, markerfacecolor='blue')
     fig.show()
 
     while True:
@@ -106,6 +121,13 @@ def get_neighbors(pos):
     return [(x+1, y), (x-1, y),
             (x, y+1), (x, y-1),
             (x+1, y-1), (x-1, y+1)]
+
+# return Cartesian coordinates of honeycomb grid nodes for plotting
+def honeycomb_to_cartesian(pos):
+    x = pos[0]
+    y = pos[1]
+    # askewing y axis to the right for pi/6
+    return [x+y*math.sin(math.pi/6), y*math.cos(math.pi/6)]
 
 if __name__ == '__main__':
     main()
