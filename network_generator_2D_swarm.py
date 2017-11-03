@@ -77,8 +77,9 @@ def main():
                 connections[j][i] = 1
 
     # plot the network as dots and lines
-    fig = plt.figure()
-    fig.canvas.set_window_title('Randomly generated 2D swarm network')
+    fig_side_size = int(math.sqrt(size)*0.7)  # calculate fig side size from network size
+    fig = plt.figure(figsize=(fig_side_size, fig_side_size))  # square fig
+    fig.canvas.set_window_title('2D Honeycomb Network Generator')
     splt = fig.add_subplot(1,1,1)
     splt.axis('equal')  # equal scale for x and y axis
     splt.tick_params(axis='both',
@@ -89,8 +90,15 @@ def main():
                      right='off',
                      labelbottom='off',
                      labelleft='off')  # turn off ticks and labels
-    # convert node positions from honeycomb grid to Cartesian coordinates, for plotting
+    # convert node positions from honeycomb coordinates to Cartesian coordinates, for plotting
     nodes_t_plt = [honeycomb_to_cartesian(pos) for pos in nodes_t]
+    # set x and y axes limits
+    xmin = min([pos[0] for pos in nodes_t_plt])
+    xmax = max([pos[0] for pos in nodes_t_plt])
+    ymin = min([pos[1] for pos in nodes_t_plt])
+    ymax = max([pos[1] for pos in nodes_t_plt])
+    splt.set_xlim([xmin-1, xmax+1])  # leave space on both sides
+    splt.set_ylim([ymin-1, ymax+1])
     # draw the connections as lines
     for i in range(size):
         for j in range(i+1, size):
@@ -107,9 +115,6 @@ def main():
 
     while True:
         pass
-
-# relocate the network centroid to the middle of the graph
-
 
 # return the positions of the six neighbors of the input node on honeycomb grid
 # The first four neighbors are just like the situation in the Cartesian coordinates, the last
