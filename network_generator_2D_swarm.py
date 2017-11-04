@@ -25,7 +25,6 @@
 
 
 import math, random, sys, os, time
-import numpy.matlib
 import matplotlib.pyplot as plt
 import getopt
 
@@ -76,7 +75,7 @@ def main():
                 connections[j][i] = 1
 
     # the network has been generated, save it to file
-    save_folder = 'honeycomb-networks'  # folder to save new file
+    save_folder = 'honeycomb-networks'  # folder for saved honeycomb network
     save_path = os.path.join(os.getcwd(), save_folder)
     filename_count = 1  # always start to try filename with suffix of 1
     new_filename = str(size) + '-' + str(filename_count)
@@ -113,8 +112,8 @@ def main():
     xmax = max([pos[0] for pos in nodes_t_plt])
     ymin = min([pos[1] for pos in nodes_t_plt])
     ymax = max([pos[1] for pos in nodes_t_plt])
-    splt.set_xlim([xmin-1, xmax+1])  # leave space on both sides
-    splt.set_ylim([ymin-1, ymax+1])
+    splt.set_xlim([xmin-0.5, xmax+0.5])  # leave space on both sides
+    splt.set_ylim([ymin-0.5, ymax+0.5])
     # draw the connections as lines
     for i in range(size):
         for j in range(i+1, size):
