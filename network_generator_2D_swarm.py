@@ -24,8 +24,7 @@
 # when network size is very large.
 
 
-
-import math, random, sys
+import math, random, sys, os
 import numpy.matlib
 import matplotlib.pyplot as plt
 import getopt
@@ -75,6 +74,23 @@ def main():
                 # either one of the axis difference is 1, or combination of 1 and -1
                 connections[i][j] = 1
                 connections[j][i] = 1
+
+    # the network has been generated, save it to file
+    save_folder = 'honeycomb-networks'  # folder to save new file
+    save_path = os.path.join(os.getcwd(), save_folder)
+    filename_count = 1  # always start to try filename with suffix of 1
+    new_filename = str(size) + '-' + str(filename_count)
+    all_files = os.listdir(save_path)
+    # check to avoid filename duplication
+    while new_filename in all_files:
+        filename_count = filename_count + 1
+        new_filename = str(size) + '-' + str(filename_count)
+    new_filepath = os.path.join(save_path, new_filename)
+    f = open(new_filepath, 'w')
+    for i,pos in enumerate(nodes_t):
+        f.write(str(pos[0]) + ' ' + str(pos[1]))
+        if i != size-1: f.write('\n')  # newline for every node except last one
+    f.close()
 
     # plot the network as dots and lines
     fig_side_size = int(math.sqrt(size)*0.7)  # calculate fig side size from network size
