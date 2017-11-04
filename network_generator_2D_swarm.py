@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 import getopt
 
 def main():
-    size = 0  # network size from input
+    size = 0  # network size to be read from input
 
     # read command line options
     try:
