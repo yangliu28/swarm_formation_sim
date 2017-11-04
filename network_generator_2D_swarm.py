@@ -111,10 +111,12 @@ def main():
     for i in range(1,size):
         splt.plot(nodes_t_plt[i][0], nodes_t_plt[i][1], 'o',
                   markersize=10, markerfacecolor='blue')
-    fig.show()
 
-    while True:
-        pass
+    # show the figure, and exit
+    fig.show()
+    raw_input("<Press enter to close>")
+    plt.close(fig)
+
 
 # return the positions of the six neighbors of the input node on honeycomb grid
 # The first four neighbors are just like the situation in the Cartesian coordinates, the last
