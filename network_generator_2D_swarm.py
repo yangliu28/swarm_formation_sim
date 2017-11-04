@@ -24,7 +24,7 @@
 # when network size is very large.
 
 
-import math, random, sys, os
+import math, random, sys, os, time
 import numpy.matlib
 import matplotlib.pyplot as plt
 import getopt
@@ -128,9 +128,10 @@ def main():
         splt.plot(nodes_t_plt[i][0], nodes_t_plt[i][1], 'o',
                   markersize=10, markerfacecolor='blue')
 
-    # show the figure, and exit
+    # show the figure, press to exit
     fig.show()
-    raw_input("<Press enter to close>")
+    # time.sleep(1)  # sleep for 1 sec and exit
+    raw_input("<Press enter to close>")  # wait enter key to exit
     plt.close(fig)
 
 
