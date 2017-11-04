@@ -1,1 +1,1 @@
-# 
+# This simulation tests the collective decision making algorithm, extracted from previous 
