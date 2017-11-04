@@ -42,4 +42,6 @@ Loop reshape simulation, dynamic version: (see more parameter options in the hea
 
 `python loop_reshape_2_dynamic.py gen_discard initial_read 30-1 target_gen`
 
+## License
+See the [LICENSE](LICENSE.md) file for license rights and limitations (MIT).
 
