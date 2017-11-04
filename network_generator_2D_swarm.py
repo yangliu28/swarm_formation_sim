@@ -37,9 +37,9 @@ def main():
     except getopt.GetoptError as err:
         print str(err)
         sys.exit()
-    for o,a in opts:
-        if o == '-n':
-            size = int(a)
+    for opt,arg in opts:
+        if opt == '-n':
+            size = int(arg)
 
     # use list to store the node information
     nodes_t = []  # target nodes pool, for decided nodes in target network
