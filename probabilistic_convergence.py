@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 from network_generator_2D_swarm import *
 
 net_size = 0  # size of the honeycomb network
-net_filename = ''  # filename of the network to be read
-net_filepath = ''
+net_filename = ''  # filename of the network file
+net_filepath = ''  # filepath of the network file
 net_folder = 'honeycomb-networks'  # folder for all network files
 
 # read command line options
@@ -31,6 +31,12 @@ for opt,arg in opts:
 
 # read the network from file
 nodes = []
-
-
+f = open(net_filepath, 'r')
+new_line = f.readline()
+while len(new_line) != 0:  # not the end of the file yet
+    pos_str = new_line[0:-1].split(' ')  # get rid of '\n'
+    pos = [int(pos_str[0]), int(pos_str[1])]  # convert to integers
+    print pos
+    nodes.append(pos)
+    new_line = f.readline()
 

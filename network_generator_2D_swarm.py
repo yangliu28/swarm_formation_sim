@@ -86,9 +86,8 @@ def main():
         new_filename = str(size) + '-' + str(filename_count)
     new_filepath = os.path.join(save_path, new_filename)
     f = open(new_filepath, 'w')
-    for i,pos in enumerate(nodes_t):
-        f.write(str(pos[0]) + ' ' + str(pos[1]))
-        if i != size-1: f.write('\n')  # newline for every node except last one
+    for pos in nodes_t:
+        f.write(str(pos[0]) + ' ' + str(pos[1]) + '\n')
     f.close()
 
     # plot the network as dots and lines
