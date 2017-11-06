@@ -3,18 +3,25 @@
 # from previous loop reshape simulations, for further testing if it can be generally used
 # on 2D random network topologies.
 
-import math, sys, os, getopt
+# input arguments:
+# '-f': filename of the honeycomb network
+# '-d': number of decisions each node can choose from
+
+import math, sys, os, getopt, time
 import matplotlib.pyplot as plt
 from network_generator_2D_swarm import *
+import numpy as np
 
-net_size = 0  # size of the honeycomb network
+net_size = 30  # default size of the honeycomb network
 net_folder = 'honeycomb-networks'  # folder for all network files
 net_filename = '30-1'  # defautl filename of the network file, if no input
 net_filepath = os.path.join(os.getcwd(), net_folder, net_filename)  # corresponding filepath
 
+deci_num = 30  # default number of decisions each node can choose from
+
 # read command line options
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'f:')
+    opts, args = getopt.getopt(sys.argv[1:], 'f:d:')
     # The colon after 'f' means '-f' requires an argument, it will raise an error if no
     # argument followed by '-f'. But if '-f' is not even in the arguments, this won't raise
     # an error. So it's necessary to define the default network filename
@@ -23,6 +30,7 @@ except getopt.GetoptError as err:
     sys.exit()
 for opt,arg in opts:
     if opt == '-f':
+        # get the filename of the network
         net_filename = arg
         # check if this file exists
         net_filepath = os.path.join(os.getcwd(), net_folder, net_filename)
@@ -31,6 +39,9 @@ for opt,arg in opts:
             sys.exit()
         # parse the network size
         net_size = int(net_filename.split('-')[0])  # the number before first dash
+    elif opt == '-d':
+        # get the number of decisions
+        deci_num = int(arg)
 
 # read the network from file
 nodes = []
@@ -43,12 +54,12 @@ while len(new_line) != 0:  # not the end of the file yet
     new_line = f.readline()
 
 # generate the connection variable, 0 for not connected, 1 for connected
-connections = [[0 for j in range(size)] for i in range(size)]  # populated with zeros
-for i in range(size):
-    for j in range(i+1, size):
+connections = [[0 for j in range(net_size)] for i in range(net_size)]  # all zeros
+for i in range(net_size):
+    for j in range(i+1, net_size):
         # find if nodes[i] and nodes[j] are neighbors
-        diff_x = nodes_t[i][0] - nodes_t[j][0]
-        diff_y = nodes_t[i][1] - nodes_t[j][1]
+        diff_x = nodes[i][0] - nodes[j][0]
+        diff_y = nodes[i][1] - nodes[j][1]
         if abs(diff_x) + abs(diff_y) == 1 or diff_x * diff_y == -1:
             # condition 1: one of the axis value difference is 1, the other is 0
             # condition 2: one of the axis value difference is 1, the other is -1
@@ -56,5 +67,49 @@ for i in range(size):
             connections[j][i] = 1
 
 # plot the network as dots and lines
+fig_size = int(math.sqrt(net_size)*0.7)  # decide fig size from network size
+fig = plt.figure(figsize=(fig_size, fig_size))  # square fig
+fig.canvas.set_window_title('Probabilistic convergence of 2D Honeycomb Network')
+splt = fig.add_subplot(1,1,1)
+splt.axis('equal')  # equal scale for x and y axis
+splt.tick_params(axis='both', which='both', bottom='off', top='off', left='off',
+                 right='off', labelbottom='off', labelleft='off')  # turn off ticks&labels
+# convert node positions from honeycomb coordinates to Cartesian coordinates, for plotting
+nodes_plt = [honeycomb_to_cartesian(pos) for pos in nodes]
+# set x and y axes limits
+xmin = min([pos[0] for pos in nodes_plt])
+xmax = max([pos[0] for pos in nodes_plt])
+ymin = min([pos[1] for pos in nodes_plt])
+ymax = max([pos[1] for pos in nodes_plt])
+splt.set_xlim([xmin-0.5, xmax+0.5])  # leave space on both sides
+splt.set_ylim([ymin-0.5, ymax+0.5])
+# draw the connections as lines
+for i in range(net_size):
+    for j in range(i+1, net_size):
+        if connections[i][j] == 1:
+            splt.plot([nodes_plt[i][0], nodes_plt[j][0]],
+                      [nodes_plt[i][1], nodes_plt[j][1]], '-k')
+# draw the nodes as dots, origin node as red, rest blue
+splt.plot(nodes_plt[0][0], nodes_plt[0][1], 'o',
+          markersize=10, markerfacecolor='red')
+for i in range(1,net_size):
+    splt.plot(nodes_plt[i][0], nodes_plt[i][1], 'o',
+              markersize=10, markerfacecolor='blue')
+# show the figure, pause for a second then proceed
+fig.show()
+time.sleep(1)
+
+############### the probabilistic convergence ###############
+
+# variable for decision distributions of all individuals
+deci_dist = np.random.rand(net_size, deci_num)
+# normalize the random numbers such that the sum is 1.0
+sum_temp = np.sum(deci_dist, axis=1)
+for i in range(net_size):
+    deci_dist[i][:] = deci_dist[i][:] / sum_temp[i]
+# variable for the dominant decision
+deci_domi = [0 for i in range(net_size)]
+
+
 
 
