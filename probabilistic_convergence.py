@@ -42,5 +42,19 @@ while len(new_line) != 0:  # not the end of the file yet
     nodes.append(pos)
     new_line = f.readline()
 
+# generate the connection variable, 0 for not connected, 1 for connected
+connections = [[0 for j in range(size)] for i in range(size)]  # populated with zeros
+for i in range(size):
+    for j in range(i+1, size):
+        # find if nodes[i] and nodes[j] are neighbors
+        diff_x = nodes_t[i][0] - nodes_t[j][0]
+        diff_y = nodes_t[i][1] - nodes_t[j][1]
+        if abs(diff_x) + abs(diff_y) == 1 or diff_x * diff_y == -1:
+            # condition 1: one of the axis value difference is 1, the other is 0
+            # condition 2: one of the axis value difference is 1, the other is -1
+            connections[i][j] = 1
+            connections[j][i] = 1
+
+# plot the network as dots and lines
 
 

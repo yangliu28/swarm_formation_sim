@@ -70,7 +70,8 @@ def main():
             diff_x = nodes_t[i][0] - nodes_t[j][0]
             diff_y = nodes_t[i][1] - nodes_t[j][1]
             if abs(diff_x) + abs(diff_y) == 1 or diff_x * diff_y == -1:
-                # either one of the axis difference is 1, or combination of 1 and -1
+                # condition 1: one of the axis value difference is 1, the other is 0
+                # condition 2: one of the axis value difference is 1, the other is -1
                 connections[i][j] = 1
                 connections[j][i] = 1
 
