@@ -147,8 +147,9 @@ def get_neighbors(pos):
 
 # return Cartesian coordinates of honeycomb grid nodes for plotting
 def honeycomb_to_cartesian(pos):
-    x = pos[0]
-    y = pos[1]
+    # the resulting coordinates should be in floating point numbers
+    x = float(pos[0])
+    y = float(pos[1])
     # askewing y axis to the right for pi/6
     return [x+y*math.sin(math.pi/6), y*math.cos(math.pi/6)]
 

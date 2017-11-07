@@ -50,7 +50,7 @@ for opt,arg in opts:
         deci_num = int(arg)
 
 # read the network from file
-nodes = []
+nodes = []  # integers only will be used to describe the node positions in the network
 f = open(net_filepath, 'r')
 new_line = f.readline()
 while len(new_line) != 0:  # not the end of the file yet
@@ -71,6 +71,51 @@ for i in range(net_size):
             # condition 2: one of the axis value difference is 1, the other is -1
             connections[i][j] = 1
             connections[j][i] = 1
+
+# plot the network as dots and lines in pygame window
+pygame.init()  # initialize the pygame
+# find appropriate window size from current network
+# convert node positions from honeycomb coordinates to Cartesian coordinates, for plotting
+nodes_plt = np.array([honeycomb_to_cartesian(pos) for pos in nodes])
+(xmin, ymin) = np.amin(nodes_plt, axis=0)
+(xmax, ymax) = np.amax(nodes_plt, axis=0)
+world_size = (xmax-xmin + 2.0, ymax-ymin + 2.0)  # extra length for clearance
+pixels_per_length = 50  # resolution for converting from world to display
+# display origin is at left top corner
+screen_size = (int(round(world_size[0] * pixels_per_length)),
+               int(round(world_size[1] * pixels_per_length)))
+background_color = (0,0,0)
+node_color = (255,0,0)  # red for nodes and connecting lines
+subgroup_color = (255,255,0)  # yellow for connecting lines in the subgroups
+node_size = 5  # node modeled as dot, number of pixels for radius
+subgroup_thickness = 3  # thickness of connecting lines in the subgroups
+# set up the simulation window and surface object
+icon = pygame.image.load("icon_geometry_art.jpg")
+pygame.display.set_icon(icon)
+screen = pygame.display.set_mode(screen_size)
+pygame.display.set_caption("Probabilistic Convergence of 2D Honeycomb Network")
+
+# shift the node display positions to the middle of the window
+centroid_temp = np.mean(nodes_plt, axis=0)
+nodes_plt = nodes_plt - centroid_temp + (world_size[0]/2.0, world_size[1]/2.0)
+print nodes_plt
+nodes_disp = [world_to_display(nodes_plt[i], world_size, screen_size)
+              for i in range(net_size)]
+
+# draw the network for the first time
+screen.fill(background_color)
+# draw the connecting lines
+for i in range(net_size):
+    for j in range(i+1, net_size):
+        if connections[i][j]:
+            pygame.draw.line(screen, node_color, nodes_disp[i], nodes_disp[j])
+# draw the nodes as dots
+for i in range(net_size):
+    pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
+pygame.display.update()
+
+time.sleep(100)
+
 
 # plot the network as dots and lines
 fig_size = int(math.sqrt(net_size)*0.7)  # decide fig size from network size
