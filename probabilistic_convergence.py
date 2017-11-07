@@ -7,10 +7,16 @@
 # '-f': filename of the honeycomb network
 # '-d': number of decisions each node can choose from
 
+# Pygame will be used to animate the dynamic subgroup changes in the network;
+# Matplotlib will be used to draw the unipolarity in a 3D histogram, full distribution is
+# not necessary.
+
 import math, sys, os, getopt, time
 import matplotlib.pyplot as plt
 from network_generator_2D_swarm import *
 import numpy as np
+import pygame
+from formation_functions import *
 
 net_size = 30  # default size of the honeycomb network
 net_folder = 'honeycomb-networks'  # folder for all network files
@@ -101,14 +107,35 @@ time.sleep(1)
 
 ############### the probabilistic convergence ###############
 
-# variable for decision distributions of all individuals
+# variable for decision distribution of all individuals
 deci_dist = np.random.rand(net_size, deci_num)
 # normalize the random numbers such that the sum is 1.0
 sum_temp = np.sum(deci_dist, axis=1)
 for i in range(net_size):
     deci_dist[i][:] = deci_dist[i][:] / sum_temp[i]
 # variable for the dominant decision
-deci_domi = [0 for i in range(net_size)]
+deci_domi = np.argmax(deci_dist, axis=1)
+# only adjacent block of nodes sharing same dominant decision belongs to same subgroup
+subgroups = []  # seperate lists of node indices for all subgroups
+subsize = []  # the subgroup size that each node belongs to
+# Difference of two distributions is the sum of absolute values of differences
+# of all individual probabilities.
+# Overflow threshold for the distribution difference. Distribution difference larger than
+# this means neighbors are not quite agree with each other, so no further improvement on
+# unipolarity will be performed. If distribution difference is lower than the threshold,
+# linear multiplier will be used to improve unipolarity on the result distribution.
+dist_diff_thres = 0.3
+# Variable for ratio of distribution difference to distribution difference threshold.
+# The ratio is in range of [0,1], it will be used for constructing the corresponding linear
+# multiplier. At one side, the smaller the ratio, the smaller the distribution difference,
+# and faster the unipolarity should increase. At the other side, the ratio will be positively
+# related to the small end of the linear multiplier. The smallee the ratio gets, the steeper
+# the linear multiplier will be, and the faster the unipolarity increases.
+dist_diff_ratio = [0.0 for i in range(net_size)]
+# Exponent of a power function to map the distribution difference ratio to a larger value,
+# and therefore slow donw the growing rate.
+dist_diff_power = 0.3
+
 
 
 
