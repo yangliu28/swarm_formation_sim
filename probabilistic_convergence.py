@@ -126,7 +126,7 @@ for i in range(net_size):
 deci_domi = np.argmax(deci_dist, axis=1)
 # only adjacent block of nodes sharing same dominant decision belongs to same subgroup
 subgroups = []  # seperate lists of node indices for all subgroups
-subsize = []  # the subgroup size that each node belongs to
+subsizes = [0 for i in range(net_size)]  # the subgroup size that each node belongs to
 # Difference of two distributions is the sum of absolute values of differences
 # of all individual probabilities.
 # Overflow threshold for the distribution difference. Distribution difference larger than
@@ -145,17 +145,22 @@ dist_diff_ratio = [0.0 for i in range(net_size)]
 # and therefore slow donw the growing rate.
 dist_diff_power = 0.3
 
+# Algorithm to update the subgroups:
+# Using a pool of indices for nodes that have not been subgrouped, those labeled into a
+# subgroup will be remove from the pool. As long as the pool is not enpty, a while loop
+# will continue searching subgroups one by one. In the loop, it initialize a new subgroup
+# with first node in the pool. It also initialize a fifo-like variable(p_members) for
+# potential members of this subgroup, and an index variable(p_index) for iterating through
+# the potential members. If p_members[p_index] doesn't share same decidion with first node,
+# p_index increases by 1, will check next value in p_members. If it does, then a new member
+# for this subgroup has been found, it will be removed from the pool and p_members, and added
+# to current subgroup. The new subgroup member will also introduce its neighbors as new
+# potential members, but they should not be in p_members and current subgroup, and should be
+# in node pool. The member search for this subgroup will end if p_index iterates to the end
+# of p_members.
 
-
-
-
-# Algorithm to update the subgroups
-
-
-# update the subgroups initially
-subgroups = [[0]]  # start with node 0
 # a diminishing global pool for node indices, for nodes not yet assigned into subgroups
-n_pool = range(1,net_size)  # 0 is already out of the pool
+n_pool = range(net_size)
 # convert the connection matrix to connection lists
 connection_lists = []  # the lists of connecting nodes for each node
 for i in range(net_size):
@@ -166,15 +171,16 @@ for i in range(net_size):
 # start searching subgroups one by one from the global node pool
 while len(n_pool) != 0:
     # start a new subgroup, with first node in the n_pool
-    subgroup_temp = [n_pool[0]]  # current temporary subgroup
-    n_pool.pop(0)  # remove first node in the pool
+    first_member = n_pool[0]  # first member of this subgroup
+    subgroup_temp = [first_member]  # current temporary subgroup
+    n_pool.pop(0)  # pop out first node in the pool
     # a list of potential members for current subgroup
     # this list may increase when new members of subgroup are discovered
-    p_members = connection_lists[subgroup_temp[0]][:]
+    p_members = connection_lists[first_member][:]
     # an index for iterating through p_members, in searching subgroup members
     p_index = 0  # if it climbs to the end, the searching ends
     # index of dominant decision for current subgroup
-    current_domi = deci_domi[subgroup_temp[0]]
+    current_domi = deci_domi[first_member]
     # dynamically iterating through p_members with p_index
     while p_index < len(p_members):  # index still in valid range
         if deci_domi[p_members[p_index]] == current_domi:
@@ -200,8 +206,46 @@ while len(n_pool) != 0:
     subgroups.append(subgroup_temp)  # append the new subgroup
     # the end of searching for one subgroup
 
-print deci_domi
-print subgroups
+# update the size of the subgroup each node is in
+traverse_list = range(net_size)
+     # used to check if all nodes have been assigned a subgroup size
+for sub in subgroups:
+    size_temp = len(sub)
+    for i in sub:
+        subsizes[i] = size_temp
+        traverse_list.remove(i)
+if len(traverse_list) != 0:
+    print("subgroup sizes check error")
+    sys.exit()
+
+# the loop
+sim_exit = False  # simulation exit flag
+sim_pause = False  # simulation pause flag
+while not sim_exit:
+    # exit the program by close window button, or Esc or Q on keyboard
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sim_exit = True  # exit with the close window button
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE:
+                sim_pause = not sim_pause  # reverse the pause flag
+            if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
+                sim_exit = True  # exit with ESC key or Q key
+
+    # skip the rest if paused
+    if sim_pause: continue
+
+    # the decision distribution evolution
+    deci_dist_t = np.copy(deci_dist)  # deep copy of the 'deci_dist'
+    for i in range(net_size):
+        host_domi = deci_domi[i]
+
+
+
+
+# after each step of evolution
+# needs to update dominant decision, subgroups, subgroup sizes
+
 
 
 
