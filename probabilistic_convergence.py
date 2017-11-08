@@ -1,7 +1,8 @@
 # This simulation tests the probabilistic convergence algorithm (a collective decision
 # making algorithm) on randomly generated 2D honeycomb network. The algorithm is extracted
-# from previous loop reshape simulations, for further testing if it can be generally used
-# on 2D random network topologies.
+# from previous loop reshape simulations for further testing, so that it can be generally
+# used on 2D random network topologies. The distribution evolution method is very similiar
+# except that more than three nodes are involved in the weighted averaging process.
 
 # input arguments:
 # '-f': filename of the honeycomb network
@@ -59,7 +60,7 @@ while len(new_line) != 0:  # not the end of the file yet
     nodes.append(pos)
     new_line = f.readline()
 
-# generate the connection variable, 0 for not connected, 1 for connected
+# generate the connection matrix, 0 for not connected, 1 for connected
 connections = [[0 for j in range(net_size)] for i in range(net_size)]  # all zeros
 for i in range(net_size):
     for j in range(i+1, net_size):
@@ -71,6 +72,14 @@ for i in range(net_size):
             # condition 2: one of the axis value difference is 1, the other is -1
             connections[i][j] = 1
             connections[j][i] = 1
+# another list type variable for easy indexing from each node
+# converted from the above connection matrix variable
+connection_lists = []  # the lists of connecting nodes for each node
+for i in range(net_size):
+    connection_list_temp = []
+    for j in range(net_size):
+        if connections[i][j]: connection_list_temp.append(j)
+    connection_lists.append(connection_list_temp)
 
 # plot the network as dots and lines in pygame window
 pygame.init()  # initialize the pygame
@@ -158,16 +167,10 @@ dist_diff_power = 0.3
 # potential members, but they should not be in p_members and current subgroup, and should be
 # in node pool. The member search for this subgroup will end if p_index iterates to the end
 # of p_members.
+# The following block of code is the implementation of this algorithm.
 
 # a diminishing global pool for node indices, for nodes not yet assigned into subgroups
 n_pool = range(net_size)
-# convert the connection matrix to connection lists
-connection_lists = []  # the lists of connecting nodes for each node
-for i in range(net_size):
-    connection_lists_temp = []
-    for j in range(net_size):
-        if connections[i][j]: connection_lists_temp.append(j)
-    connection_lists.append(connection_lists_temp)
 # start searching subgroups one by one from the global node pool
 while len(n_pool) != 0:
     # start a new subgroup, with first node in the n_pool
@@ -239,6 +242,74 @@ while not sim_exit:
     deci_dist_t = np.copy(deci_dist)  # deep copy of the 'deci_dist'
     for i in range(net_size):
         host_domi = deci_domi[i]
+        converged = True
+        for neighbor in connection_lists[i]:
+            if host_domi != deci_domi[neighbor]:
+                converged = False
+                break
+        # action based on convergence of dominant decision
+        if converged:  # all neighbors have converged with host
+            # step 1: take equally weighted average on all distributions
+            # including host and all neighbors
+            deci_dist[i] = deci_dist_t[i]*1.0
+            for neighbor in connection_lists[i]:
+                # accumulate neighbor's distribution
+                deci_dist[i] = deci_dist[i] + deci_dist_t[neighbor]
+            # normalize the distribution such that sum is 1.0
+            sum_temp = np.sum(deci_dist[i])
+            deci_dist[i] = deci_dist[i] / sum_temp
+            # step 2: increase the unipolarity by applying the linear multiplier
+            # (this step is only for when all neighbors are converged)
+            # First find the largest difference between two distributions in this block
+            # of nodes, including the host and all its neighbors.
+            comb_pool = [i] + connection_lists[i]  # add host to a pool with its neighbors
+                # will be used to form combinations from this pool
+            comb_pool_len = len(comb_pool)
+            dist_diff = []
+            for j in range(comb_pool_len):
+                for k in range(j+1, comb_pool_len):
+                    j_node = comb_pool[j]
+                    k_node = comb_pool[k]
+                    dist_diff.append(np.sum(abs(deci_dist[j_node] - deci_dist[k_node])))
+            dist_diff_max = max(dist_diff)  # maximum distribution difference of all
+            if dist_diff_max < dist_diff_thres:
+                # distribution difference is small enough,
+                # that linear multiplier should be applied to increase unipolarity
+                dist_diff_ratio = dist_diff_max/dist_diff_thres
+                # Linear multiplier is generated from value of smaller and larger ends, the
+                # smaller end is positively related with dist_diff_ratio. The smaller the
+                # maximum distribution difference, the smaller the dist_diff_ratio, and the
+                # steeper the linear multiplier.
+                # '1.0/deci_num' is the average value of the linear multiplier
+                small_end = 1.0/deci_num * np.power(dist_diff_ratio, dist_diff_power)
+                large_end = 2.0/deci_num - small_end
+                # sort the magnitude of the current distribution
+                dist_temp = np.copy(deci_dist[i])  # temporary distribution
+                sort_index = range(deci_num)
+                for j in range(deci_num-1):  # bubble sort, ascending order
+                    for k in range(deci_num-1-j):
+                        if dist_temp[k] > dist_temp[k+1]:
+                            # exchange values in 'dist_temp'
+                            temp = dist_temp[k]
+                            dist_temp[k] = dist_temp[k+1]
+                            dist_temp[k+1] = temp
+                            # exchange values in 'sort_index'
+                            temp = sort_index[k]
+                            sort_index[k] = sort_index[k+1]
+                            sort_index[k+1] = temp
+                # applying the linear multiplier
+                for j in range(deci_num):
+                    multiplier = small_end + float(j)/(deci_num-1) * (large_end-small_end)
+                    deci_dist[i][sort_index[j]] = deci_dist[i][sort_index[j]] * multiplier
+                # normalize the distribution such that sum is 1.0
+                sum_temp = np.sum(deci_dist[i])
+                deci_dist[i] = deci_dist[i]/sum_temp
+            else:
+                # not applying linear multiplier when distribution difference is large
+                pass
+        else:  # at least one neighbor has different opinion with host
+
+
 
 
 
