@@ -50,7 +50,7 @@ for opt,arg in opts:
         deci_num = int(arg)
 
 # read the network from file
-nodes = []  # integers only will be used to describe the node positions in the network
+nodes = []  # integers only is necessary to describe the network's node positions
 f = open(net_filepath, 'r')
 new_line = f.readline()
 while len(new_line) != 0:  # not the end of the file yet
@@ -98,7 +98,6 @@ pygame.display.set_caption("Probabilistic Convergence of 2D Honeycomb Network")
 # shift the node display positions to the middle of the window
 centroid_temp = np.mean(nodes_plt, axis=0)
 nodes_plt = nodes_plt - centroid_temp + (world_size[0]/2.0, world_size[1]/2.0)
-print nodes_plt
 nodes_disp = [world_to_display(nodes_plt[i], world_size, screen_size)
               for i in range(net_size)]
 
@@ -113,41 +112,6 @@ for i in range(net_size):
 for i in range(net_size):
     pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
 pygame.display.update()
-
-time.sleep(100)
-
-
-# plot the network as dots and lines
-fig_size = int(math.sqrt(net_size)*0.7)  # decide fig size from network size
-fig = plt.figure(figsize=(fig_size, fig_size))  # square fig
-fig.canvas.set_window_title('Probabilistic convergence of 2D Honeycomb Network')
-splt = fig.add_subplot(1,1,1)
-splt.axis('equal')  # equal scale for x and y axis
-splt.tick_params(axis='both', which='both', bottom='off', top='off', left='off',
-                 right='off', labelbottom='off', labelleft='off')  # turn off ticks&labels
-# convert node positions from honeycomb coordinates to Cartesian coordinates, for plotting
-nodes_plt = [honeycomb_to_cartesian(pos) for pos in nodes]
-# set x and y axes limits
-xmin = min([pos[0] for pos in nodes_plt])
-xmax = max([pos[0] for pos in nodes_plt])
-ymin = min([pos[1] for pos in nodes_plt])
-ymax = max([pos[1] for pos in nodes_plt])
-splt.set_xlim([xmin-0.5, xmax+0.5])  # leave space on both sides
-splt.set_ylim([ymin-0.5, ymax+0.5])
-# draw the connections as lines
-for i in range(net_size):
-    for j in range(i+1, net_size):
-        if connections[i][j] == 1:
-            splt.plot([nodes_plt[i][0], nodes_plt[j][0]],
-                      [nodes_plt[i][1], nodes_plt[j][1]], '-k')
-# draw the nodes as dots, origin node as red, rest blue
-splt.plot(nodes_plt[0][0], nodes_plt[0][1], 'o',
-          markersize=10, markerfacecolor='red')
-for i in range(1,net_size):
-    splt.plot(nodes_plt[i][0], nodes_plt[i][1], 'o',
-              markersize=10, markerfacecolor='blue')
-# show the figure, pause for a second then proceed
-fig.show()
 time.sleep(1)
 
 ############### the probabilistic convergence ###############
@@ -181,6 +145,28 @@ dist_diff_ratio = [0.0 for i in range(net_size)]
 # and therefore slow donw the growing rate.
 dist_diff_power = 0.3
 
+
+
+# Algorithm to update the subgroups
+
+
+
+# update the subgroups initially
+subgroups = [[0]]  # start with node 0
+# A diminishing pool for node indices, for nodes not yet assigned into subgroups.
+n_pool = range(1,net_size)  # 0 is already out of the pool
+# FIFO for nodes on the waiting list for current subgroup, will be checked orderly.
+current_fifo = connection_lists[0]
+# convert the connections matrix to lists
+connection_lists = []  # the lists of connecting nodes for each node
+for i in range(net_size):
+    connection_lists_temp = []
+    for j in range(net_size):
+        if connections[i][j]: connection_lists_temp.append(j)
+    connection_lists.append(connection_lists_temp)
+# 
+while len(n_pool) != 0:
+    
 
 
 
