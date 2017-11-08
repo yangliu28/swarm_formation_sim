@@ -147,27 +147,61 @@ dist_diff_power = 0.3
 
 
 
-# Algorithm to update the subgroups
 
+
+# Algorithm to update the subgroups
 
 
 # update the subgroups initially
 subgroups = [[0]]  # start with node 0
-# A diminishing pool for node indices, for nodes not yet assigned into subgroups.
+# a diminishing global pool for node indices, for nodes not yet assigned into subgroups
 n_pool = range(1,net_size)  # 0 is already out of the pool
-# FIFO for nodes on the waiting list for current subgroup, will be checked orderly.
-current_fifo = connection_lists[0]
-# convert the connections matrix to lists
+# convert the connection matrix to connection lists
 connection_lists = []  # the lists of connecting nodes for each node
 for i in range(net_size):
     connection_lists_temp = []
     for j in range(net_size):
         if connections[i][j]: connection_lists_temp.append(j)
     connection_lists.append(connection_lists_temp)
-# 
+# start searching subgroups one by one from the global node pool
 while len(n_pool) != 0:
-    
+    # start a new subgroup, with first node in the n_pool
+    subgroup_temp = [n_pool[0]]  # current temporary subgroup
+    n_pool.pop(0)  # remove first node in the pool
+    # a list of potential members for current subgroup
+    # this list may increase when new members of subgroup are discovered
+    p_members = connection_lists[subgroup_temp[0]][:]
+    # an index for iterating through p_members, in searching subgroup members
+    p_index = 0  # if it climbs to the end, the searching ends
+    # index of dominant decision for current subgroup
+    current_domi = deci_domi[subgroup_temp[0]]
+    # dynamically iterating through p_members with p_index
+    while p_index < len(p_members):  # index still in valid range
+        if deci_domi[p_members[p_index]] == current_domi:
+            # a new member has been found
+            new_member = p_members[p_index]  # get index of the new member
+            p_members.remove(new_member)  # remove it from p_members list
+                # but not increase p_index, because new value in p_members will flush in
+            n_pool.remove(new_member)  # remove it from the global node pool
+            subgroup_temp.append(new_member)  # add it to current subgroup
+            # check if new potential members are available, due to new node discovery
+            p_members_new = connection_lists[new_member]  # new potential members
+            for member in p_members_new:
+                if member not in p_members:  # should not already in p_members
+                    if member not in subgroup_temp:  # should not in current subgroup
+                        if member in n_pool:  # should be available in global pool
+                            # if conditions satisfied, it is qualified as a potential member
+                            p_members.append(member)  # append at the end
+        else:
+            # a boundary node(share different decision) has been met
+            # leave it in p_members, will help to avoid checking back again on this node
+            p_index = p_index + 1  # shift right one position
+    # all connected members for this subgroup have been located
+    subgroups.append(subgroup_temp)  # append the new subgroup
+    # the end of searching for one subgroup
 
+print deci_domi
+print subgroups
 
 
 
