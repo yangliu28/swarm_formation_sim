@@ -31,7 +31,7 @@
 import pygame
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from network_generator_2D_swarm import *
+from honeycomb_network_generator import *
 from formation_functions import *
 import math, sys, os, getopt, time
 import numpy as np
@@ -181,8 +181,8 @@ z_pos = np.zeros(net_size)
 dx = 0.5 * np.ones(net_size)  # the sizes of the bars
 dy = 0.5 * np.ones(net_size)
 dz = np.zeros(net_size)
-fig.canvas.draw()
-fig.show()
+# fig.canvas.draw()
+# fig.show()
 
 # the simulation cycle
 sim_exit = False  # simulation exit flag
@@ -352,7 +352,7 @@ while not sim_exit:
         for j in range(i+1, net_size):
             if connections[i][j]:
                 pygame.draw.line(screen, connection_color,
-                                 nodes_disp[i], nodes_disp[j], 2)
+                                 nodes_disp[i], nodes_disp[j], 3)
     # draw the connecting lines marking subgroups
     for sub in subgroups:
         sub_len = len(sub)
@@ -370,10 +370,10 @@ while not sim_exit:
         pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
     pygame.display.update()
     # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
-    dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
-    ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, color='b')
-    fig.canvas.draw()
-    fig.show()
+    # dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
+    # ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, color='b')
+    # fig.canvas.draw()
+    # fig.show()
 
     # simulation updating frequency control
     time_now = pygame.time.get_ticks()
