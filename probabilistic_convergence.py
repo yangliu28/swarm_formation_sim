@@ -112,7 +112,8 @@ pixels_per_length = 50  # resolution for converting from world to display
 screen_size = (int(round(world_size[0] * pixels_per_length)),
                int(round(world_size[1] * pixels_per_length)))
 background_color = (0,0,0)
-node_color = (255,0,0)  # red for nodes and connecting lines
+node_color = (255,0,0)  # red for nodes as dots
+connection_color = [0,0,255]  # blue for regular connecting lines
 subgroup_color = (255,255,0)  # yellow for connecting lines in the subgroups
 node_size = 5  # node modeled as dot, number of pixels for radius
 # set up the simulation window and surface object
@@ -179,13 +180,17 @@ y_pos = [pos[1] for pos in nodes_plt]
 z_pos = np.zeros(net_size)
 dx = 0.5 * np.ones(net_size)  # the sizes of the bars
 dy = 0.5 * np.ones(net_size)
-dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
-ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, color='b')
+dz = np.zeros(net_size)
+fig.canvas.draw()
+fig.show()
 
 # the simulation cycle
 sim_exit = False  # simulation exit flag
-sim_pause = False  # simulation pause flag
+sim_pause = True  # simulation pause flag
 iter_count = 0
+time_now = pygame.time.get_ticks()  # return milliseconds
+time_last = time_now  # reset as right now
+time_period = 500  # desired simulation period, will jump the delay if period overflow
 while not sim_exit:
     # exit the program by close window button, or Esc or Q on keyboard
     for event in pygame.event.get():
@@ -346,7 +351,8 @@ while not sim_exit:
     for i in range(net_size):
         for j in range(i+1, net_size):
             if connections[i][j]:
-                pygame.draw.line(screen, node_color, nodes_disp[i], nodes_disp[j])
+                pygame.draw.line(screen, connection_color,
+                                 nodes_disp[i], nodes_disp[j], 2)
     # draw the connecting lines marking subgroups
     for sub in subgroups:
         sub_len = len(sub)
@@ -364,14 +370,23 @@ while not sim_exit:
         pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
     pygame.display.update()
     # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
+    dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
+    ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, color='b')
     fig.canvas.draw()
     fig.show()
 
-    time.sleep(0.5)
-
+    # simulation updating frequency control
+    time_now = pygame.time.get_ticks()
+    time_past = time_now - time_last  # time past since last time_last
+    # needs to delay a bit more if time past has not reach desired period
+    # will skip if time is overdue
+    if time_now - time_last < time_period:
+        pygame.time.delay(time_period-time_past)
+    time_last = pygame.time.get_ticks()  # reset time-last
     # iteration count
     print "iteration {}".format(iter_count)
     iter_count = iter_count + 1
+
 
 
 
