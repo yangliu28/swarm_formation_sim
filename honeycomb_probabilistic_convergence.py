@@ -44,9 +44,11 @@ net_filepath = os.path.join(os.getcwd(), net_folder, net_filename)  # correspond
 
 deci_num = 30  # default number of decisions each node can choose from
 
+nobargraph = False  # option as to whether or not skipping the 3D bar graph
+
 # read command line options
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'f:d:')
+    opts, args = getopt.getopt(sys.argv[1:], 'f:d:', ['nobargraph'])
     # The colon after 'f' means '-f' requires an argument, it will raise an error if no
     # argument followed by '-f'. But if '-f' is not even in the arguments, this won't raise
     # an error. So it's necessary to define the default network filename
@@ -67,6 +69,8 @@ for opt,arg in opts:
     elif opt == '-d':
         # get the number of decisions
         deci_num = int(arg)
+    elif opt == '--nobargraph':
+        nobargraph = True
 
 # read the network from file
 nodes = []  # integers only is necessary to describe the network's node positions
@@ -181,8 +185,9 @@ z_pos = np.zeros(net_size)
 dx = 0.5 * np.ones(net_size)  # the sizes of the bars
 dy = 0.5 * np.ones(net_size)
 dz = np.zeros(net_size)
-# fig.canvas.draw()
-# fig.show()
+if not nobargraph:
+    fig.canvas.draw()
+    fig.show()
 
 # the simulation cycle
 sim_exit = False  # simulation exit flag
@@ -370,10 +375,11 @@ while not sim_exit:
         pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
     pygame.display.update()
     # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
-    # dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
-    # ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, color='b')
-    # fig.canvas.draw()
-    # fig.show()
+    if not nobargraph:
+        dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
+        ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, color='b')
+        fig.canvas.draw()
+        fig.show()
 
     # simulation updating frequency control
     time_now = pygame.time.get_ticks()
