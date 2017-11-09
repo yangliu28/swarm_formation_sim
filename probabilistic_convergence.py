@@ -115,7 +115,6 @@ background_color = (0,0,0)
 node_color = (255,0,0)  # red for nodes and connecting lines
 subgroup_color = (255,255,0)  # yellow for connecting lines in the subgroups
 node_size = 5  # node modeled as dot, number of pixels for radius
-subgroup_thickness = 3  # thickness of connecting lines in the subgroups
 # set up the simulation window and surface object
 icon = pygame.image.load("icon_geometry_art.jpg")
 pygame.display.set_icon(icon)
@@ -139,7 +138,6 @@ for i in range(net_size):
 for i in range(net_size):
     pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
 pygame.display.update()
-time.sleep(3)  # debugging purpose
 
 ############### the probabilistic convergence ###############
 
@@ -176,10 +174,18 @@ dist_diff_power = 0.3
 fig = plt.figure()
 fig.canvas.set_window_title('Unipolarity of 2D Honeycomb Network')
 ax = fig.add_subplot(111, projection='3d')
+x_pos = [pos[0] for pos in nodes_plt]  # the positions of the bars
+y_pos = [pos[1] for pos in nodes_plt]
+z_pos = np.zeros(net_size)
+dx = 0.5 * np.ones(net_size)  # the sizes of the bars
+dy = 0.5 * np.ones(net_size)
+dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
+ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, color='b')
 
 # the simulation cycle
 sim_exit = False  # simulation exit flag
 sim_pause = False  # simulation pause flag
+iter_count = 0
 while not sim_exit:
     # exit the program by close window button, or Esc or Q on keyboard
     for event in pygame.event.get():
@@ -350,23 +356,22 @@ while not sim_exit:
                 j_node = sub[j]
                 # check if two nodes in one subgroup is connected
                 if connections[i_node][j_node]:
+                    # wider lines for subgroup connections
                     pygame.draw.line(screen, subgroup_color,
-                                     nodes_disp[i_node], nodes_disp[j_node])
+                                     nodes_disp[i_node], nodes_disp[j_node], 3)
     # draw the nodes as dots
-    for i in rnage(net_size):
+    for i in range(net_size):
         pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
     pygame.display.update()
     # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
-    x_pos = [pos[0] for pos in nodes_disp]  # the positions of the bars
-    y_pos = [pos[1] for pos in nodes_disp]
-    z_pos = np.zeros(net_size)
-    dx = 0.5 * np.ones(net_size)  # the sizes of the bars
-    dy = 0.5 * np.ones(net_size)
-    dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
-    ax.bar3d(x_data, y_data, z_data, dx, dy, dz, color='b')
-    plt.show()
+    fig.canvas.draw()
+    fig.show()
 
+    time.sleep(0.5)
 
+    # iteration count
+    print "iteration {}".format(iter_count)
+    iter_count = iter_count + 1
 
 
 
