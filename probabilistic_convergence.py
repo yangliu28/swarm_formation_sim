@@ -9,15 +9,33 @@
 # '-d': number of decisions each node can choose from
 
 # Pygame will be used to animate the dynamic subgroup changes in the network;
-# Matplotlib will be used to draw the unipolarity in a 3D histogram, full distribution is
-# not necessary.
+# Matplotlib will be used to draw the unipolarity in a 3D bar graph, the whole decision
+# distribution is not necessary.
 
-import math, sys, os, getopt, time
-import matplotlib.pyplot as plt
-from network_generator_2D_swarm import *
-import numpy as np
+# Algorithm to update the subgroups in 2D honeycomb network:
+# Using a pool of indices for nodes that have not been subgrouped, those labeled into a
+# subgroup will be remove from the pool. As long as the pool is not enpty, a while loop
+# will continue searching subgroups one by one. In the loop, it initialize a new subgroup
+# with first node in the pool. It also initialize a fifo-like variable(p_members) for
+# potential members of this subgroup, and an index variable(p_index) for iterating through
+# the potential members. If p_members[p_index] doesn't share same decidion with first node,
+# p_index increases by 1, will check next value in p_members. If it does, then a new member
+# for this subgroup has been found, it will be removed from the pool and p_members, and added
+# to current subgroup. The new subgroup member will also introduce its neighbors as new
+# potential members, but they should not be in p_members and current subgroup, and should be
+# in node pool. The member search for this subgroup will end if p_index iterates to the end
+# of p_members.
+# Implementation of this algorithm is inside the simulation loop.
+
+
 import pygame
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from network_generator_2D_swarm import *
 from formation_functions import *
+import math, sys, os, getopt, time
+import numpy as np
+
 
 net_size = 30  # default size of the honeycomb network
 net_folder = 'honeycomb-networks'  # folder for all network files
@@ -121,7 +139,7 @@ for i in range(net_size):
 for i in range(net_size):
     pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
 pygame.display.update()
-time.sleep(1)
+time.sleep(3)  # debugging purpose
 
 ############### the probabilistic convergence ###############
 
@@ -131,7 +149,7 @@ deci_dist = np.random.rand(net_size, deci_num)
 sum_temp = np.sum(deci_dist, axis=1)
 for i in range(net_size):
     deci_dist[i][:] = deci_dist[i][:] / sum_temp[i]
-# variable for the dominant decision
+# variable for the dominant decision for all nodes
 deci_domi = np.argmax(deci_dist, axis=1)
 # only adjacent block of nodes sharing same dominant decision belongs to same subgroup
 subgroups = []  # seperate lists of node indices for all subgroups
@@ -154,74 +172,12 @@ dist_diff_ratio = [0.0 for i in range(net_size)]
 # and therefore slow donw the growing rate.
 dist_diff_power = 0.3
 
-# Algorithm to update the subgroups:
-# Using a pool of indices for nodes that have not been subgrouped, those labeled into a
-# subgroup will be remove from the pool. As long as the pool is not enpty, a while loop
-# will continue searching subgroups one by one. In the loop, it initialize a new subgroup
-# with first node in the pool. It also initialize a fifo-like variable(p_members) for
-# potential members of this subgroup, and an index variable(p_index) for iterating through
-# the potential members. If p_members[p_index] doesn't share same decidion with first node,
-# p_index increases by 1, will check next value in p_members. If it does, then a new member
-# for this subgroup has been found, it will be removed from the pool and p_members, and added
-# to current subgroup. The new subgroup member will also introduce its neighbors as new
-# potential members, but they should not be in p_members and current subgroup, and should be
-# in node pool. The member search for this subgroup will end if p_index iterates to the end
-# of p_members.
-# The following block of code is the implementation of this algorithm.
+# start the matplotlib window first before the simulation cycle
+fig = plt.figure()
+fig.canvas.set_window_title('Unipolarity of 2D Honeycomb Network')
+ax = fig.add_subplot(111, projection='3d')
 
-# a diminishing global pool for node indices, for nodes not yet assigned into subgroups
-n_pool = range(net_size)
-# start searching subgroups one by one from the global node pool
-while len(n_pool) != 0:
-    # start a new subgroup, with first node in the n_pool
-    first_member = n_pool[0]  # first member of this subgroup
-    subgroup_temp = [first_member]  # current temporary subgroup
-    n_pool.pop(0)  # pop out first node in the pool
-    # a list of potential members for current subgroup
-    # this list may increase when new members of subgroup are discovered
-    p_members = connection_lists[first_member][:]
-    # an index for iterating through p_members, in searching subgroup members
-    p_index = 0  # if it climbs to the end, the searching ends
-    # index of dominant decision for current subgroup
-    current_domi = deci_domi[first_member]
-    # dynamically iterating through p_members with p_index
-    while p_index < len(p_members):  # index still in valid range
-        if deci_domi[p_members[p_index]] == current_domi:
-            # a new member has been found
-            new_member = p_members[p_index]  # get index of the new member
-            p_members.remove(new_member)  # remove it from p_members list
-                # but not increase p_index, because new value in p_members will flush in
-            n_pool.remove(new_member)  # remove it from the global node pool
-            subgroup_temp.append(new_member)  # add it to current subgroup
-            # check if new potential members are available, due to new node discovery
-            p_members_new = connection_lists[new_member]  # new potential members
-            for member in p_members_new:
-                if member not in p_members:  # should not already in p_members
-                    if member not in subgroup_temp:  # should not in current subgroup
-                        if member in n_pool:  # should be available in global pool
-                            # if conditions satisfied, it is qualified as a potential member
-                            p_members.append(member)  # append at the end
-        else:
-            # a boundary node(share different decision) has been met
-            # leave it in p_members, will help to avoid checking back again on this node
-            p_index = p_index + 1  # shift right one position
-    # all connected members for this subgroup have been located
-    subgroups.append(subgroup_temp)  # append the new subgroup
-    # the end of searching for one subgroup
-
-# update the size of the subgroup each node is in
-traverse_list = range(net_size)
-     # used to check if all nodes have been assigned a subgroup size
-for sub in subgroups:
-    size_temp = len(sub)
-    for i in sub:
-        subsizes[i] = size_temp
-        traverse_list.remove(i)
-if len(traverse_list) != 0:
-    print("subgroup sizes check error")
-    sys.exit()
-
-# the loop
+# the simulation cycle
 sim_exit = False  # simulation exit flag
 sim_pause = False  # simulation pause flag
 while not sim_exit:
@@ -238,6 +194,66 @@ while not sim_exit:
     # skip the rest if paused
     if sim_pause: continue
 
+    # prepare information for the decision distribution evolution
+    # including 1.dominant decisions, 2.subgroups, and 3.subgroup sizes
+
+    # 1.update the dominant decision for all nodes
+    deci_domi = np.argmax(deci_dist, axis=1)
+
+    # 2.update the subgroups
+    subgroups = []  # empty the subgroups container
+    # a diminishing global pool for node indices, for nodes not yet assigned into subgroups
+    n_pool = range(net_size)
+    # start searching subgroups one by one from the global node pool
+    while len(n_pool) != 0:
+        # start a new subgroup, with first node in the n_pool
+        first_member = n_pool[0]  # first member of this subgroup
+        subgroup_temp = [first_member]  # current temporary subgroup
+        n_pool.pop(0)  # pop out first node in the pool
+        # a list of potential members for current subgroup
+        # this list may increase when new members of subgroup are discovered
+        p_members = connection_lists[first_member][:]
+        # an index for iterating through p_members, in searching subgroup members
+        p_index = 0  # if it climbs to the end, the searching ends
+        # index of dominant decision for current subgroup
+        current_domi = deci_domi[first_member]
+        # dynamically iterating through p_members with p_index
+        while p_index < len(p_members):  # index still in valid range
+            if deci_domi[p_members[p_index]] == current_domi:
+                # a new member has been found
+                new_member = p_members[p_index]  # get index of the new member
+                p_members.remove(new_member)  # remove it from p_members list
+                    # but not increase p_index, because new value in p_members will flush in
+                n_pool.remove(new_member)  # remove it from the global node pool
+                subgroup_temp.append(new_member)  # add it to current subgroup
+                # check if new potential members are available, due to new node discovery
+                p_members_new = connection_lists[new_member]  # new potential members
+                for member in p_members_new:
+                    if member not in p_members:  # should not already in p_members
+                        if member not in subgroup_temp:  # should not in current subgroup
+                            if member in n_pool:  # should be available in global pool
+                                # if conditions satisfied, it is qualified as a potential member
+                                p_members.append(member)  # append at the end
+            else:
+                # a boundary node(share different decision) has been met
+                # leave it in p_members, will help to avoid checking back again on this node
+                p_index = p_index + 1  # shift right one position
+        # all connected members for this subgroup have been located
+        subgroups.append(subgroup_temp)  # append the new subgroup
+        # the end of searching for one subgroup
+
+    # 3.update the subgroup size each node is in
+    traverse_list = range(net_size)  # remove when debugged
+         # used to check if all nodes have been assigned a subgroup size
+    for sub in subgroups:
+        size_temp = len(sub)
+        for i in sub:
+            subsizes[i] = size_temp
+            traverse_list.remove(i)
+    if len(traverse_list) != 0:
+        print("subgroup sizes check error")
+        sys.exit()
+
     # the decision distribution evolution
     deci_dist_t = np.copy(deci_dist)  # deep copy of the 'deci_dist'
     for i in range(net_size):
@@ -251,7 +267,7 @@ while not sim_exit:
         if converged:  # all neighbors have converged with host
             # step 1: take equally weighted average on all distributions
             # including host and all neighbors
-            deci_dist[i] = deci_dist_t[i]*1.0
+            deci_dist[i] = deci_dist_t[i]*1.0  # start with host itself
             for neighbor in connection_lists[i]:
                 # accumulate neighbor's distribution
                 deci_dist[i] = deci_dist[i] + deci_dist_t[neighbor]
@@ -308,14 +324,48 @@ while not sim_exit:
                 # not applying linear multiplier when distribution difference is large
                 pass
         else:  # at least one neighbor has different opinion with host
+            # take unequal weights in the averaging process based on subgroup sizes
+            deci_dist[i] = deci_dist_t[i]*subsizes[i]  # start with host itself
+            for neighbor in connection_lists[i]:
+                # accumulate neighbor's distribution
+                deci_dist[i] = deci_dist[i] + deci_dist_t[neighbor]*subsizes[neighbor]
+            # normalize the distribution
+            sum_temp = np.sum(deci_dist[i])
+            deci_dist[i] = deci_dist[i] / sum_temp
 
+    # graphics animation, both pygame window and matplotlib window
+    # 1.pygame window for dynamics of network's subgroups
+    screen.fill(background_color)
+    # draw the regualr connecting lines
+    for i in range(net_size):
+        for j in range(i+1, net_size):
+            if connections[i][j]:
+                pygame.draw.line(screen, node_color, nodes_disp[i], nodes_disp[j])
+    # draw the connecting lines marking subgroups
+    for sub in subgroups:
+        sub_len = len(sub)
+        for i in range(sub_len):
+            for j in range(i+1, sub_len):
+                i_node = sub[i]
+                j_node = sub[j]
+                # check if two nodes in one subgroup is connected
+                if connections[i_node][j_node]:
+                    pygame.draw.line(screen, subgroup_color,
+                                     nodes_disp[i_node], nodes_disp[j_node])
+    # draw the nodes as dots
+    for i in rnage(net_size):
+        pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
+    pygame.display.update()
+    # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
+    x_pos = [pos[0] for pos in nodes_disp]  # the positions of the bars
+    y_pos = [pos[1] for pos in nodes_disp]
+    z_pos = np.zeros(net_size)
+    dx = 0.5 * np.ones(net_size)  # the sizes of the bars
+    dy = 0.5 * np.ones(net_size)
+    dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
+    ax.bar3d(x_data, y_data, z_data, dx, dy, dz, color='b')
+    plt.show()
 
-
-
-
-
-# after each step of evolution
-# needs to update dominant decision, subgroups, subgroup sizes
 
 
 
