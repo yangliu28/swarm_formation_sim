@@ -2,7 +2,7 @@
 # First section is copied verbatim, algorithm tests are carried on in second section for the
 # preferability distribution evolution.
 
-# command line arguments passing format:
+# command line arguments formats:
     # ex1: "gen_save initial_gen target_gen"
         # ex1 will generate two formations, and save both to files.
     # ex2: "gen_discard initial_gen target_read target_filename"

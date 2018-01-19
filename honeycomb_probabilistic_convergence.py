@@ -25,7 +25,6 @@
 # potential members, but they should not be in p_members and current subgroup, and should be
 # in node pool. The member search for this subgroup will end if p_index iterates to the end
 # of p_members.
-# Implementation of this algorithm is inside the simulation loop.
 
 
 import pygame
@@ -39,7 +38,7 @@ import numpy as np
 
 net_size = 30  # default size of the honeycomb network
 net_folder = 'honeycomb-networks'  # folder for all network files
-net_filename = '30-1'  # defautl filename of the network file, if no input
+net_filename = '30-1'  # default filename of the network file, if no input
 net_filepath = os.path.join(os.getcwd(), net_folder, net_filename)  # corresponding filepath
 
 deci_num = 30  # default number of decisions each node can choose from
@@ -191,7 +190,7 @@ if not nobargraph:
 
 # the simulation cycle
 sim_exit = False  # simulation exit flag
-sim_pause = True  # simulation pause flag
+sim_pause = False  # simulation pause flag
 iter_count = 0
 time_now = pygame.time.get_ticks()  # return milliseconds
 time_last = time_now  # reset as right now

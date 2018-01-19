@@ -38,9 +38,13 @@ Loop formation simulation:
 
 `python loop_formation.py`
 
-Loop reshape simulation, dynamic version: (see more parameter options in the header comments of the file)
+Loop reshape simulation:
 
 `python loop_reshape_2_dynamic.py gen_discard initial_read 30-1 target_gen`
+
+Probabilistic convergence algorithm simulation:
+
+`python honeycomb_probabilistic_convergence.py -f 50-3 -d 30 --nobargraph`
 
 ## License
 See the [LICENSE](LICENSE.md) file for license rights and limitations (MIT).
