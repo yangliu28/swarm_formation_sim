@@ -31,7 +31,7 @@
 import pygame
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from honeycomb_network_generator import *
+from honeycomb_generator import *
 from formation_functions import *
 import math, sys, os, getopt, time
 import numpy as np

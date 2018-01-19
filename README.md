@@ -20,7 +20,7 @@ All the formation control algorithms simulated here agree on a few conditions of
 
 *loop_reshape_test_power.py* is for testing how power function can increase the unipolarity of a random distribution. Linear multiplier was later found to be more mild and thus a better choice. *loop_reshape_test_motion* is for testing the physical motion controlalgorithm of the loop reshape process, the SMA algorithm was first tested here. *curve_shape_test_filter.py* is for smoothing open curves or closed curves to the effect of human drawing like curves.
 
-*honeycomb_probabilistic_convergence.py* is the test program for probabilistic convergence algorithm, running on 2D honeycomb networks. *honeycomb_network_generator.py* is the corresponding 2D honeycomb network generator.
+*honeycomb_probabilistic_convergence.py* is the test program for probabilistic convergence algorithm, running on 2D honeycomb networks. *honeycomb_generator.py* is the corresponding 2D honeycomb network generator.
 
 
 ## Run the simulations

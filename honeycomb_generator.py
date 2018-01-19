@@ -1,11 +1,10 @@
-# random network generator for robot swarm on 2D honeycomb grid
-# generated network should be one-connected, that is, no robot is isolated behind
-# input: number of nodes for target network
+# random 2D network generator for robot swarm on 2D honeycomb grid
+# the networks are connected in one piece, there is a path between any pair of nodes
 
 # Constraint of honeycomb grid guaranteed the robots are uniformed spaced, and 6 connections
 # at most for each robot. Robots will reside in the middle of each honeycomb grid cell, not
 # the corner points. The lines representing connections are drew perpendicular to the edges
-# of the hexagons. 
+# of the hexagons.
 
 # Honeycomb grid coordinates:
 # Position of a node on a 2D plane has two degrees of freedom. Following this rule, even three
@@ -129,8 +128,9 @@ def main():
 
     # show the figure, press to exit
     fig.show()
-    # time.sleep(1)  # sleep for 1 sec and exit
-    raw_input("<Press enter to close>")  # wait enter key to exit
+    # choose one of the following two lines
+    # time.sleep(1)  # hold the figure for 1 sec and exit
+    raw_input("<Press enter to close>")  # wait enter key command to exit
     plt.close(fig)
 
 
