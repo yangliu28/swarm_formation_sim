@@ -26,6 +26,11 @@
 # in node pool. The member search for this subgroup will end if p_index iterates to the end
 # of p_members.
 
+# 01/19/2018
+# Testing an invented concept call "holistic dependency", for measuring the degree of how
+# much partial nodes are being depended on than others for maintaining the network
+# connectivity in a holistic view. The final name of the concept is subject to change.
+
 
 import pygame
 import matplotlib.pyplot as plt
@@ -34,7 +39,6 @@ from honeycomb_generator import *
 from formation_functions import *
 import math, sys, os, getopt, time
 import numpy as np
-
 
 net_size = 30  # default size of the honeycomb network
 net_folder = 'honeycomb-networks'  # folder for all network files
@@ -93,7 +97,7 @@ for i in range(net_size):
             # condition 2: one of the axis value difference is 1, the other is -1
             connections[i][j] = 1
             connections[j][i] = 1
-# another list type variable for easy indexing from each node
+# another list type variable for easily indexing from the nodes
 # converted from the above connection matrix variable
 connection_lists = []  # the lists of connecting nodes for each node
 for i in range(net_size):
