@@ -27,9 +27,9 @@
 # of p_members.
 
 # 01/19/2018
-# Testing an invented concept call "holistic dependency", for measuring the degree of how
+# Testing an invented concept called "holistic dependency", for measuring the degree of how
 # much partial nodes are being depended on than others for maintaining the network
-# connectivity in a holistic view. The final name of the concept is subject to change.
+# connectivity in the holistic view. The final name of the concept may change.
 
 
 import pygame
@@ -106,6 +106,39 @@ for i in range(net_size):
         if connections[i][j]: connection_list_temp.append(j)
     connection_lists.append(connection_list_temp)
 
+# until here, the network information has been read and interpreted completely
+# calculate the "holistic dependency"
+dependencies = [0.0 for i in range(net_size)]  # individual dependency for each robot
+holistic_dependency = 0.0  # holistic dependency
+# Search the shortest path for every pair of nodes i and j.
+for i in range(net_size-1):
+    for j in range(i+1, net_size):
+        # (There might be multiple path sharing the shortest length, which are totally fine,
+        # all the path should count.)
+        # The searching algorithm I used is close to a brute force search, there is no guide
+        # of which direction the path should go. Because due to the randomness of the network
+        # topology, the shortest path might deviate from the target first, and finally get
+        # to it. Some useful tricks have been used to make the search more efficient.
+        search_end = False  # flag indicating if the shortest path is found
+        path_potential = [[i]]  # the paths are in progress, potentially the shortest
+        path_succeed = []  # the shortest paths
+        path_dead = []  # the paths that go into dead end, kicked out from path_potential
+        # start searching
+        while not search_end:
+            # increase one step for all paths in path_potential
+            path_potential2 = []  # for the paths with one more step than path_potential
+            for path in path_potential:
+                node_front = path[-1]  # front node in this current path
+                nodes_next = []  # for nodes that are qualified to be the next one
+                for node in connection_lists[node_front]:
+                    if node == j:  # the shortest path found, only these many steps needed
+                        search_end = True
+                        nodes_next.append(j)
+                    for 
+
+
+
+
 # plot the network as dots and lines in pygame window
 pygame.init()  # initialize the pygame
 # find appropriate window size from current network
@@ -120,7 +153,7 @@ screen_size = (int(round(world_size[0] * pixels_per_length)),
                int(round(world_size[1] * pixels_per_length)))
 background_color = (0,0,0)
 node_color = (255,0,0)  # red for nodes as dots
-connection_color = [0,0,255]  # blue for regular connecting lines
+connection_color = (0,0,255)  # blue for regular connecting lines
 subgroup_color = (255,255,0)  # yellow for connecting lines in the subgroups
 node_size = 5  # node modeled as dot, number of pixels for radius
 # set up the simulation window and surface object
