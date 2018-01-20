@@ -109,34 +109,60 @@ for i in range(net_size):
 # until here, the network information has been read and interpreted completely
 # calculate the "holistic dependency"
 dependencies = [0.0 for i in range(net_size)]  # individual dependency for each robot
-holistic_dependency = 0.0  # holistic dependency
+relative_holistic_dependency = 0.0  # relative holistic dependency
+absolute_holistic_dependency = 0.0  # absolute holistic dependency
 # Search the shortest path for every pair of nodes i and j.
-for i in range(net_size-1):
-    for j in range(i+1, net_size):
+for i in range(net_size-1):  # i is the starting node
+    for j in range(i+1, net_size):  # j is the target node
         # (There might be multiple path sharing the shortest length, which are totally fine,
         # all the path should count.)
         # The searching algorithm I used is close to a brute force search, there is no guide
         # of which direction the path should go. Because due to the randomness of the network
         # topology, the shortest path might deviate from the target first, and finally get
         # to it. Some useful tricks have been used to make the search more efficient.
-        search_end = False  # flag indicating if the shortest path is found
-        path_potential = [[i]]  # the paths are in progress, potentially the shortest
+        path_potential = [[i]]  # the paths that are in progress, potentially the shortest
         path_succeed = []  # the shortest paths
-        path_dead = []  # the paths that go into dead end, kicked out from path_potential
         # start searching
+        search_end = False  # flag indicating if the shortest path is found
         while not search_end:
             # increase one step for all paths in path_potential
-            path_potential2 = []  # for the paths with one more step than path_potential
+            path_potential2 = []  # for the paths adding one step from path_potential
             for path in path_potential:
                 node_front = path[-1]  # front node in this current path
                 nodes_next = []  # for nodes that are qualified to be the next one
-                for node in connection_lists[node_front]:
-                    if node == j:  # the shortest path found, only these many steps needed
+                for node_n in connection_lists[node_front]:  # neighbor node
+                    if node_n == j:  # the shortest path found, only these many steps needed
+                        nodes_next.append(node_n)
                         search_end = True
-                        nodes_next.append(j)
-                    for 
-
-
+                        continue
+                    repeated = False
+                    for node_p in path[-2::-1]:
+                        # previous node on path; reverse indexing, exclude the front node
+                        if node_n == node_p:  # node_n is a repeated node of node_p
+                            repeated = True
+                            continue
+                    if not repeated: nodes_next.append(node_n)
+                for node_next in nodes_next:
+                    path_potential2.append(path + [node_next])
+            path_potential = []  # empty the old potential paths
+            # assign the new potential paths, copy with list comprehension method
+            path_potential = [[node for node in path] for path in path_potential2]
+        # if here, the shortest paths have been found; locate them
+        for path in path_potential:
+            if path[-1] == j:
+                path_succeed.append(path)
+        # distribute the dependency value evenly for each shortest paths
+        d_value = 1.0 / len(path_succeed)
+        for path in path_succeed:
+            for node in path[1:-1]:  # exclude start and end nodes
+                dependencies[node] = dependencies[node] + d_value
+print(dependencies)
+dependency_mean = sum(dependencies)/net_size
+relative_holistic_dependency = max(dependencies) / dependency_mean
+absolute_holistic_dependency = max(dependencies) - dependency_mean
+print "holistic dependency: absolute {} relative {}".format(absolute_holistic_dependency,
+                                                            relative_holistic_dependency)
+raw_input("Press the <ENTER> key to continue")
 
 
 # plot the network as dots and lines in pygame window
