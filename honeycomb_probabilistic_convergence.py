@@ -109,8 +109,8 @@ for i in range(net_size):
 # until here, the network information has been read and interpreted completely
 # calculate the "holistic dependency"
 dependencies = [0.0 for i in range(net_size)]  # individual dependency for each robot
-relative_holistic_dependency = 0.0  # relative holistic dependency
-absolute_holistic_dependency = 0.0  # absolute holistic dependency
+holistic_dependency_abs = 0.0  # absolute holistic dependency
+holistic_dependency_rel = 0.0  # relative holistic dependency
 # Search the shortest path for every pair of nodes i and j.
 for i in range(net_size-1):  # i is the starting node
     for j in range(i+1, net_size):  # j is the target node
@@ -156,14 +156,13 @@ for i in range(net_size-1):  # i is the starting node
         for path in path_succeed:
             for node in path[1:-1]:  # exclude start and end nodes
                 dependencies[node] = dependencies[node] + d_value
-print(dependencies)
+# print(dependencies)
 dependency_mean = sum(dependencies)/net_size
-relative_holistic_dependency = max(dependencies) / dependency_mean
-absolute_holistic_dependency = max(dependencies) - dependency_mean
-print "holistic dependency: absolute {} relative {}".format(absolute_holistic_dependency,
-                                                            relative_holistic_dependency)
-raw_input("Press the <ENTER> key to continue")
-
+node_max = dependencies.index(max(dependencies))
+holistic_dependency_abs = dependencies[node_max] - dependency_mean
+holistic_dependency_rel = dependencies[node_max] / dependency_mean
+print "absolute holistic dependency {}".format(holistic_dependency_abs)
+print "relative holistic dependency {}".format(holistic_dependency_rel)
 
 # plot the network as dots and lines in pygame window
 pygame.init()  # initialize the pygame
@@ -204,7 +203,11 @@ for i in range(net_size):
 # draw the nodes as dots
 for i in range(net_size):
     pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
+# highlight the node with maximum individual dependency
+pygame.draw.circle(screen, subgroup_color, nodes_disp[node_max], node_size, 0)
 pygame.display.update()
+
+raw_input("Press the <ENTER> key to continue")
 
 ############### the probabilistic convergence ###############
 
