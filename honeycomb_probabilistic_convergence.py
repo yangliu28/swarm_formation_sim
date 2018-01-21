@@ -53,7 +53,7 @@ nobargraph = False  # option as to whether or not skipping the 3D bar graph
 
 # read command line options
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'f:d:', ['nobargraph'])
+    opts, args = getopt.getopt(sys.argv[1:], 'f:d:r:', ['nobargraph'])
     # The colon after 'f' means '-f' requires an argument, it will raise an error if no
     # argument followed by '-f'. But if '-f' is not even in the arguments, this won't raise
     # an error. So it's necessary to define the default network filename
@@ -227,61 +227,64 @@ pygame.display.update()
 
 ############### the probabilistic convergence ###############
 
-# variable for decision distribution of all individuals
-deci_dist = np.random.rand(net_size, deci_num)
-# normalize the random numbers such that the sum is 1.0
-sum_temp = np.sum(deci_dist, axis=1)
-for i in range(net_size):
-    deci_dist[i][:] = deci_dist[i][:] / sum_temp[i]
-# calculate the average decision distribution
-mean_temp = np.mean(deci_dist, axis=0)
-avg_dist_sort = np.sort(mean_temp)[::-1]
-avg_dist_id_sort = np.argsort(mean_temp)[::-1]
-# the dominant decision of all nodes
-deci_domi = np.argmax(deci_dist, axis=1)
-# only adjacent block of nodes sharing same dominant decision belongs to same subgroup
-subgroups = []  # seperate lists of node indices for all subgroups
-subsizes = [0 for i in range(net_size)]  # the subgroup size that each node belongs to
-# Difference of two distributions is the sum of absolute values of differences
-# of all individual probabilities.
-# Overflow threshold for the distribution difference. Distribution difference larger than
-# this means neighbors are not quite agree with each other, so no further improvement on
-# unipolarity will be performed. If distribution difference is lower than the threshold,
-# linear multiplier will be used to improve unipolarity on the result distribution.
-dist_diff_thres = 0.3
-# Variable for ratio of distribution difference to distribution difference threshold.
-# The ratio is in range of [0,1], it will be used for constructing the corresponding linear
-# multiplier. At one side, the smaller the ratio, the smaller the distribution difference,
-# and faster the unipolarity should increase. At the other side, the ratio will be positively
-# related to the small end of the linear multiplier. The smallee the ratio gets, the steeper
-# the linear multiplier will be, and the faster the unipolarity increases.
-dist_diff_ratio = [0.0 for i in range(net_size)]
-# Exponent of a power function to map the distribution difference ratio to a larger value,
-# and therefore slow donw the growing rate.
-dist_diff_power = 0.3
+all_steps = [0 for i in range(repeat_times)]  # steps taken to converge for all simulations
+all_deci_orders = [0 for i in range(repeat_times)]  # the order of the final decisions
+for sim_index in range(repeat_times):  # repeat the simulation for these times
 
-# start the matplotlib window first before the simulation cycle
-fig = plt.figure()
-fig.canvas.set_window_title('Unipolarity of 2D Honeycomb Network')
-ax = fig.add_subplot(111, projection='3d')
-x_pos = [pos[0] for pos in nodes_plt]  # the positions of the bars
-y_pos = [pos[1] for pos in nodes_plt]
-z_pos = np.zeros(net_size)
-dx = 0.5 * np.ones(net_size)  # the sizes of the bars
-dy = 0.5 * np.ones(net_size)
-dz = np.zeros(net_size)
-if not nobargraph:
-    fig.canvas.draw()
-    fig.show()
+    # variable for decision distribution of all individuals
+    deci_dist = np.random.rand(net_size, deci_num)
+    # normalize the random numbers such that the sum is 1.0
+    sum_temp = np.sum(deci_dist, axis=1)
+    for i in range(net_size):
+        deci_dist[i][:] = deci_dist[i][:] / sum_temp[i]
+    # calculate the average decision distribution
+    mean_temp = np.mean(deci_dist, axis=0)
+    avg_dist_sort = np.sort(mean_temp)[::-1]
+    avg_dist_id_sort = np.argsort(mean_temp)[::-1]
+    # the dominant decision of all nodes
+    deci_domi = np.argmax(deci_dist, axis=1)
+    # only adjacent block of nodes sharing same dominant decision belongs to same subgroup
+    subgroups = []  # seperate lists of node indices for all subgroups
+    subsizes = [0 for i in range(net_size)]  # the subgroup size that each node belongs to
+    # Difference of two distributions is the sum of absolute values of differences
+    # of all individual probabilities.
+    # Overflow threshold for the distribution difference. Distribution difference larger than
+    # this means neighbors are not quite agree with each other, so no further improvement on
+    # unipolarity will be performed. If distribution difference is lower than the threshold,
+    # linear multiplier will be used to improve unipolarity on the result distribution.
+    dist_diff_thres = 0.3
+    # Variable for ratio of distribution difference to distribution difference threshold.
+    # The ratio is in range of [0,1], it will be used for constructing the corresponding linear
+    # multiplier. At one side, the smaller the ratio, the smaller the distribution difference,
+    # and faster the unipolarity should increase. At the other side, the ratio will be positively
+    # related to the small end of the linear multiplier. The smallee the ratio gets, the steeper
+    # the linear multiplier will be, and the faster the unipolarity increases.
+    dist_diff_ratio = [0.0 for i in range(net_size)]
+    # Exponent of a power function to map the distribution difference ratio to a larger value,
+    # and therefore slow donw the growing rate.
+    dist_diff_power = 0.3
 
-# the simulation cycle
-sim_exit = False  # simulation exit flag
-sim_pause = False  # simulation pause flag
-iter_count = 0
-time_now = pygame.time.get_ticks()  # return milliseconds
-time_last = time_now  # reset as right now
-time_period = 100  # desired simulation period, will jump the delay if period overflow
-for _ in range(repeat_times):
+    # start the matplotlib window first before the simulation cycle
+    fig = plt.figure()
+    fig.canvas.set_window_title('Unipolarity of 2D Honeycomb Network')
+    ax = fig.add_subplot(111, projection='3d')
+    x_pos = [pos[0] for pos in nodes_plt]  # the positions of the bars
+    y_pos = [pos[1] for pos in nodes_plt]
+    z_pos = np.zeros(net_size)
+    dx = 0.5 * np.ones(net_size)  # the sizes of the bars
+    dy = 0.5 * np.ones(net_size)
+    dz = np.zeros(net_size)
+    if not nobargraph:
+        fig.canvas.draw()
+        fig.show()
+
+    # the simulation cycle
+    sim_exit = False  # simulation exit flag
+    sim_pause = False  # simulation pause flag
+    iter_count = 0
+    time_now = pygame.time.get_ticks()  # return milliseconds
+    time_last = time_now  # reset as right now
+    time_period = 100  # desired simulation period, will jump the delay if period overflow
     while not sim_exit:
         # exit the program by close window button, or Esc or Q on keyboard
         for event in pygame.event.get():
@@ -483,11 +486,21 @@ for _ in range(repeat_times):
 
         # exit as soon as the network is converged
         if converged_all:
-            print("iterations take to converge: {}".format(iter_count-1))
+            print("steps to converge: {}".format(iter_count-1))
             print("converged to the decision: {} ({} in order)".format(deci_domi[0],
-                list(avg_dist_id_sort).index(deci_domi[0])+1))
+                list(avg_dist_id_sort).index(deci_domi[0]) + 1))
             print("the order of average initial decision:")
             print(avg_dist_id_sort)
             break
+
+        # record result of this simulation
+        all_steps[sim_index] = iter_count - 1
+        all_deci_orders[sim_index] = list(avg_dist_id_sort).index(deci_domi[0]) + 1
+
+# report statistic result if simulation runs more than once
+if repeat_times > 1:
+    print("\nstatistics\nsteps to converge: {}".format(all_steps))
+    print("final decision in order: {}".format(all_deci_orders))
+    print("average steps: {}".format(np.mean(np.array(all_steps))))
 
 
