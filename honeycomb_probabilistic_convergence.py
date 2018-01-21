@@ -116,35 +116,39 @@ for i in range(net_size-1):  # i is the starting node
     for j in range(i+1, net_size):  # j is the target node
         # (There might be multiple path sharing the shortest length, which are totally fine,
         # all the path should count.)
-        # The searching algorithm I used is close to a brute force search, there is no guide
-        # of which direction the path should go. Because due to the randomness of the network
-        # topology, the shortest path might deviate from the target first, and finally get
-        # to it. Some useful tricks have been used to make the search more efficient.
+        # Some useful tricks have been used to make the search efficient.
         path_potential = [[i]]  # the paths that are in progress, potentially the shortest
         path_succeed = []  # the shortest paths
         # start searching
         search_end = False  # flag indicating if the shortest path is found
+        nodes_reached = {i}  # dynamic pool for nodes in at least one of the paths
+            # key to speed up this search algorithm
         while not search_end:
             # increase one step for all paths in path_potential
             path_potential2 = []  # for the paths adding one step from path_potential
+            nodes_reached_add = set()  # to be added to nodes_reached
+            node_front_pool = dict()  # solutions for next qualified nodes of front node
             for path in path_potential:
                 node_front = path[-1]  # front node in this current path
-                nodes_next = []  # for nodes that are qualified to be the next one
-                for node_n in connection_lists[node_front]:  # neighbor node
-                    if node_n == j:  # the shortest path found, only these many steps needed
-                        nodes_next.append(node_n)
-                        search_end = True
-                        continue
-                    repeated = False
-                    for node_p in path[-2::-1]:
-                        # previous node on path; reverse indexing, exclude the front node
-                        if node_n == node_p:  # node_n is a repeated node of node_p
-                            repeated = True
+                nodes_next = []  # for nodes qualified as next one on path
+                if node_front in node_front_pool.keys():
+                    nodes_next = node_front_pool[node_front]
+                else:
+                    for node_n in connection_lists[node_front]:  # neighbor node
+                        if node_n == j:  # the shortest path found, only these many steps needed
+                            nodes_next.append(node_n)
+                            search_end = True
                             continue
-                    if not repeated: nodes_next.append(node_n)
+                        if node_n not in nodes_reached:
+                            nodes_reached_add.add(node_n)
+                            nodes_next.append(node_n)
+                    node_front_pool[node_front] = nodes_next[:]  # add new solution
                 for node_next in nodes_next:
                     path_potential2.append(path + [node_next])
-            path_potential = []  # empty the old potential paths
+            for node in nodes_reached_add:
+                nodes_reached.add(node)
+            # empty the old potential paths
+            path_potential = []
             # assign the new potential paths, copy with list comprehension method
             path_potential = [[node for node in path] for path in path_potential2]
         # if here, the shortest paths have been found; locate them
