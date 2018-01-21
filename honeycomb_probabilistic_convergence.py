@@ -275,7 +275,7 @@ sim_pause = False  # simulation pause flag
 iter_count = 0
 time_now = pygame.time.get_ticks()  # return milliseconds
 time_last = time_now  # reset as right now
-time_period = 500  # desired simulation period, will jump the delay if period overflow
+time_period = 100  # desired simulation period, will jump the delay if period overflow
 while not sim_exit:
     # exit the program by close window button, or Esc or Q on keyboard
     for event in pygame.event.get():
@@ -351,6 +351,7 @@ while not sim_exit:
         sys.exit()
 
     # the decision distribution evolution
+    converged_all = True  # flag for convergence of entire network
     deci_dist_t = np.copy(deci_dist)  # deep copy of the 'deci_dist'
     for i in range(net_size):
         host_domi = deci_domi[i]
@@ -420,6 +421,7 @@ while not sim_exit:
                 # not applying linear multiplier when distribution difference is large
                 pass
         else:  # at least one neighbor has different opinion with host
+            converged_all = False  # the network is not converged
             # take unequal weights in the averaging process based on subgroup sizes
             deci_dist[i] = deci_dist_t[i]*subsizes[i]  # start with host itself
             for neighbor in connection_lists[i]:
@@ -473,6 +475,12 @@ while not sim_exit:
     print "iteration {}".format(iter_count)
     iter_count = iter_count + 1
 
-
+    # exit as soon as the network is converged
+    if converged_all:
+        print("iterations take to converge: {}".format(iter_count-1))
+        print("converged to the decision: {}".format(deci_domi[0]))
+        print("the order of average initial decision:")
+        print(avg_dist_id_sort)
+        break
 
 
