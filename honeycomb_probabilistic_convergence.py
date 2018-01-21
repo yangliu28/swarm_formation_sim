@@ -108,65 +108,71 @@ for i in range(net_size):
 
 # until here, the network information has been read and interpreted completely
 # calculate the "holistic dependency"
-dependencies = [0.0 for i in range(net_size)]  # individual dependency for each robot
-holistic_dependency_abs = 0.0  # absolute holistic dependency
-holistic_dependency_rel = 0.0  # relative holistic dependency
-# Search the shortest path for every pair of nodes i and j.
-for i in range(net_size-1):  # i is the starting node
-    for j in range(i+1, net_size):  # j is the target node
-        # (There might be multiple path sharing the shortest length, which are totally fine,
-        # all the path should count.)
-        # Some useful tricks have been used to make the search efficient.
-        path_potential = [[i]]  # the paths that are in progress, potentially the shortest
-        path_succeed = []  # the shortest paths
-        # start searching
-        search_end = False  # flag indicating if the shortest path is found
-        nodes_reached = {i}  # dynamic pool for nodes in at least one of the paths
-            # key to speed up this search algorithm
-        while not search_end:
-            # increase one step for all paths in path_potential
-            path_potential2 = []  # for the paths adding one step from path_potential
-            nodes_reached_add = set()  # to be added to nodes_reached
-            node_front_pool = dict()  # solutions for next qualified nodes of front node
+calculate_h_dependency = False  # option for calculating holistic dependency
+# this computation takes significant time when net_size is above 50
+# the algorithm below has been optimized to the most efficient I can
+if calculate_h_dependency:
+    dependencies = [0.0 for i in range(net_size)]  # individual dependency for each robot
+    holistic_dependency_abs = 0.0  # absolute holistic dependency
+    holistic_dependency_rel = 0.0  # relative holistic dependency
+    # Search the shortest path for every pair of nodes i and j.
+    for i in range(net_size-1):  # i is the starting node
+        for j in range(i+1, net_size):  # j is the target node
+            # (There might be multiple path sharing the shortest length, which are totally fine,
+            # all the path should count.)
+            # Some useful tricks have been used to make the search efficient.
+            path_potential = [[i]]  # the paths that are in progress, potentially the shortest
+            path_succeed = []  # the shortest paths
+            # start searching
+            search_end = False  # flag indicating if the shortest path is found
+            nodes_reached = {i}  # dynamic pool for nodes in at least one of the paths
+                # key to speed up this search algorithm
+            while not search_end:
+                # increase one step for all paths in path_potential
+                path_potential2 = []  # for the paths adding one step from path_potential
+                nodes_reached_add = set()  # to be added to nodes_reached
+                node_front_pool = dict()  # solutions for next qualified nodes of front node
+                for path in path_potential:
+                    node_front = path[-1]  # front node in this current path
+                    nodes_next = []  # for nodes qualified as next one on path
+                    if node_front in node_front_pool.keys():
+                        nodes_next = node_front_pool[node_front]
+                    else:
+                        for node_n in connection_lists[node_front]:  # neighbor node
+                            if node_n == j:  # the shortest path found, only these many steps needed
+                                nodes_next.append(node_n)
+                                search_end = True
+                                continue
+                            if node_n not in nodes_reached:
+                                nodes_reached_add.add(node_n)
+                                nodes_next.append(node_n)
+                        node_front_pool[node_front] = nodes_next[:]  # add new solution
+                    for node_next in nodes_next:
+                        path_potential2.append(path + [node_next])
+                for node in nodes_reached_add:
+                    nodes_reached.add(node)
+                # empty the old potential paths
+                path_potential = []
+                # assign the new potential paths, copy with list comprehension method
+                path_potential = [[node for node in path] for path in path_potential2]
+            # if here, the shortest paths have been found; locate them
             for path in path_potential:
-                node_front = path[-1]  # front node in this current path
-                nodes_next = []  # for nodes qualified as next one on path
-                if node_front in node_front_pool.keys():
-                    nodes_next = node_front_pool[node_front]
-                else:
-                    for node_n in connection_lists[node_front]:  # neighbor node
-                        if node_n == j:  # the shortest path found, only these many steps needed
-                            nodes_next.append(node_n)
-                            search_end = True
-                            continue
-                        if node_n not in nodes_reached:
-                            nodes_reached_add.add(node_n)
-                            nodes_next.append(node_n)
-                    node_front_pool[node_front] = nodes_next[:]  # add new solution
-                for node_next in nodes_next:
-                    path_potential2.append(path + [node_next])
-            for node in nodes_reached_add:
-                nodes_reached.add(node)
-            # empty the old potential paths
-            path_potential = []
-            # assign the new potential paths, copy with list comprehension method
-            path_potential = [[node for node in path] for path in path_potential2]
-        # if here, the shortest paths have been found; locate them
-        for path in path_potential:
-            if path[-1] == j:
-                path_succeed.append(path)
-        # distribute the dependency value evenly for each shortest paths
-        d_value = 1.0 / len(path_succeed)
-        for path in path_succeed:
-            for node in path[1:-1]:  # exclude start and end nodes
-                dependencies[node] = dependencies[node] + d_value
-# print(dependencies)
-dependency_mean = sum(dependencies)/net_size
-node_max = dependencies.index(max(dependencies))
-holistic_dependency_abs = dependencies[node_max] - dependency_mean
-holistic_dependency_rel = dependencies[node_max] / dependency_mean
-print "absolute holistic dependency {}".format(holistic_dependency_abs)
-print "relative holistic dependency {}".format(holistic_dependency_rel)
+                if path[-1] == j:
+                    path_succeed.append(path)
+            # distribute the dependency value evenly for each shortest paths
+            d_value = 1.0 / len(path_succeed)
+            for path in path_succeed:
+                for node in path[1:-1]:  # exclude start and end nodes
+                    dependencies[node] = dependencies[node] + d_value
+    # print(dependencies)
+    dependency_mean = sum(dependencies)/net_size
+    node_max = dependencies.index(max(dependencies))
+    holistic_dependency_abs = dependencies[node_max] - dependency_mean
+    holistic_dependency_rel = dependencies[node_max] / dependency_mean
+    print "absolute holistic dependency {}".format(holistic_dependency_abs)
+    print "relative holistic dependency {}".format(holistic_dependency_rel)
+# Also uncomment two lines somewhere below to highlight maximum individual dependency node,
+# and halt the program after drawing the network.
 
 # plot the network as dots and lines in pygame window
 pygame.init()  # initialize the pygame
@@ -208,10 +214,11 @@ for i in range(net_size):
 for i in range(net_size):
     pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
 # highlight the node with maximum individual dependency
-pygame.draw.circle(screen, subgroup_color, nodes_disp[node_max], node_size, 0)
+# pygame.draw.circle(screen, subgroup_color, nodes_disp[node_max], node_size, 0)
 pygame.display.update()
 
-raw_input("Press the <ENTER> key to continue")
+# hold the program here to check the netwrok
+# raw_input("Press the <ENTER> key to continue")
 
 ############### the probabilistic convergence ###############
 
@@ -221,7 +228,11 @@ deci_dist = np.random.rand(net_size, deci_num)
 sum_temp = np.sum(deci_dist, axis=1)
 for i in range(net_size):
     deci_dist[i][:] = deci_dist[i][:] / sum_temp[i]
-# variable for the dominant decision for all nodes
+# calculate the average decision distribution
+mean_temp = np.mean(deci_dist, axis=0)
+avg_dist_sort = np.sort(mean_temp)[::-1]
+avg_dist_id_sort = np.argsort(mean_temp)[::-1]
+# the dominant decision of all nodes
 deci_domi = np.argmax(deci_dist, axis=1)
 # only adjacent block of nodes sharing same dominant decision belongs to same subgroup
 subgroups = []  # seperate lists of node indices for all subgroups
