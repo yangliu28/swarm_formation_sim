@@ -231,6 +231,8 @@ all_steps = [0 for i in range(repeat_times)]  # steps taken to converge for all 
 all_deci_orders = [0 for i in range(repeat_times)]  # the order of the final decisions
 for sim_index in range(repeat_times):  # repeat the simulation for these times
 
+    print("\n{}th simulation".format(sim_index))
+
     # variable for decision distribution of all individuals
     deci_dist = np.random.rand(net_size, deci_num)
     # normalize the random numbers such that the sum is 1.0
@@ -284,7 +286,8 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
     iter_count = 0
     time_now = pygame.time.get_ticks()  # return milliseconds
     time_last = time_now  # reset as right now
-    time_period = 100  # desired simulation period, will jump the delay if period overflow
+    time_period = 500  # simulation frequency control, will jump the delay if overflow
+    skip_speed_control = True  # if skip speed control, run as fast as it can
     while not sim_exit:
         # exit the program by close window button, or Esc or Q on keyboard
         for event in pygame.event.get():
@@ -472,14 +475,17 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
             fig.canvas.draw()
             fig.show()
 
-        # simulation updating frequency control
-        time_now = pygame.time.get_ticks()
-        time_past = time_now - time_last  # time past since last time_last
-        # needs to delay a bit more if time past has not reach desired period
-        # will skip if time is overdue
-        if time_now - time_last < time_period:
-            pygame.time.delay(time_period-time_past)
-        time_last = pygame.time.get_ticks()  # reset time-last
+        # simulation speed control
+        if not skip_speed_control:
+            # simulation updating frequency control
+            time_now = pygame.time.get_ticks()
+            time_past = time_now - time_last  # time past since last time_last
+            # needs to delay a bit more if time past has not reach desired period
+            # will skip if time is overdue
+            if time_now - time_last < time_period:
+                pygame.time.delay(time_period-time_past)
+            time_last = pygame.time.get_ticks()  # reset time-last
+
         # iteration count
         print "iteration {}".format(iter_count)
         iter_count = iter_count + 1
