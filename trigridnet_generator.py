@@ -1,18 +1,17 @@
-# random 2D network generator for robot swarm on 2D honeycomb grid
+# random 2D network generator for robot swarm on 2D equilateral triangle grid
 # the networks are connected in one piece, there is a path between any pair of nodes
 
-# Constraint of honeycomb grid guaranteed the robots are uniformed spaced, and 6 connections
-# at most for each robot. Robots will reside in the middle of each honeycomb grid cell, not
-# the corner points. The lines representing connections are drew perpendicular to the edges
-# of the hexagons.
+# Constraint of triangle grid guaranteed the robots are uniformed spaced, and 6 connections
+# at most for each robot. Robots will reside in the joint of edges, the edges represents the
+# connections between robots.
 
-# Honeycomb grid coordinates:
-# Position of a node on a 2D plane has two degrees of freedom. Following this rule, even three
-# intersecting axes can be drew on the honeycomb grid, only two are chosen as the coordinate
-# system. The two axes(randomly chosen) are angled at pi/3(or 2*pi/3), so it's like a warped 
-# coordinate system. The nodes can be located by drawing parallel lines to the two axes. This
-# system is very much like the Cartesian system, but warped and allowing more node connections.
-# The position of a node is similarly described as (x,y) in integers.
+# Equilateral triangle grid coordinates:
+# Position of a node on a 2D plane has two degrees of freedom. Following this rule, even
+# though three intersecting axes can be drew on the triangle grid, only two are chosen as
+# the coordinates. The chosen two axes are angled at pi/3, with x pointing right, and y
+# pointing pi/3 CCW relative to x, like a warped Cartesian coordinate system. The nodes can
+# be located by drawing parallel lines to the two aces. The position of a node is similarly
+# described as (x,y) in integers.
 
 # No topology duplication check:
 # It's possible that two generated networks having different grid layouts may share the same
@@ -75,7 +74,7 @@ def main():
                 connections[j][i] = 1
 
     # the network has been generated, save it to file
-    save_folder = 'honeycomb-networks'  # folder for saved honeycomb network
+    save_folder = 'trigrid-networks'  # folder for triangle grid network files
     save_path = os.path.join(os.getcwd(), save_folder)
     filename_count = 1  # always start to try filename with suffix of 1
     new_filename = str(size) + '-' + str(filename_count)
@@ -93,7 +92,7 @@ def main():
     # plot the network as dots and lines
     fig_side_size = int(math.sqrt(size)*0.7)  # calculate fig side size from network size
     fig = plt.figure(figsize=(fig_side_size, fig_side_size))  # square fig
-    fig.canvas.set_window_title('2D Honeycomb Network Generator')
+    fig.canvas.set_window_title('2D Triangle Grid Network Generator')
     splt = fig.add_subplot(1,1,1)
     splt.axis('equal')  # equal scale for x and y axis
     splt.tick_params(axis='both',
@@ -104,8 +103,8 @@ def main():
                      right='off',
                      labelbottom='off',
                      labelleft='off')  # turn off ticks and labels
-    # convert node positions from honeycomb coordinates to Cartesian coordinates, for plotting
-    nodes_t_plt = [honeycomb_to_cartesian(pos) for pos in nodes_t]
+    # convert node position from triangle grid to Cartesian, for plotting
+    nodes_t_plt = [trigrid_to_cartesian(pos) for pos in nodes_t]
     # set x and y axes limits
     xmin = min([pos[0] for pos in nodes_t_plt])
     xmax = max([pos[0] for pos in nodes_t_plt])
@@ -134,9 +133,9 @@ def main():
     plt.close(fig)
 
 
-# return the positions of the six neighbors of the input node on honeycomb grid
+# return the positions of the six neighbors of the input node on triangle grid
 # The first four neighbors are just like the situation in the Cartesian coordinates, the last
-# two neighbors are the two on the diagonal line along the y=-x axis, because the honeycomb
+# two neighbors are the two on the diagonal line along the y=-x axis, because the triangle
 # grid is like askewing the y axis toward x, allowing more space in second and fourth quadrants.
 def get_neighbors(pos):
     x = pos[0]
@@ -145,8 +144,8 @@ def get_neighbors(pos):
             (x, y+1), (x, y-1),
             (x+1, y-1), (x-1, y+1)]
 
-# return Cartesian coordinates of honeycomb grid nodes for plotting
-def honeycomb_to_cartesian(pos):
+# return Cartesian coordinates of triangle grid nodes for plotting
+def trigrid_to_cartesian(pos):
     # the resulting coordinates should be in floating point numbers
     x = float(pos[0])
     y = float(pos[1])

@@ -1,18 +1,18 @@
 # This simulation tests the probabilistic convergence algorithm (a collective decision
-# making algorithm) on randomly generated 2D honeycomb network. The algorithm is extracted
-# from previous loop reshape simulations for further testing, so that it can be generally
-# used on 2D random network topologies. The distribution evolution method is very similiar
-# except that more than three nodes are involved in the weighted averaging process.
+# making algorithm) on randomly generated 2D triangle grid network. The algorithm is
+# extracted from previous loop reshape simulations for further testing, so that it can be
+# generally used on 2D random network topologies. The distribution evolution method is very
+# similiar except that more than three nodes are involved in the weighted averaging process.
 
 # input arguments:
-# '-f': filename of the honeycomb network
+# '-f': filename of the triangle grid network
 # '-d': number of decisions each node can choose from
 
 # Pygame will be used to animate the dynamic subgroup changes in the network;
 # Matplotlib will be used to draw the unipolarity in a 3D bar graph, the whole decision
 # distribution is not necessary.
 
-# Algorithm to update the subgroups in 2D honeycomb network:
+# Algorithm to update the subgroups in 2D triangle grid network:
 # Using a pool of indices for nodes that have not been subgrouped, those labeled into a
 # subgroup will be remove from the pool. As long as the pool is not enpty, a while loop
 # will continue searching subgroups one by one. In the loop, it initialize a new subgroup
@@ -35,13 +35,13 @@
 import pygame
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from honeycomb_generator import *
+from trigridnet_generator import *
 from formation_functions import *
 import math, sys, os, getopt, time
 import numpy as np
 
-net_size = 30  # default size of the honeycomb network
-net_folder = 'honeycomb-networks'  # folder for all network files
+net_size = 30  # default size of the triangle grid network
+net_folder = 'trigrid-networks'  # folder for triangle grid network files
 net_filename = '30-1'  # default filename of the network file, if no input
 net_filepath = os.path.join(os.getcwd(), net_folder, net_filename)  # corresponding filepath
 
@@ -182,8 +182,8 @@ if calculate_h_dependency:
 # plot the network as dots and lines in pygame window
 pygame.init()  # initialize the pygame
 # find appropriate window size from current network
-# convert node positions from honeycomb coordinates to Cartesian coordinates, for plotting
-nodes_plt = np.array([honeycomb_to_cartesian(pos) for pos in nodes])
+# convert node positions from triangle grid to Cartesian, for plotting
+nodes_plt = np.array([trigrid_to_cartesian(pos) for pos in nodes])
 (xmin, ymin) = np.amin(nodes_plt, axis=0)
 (xmax, ymax) = np.amax(nodes_plt, axis=0)
 world_size = (xmax-xmin + 2.0, ymax-ymin + 2.0)  # extra length for clearance
@@ -200,7 +200,7 @@ node_size = 5  # node modeled as dot, number of pixels for radius
 icon = pygame.image.load("icon_geometry_art.jpg")
 pygame.display.set_icon(icon)
 screen = pygame.display.set_mode(screen_size)
-pygame.display.set_caption("Probabilistic Convergence of 2D Honeycomb Network")
+pygame.display.set_caption("Probabilistic Convergence of 2D Triangle Grid Network")
 
 # shift the node display positions to the middle of the window
 centroid_temp = np.mean(nodes_plt, axis=0)
@@ -268,7 +268,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
 
     # start the matplotlib window first before the simulation cycle
     fig = plt.figure()
-    fig.canvas.set_window_title('Unipolarity of 2D Honeycomb Network')
+    fig.canvas.set_window_title('Unipolarity of 2D Triangle Grid Network')
     ax = fig.add_subplot(111, projection='3d')
     x_pos = [pos[0] for pos in nodes_plt]  # the positions of the bars
     y_pos = [pos[1] for pos in nodes_plt]
