@@ -113,7 +113,7 @@ for i in range(net_size):
 
 # until here, the network information has been read and interpreted completely
 # calculate the "holistic dependency"
-calculate_h_dependency = True  # option for calculating holistic dependency
+calculate_h_dependency = False  # option for calculating holistic dependency
 # this computation takes significant time when net_size is above 50
 # the algorithm below has been optimized to the most efficient I can
 if calculate_h_dependency:
@@ -221,12 +221,12 @@ for i in range(net_size):
 for i in range(net_size):
     pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
 # highlight the node with maximum individual dependency
-pygame.draw.circle(screen, subgroup_color, nodes_disp[node_max], node_size, 0)
+# pygame.draw.circle(screen, subgroup_color, nodes_disp[node_max], node_size, 0)
 # pygame.draw.circle(screen, node_color, nodes_disp[node_max], node_size*2, 2)
 pygame.display.update()
 
 # hold the program here to check the netwrok
-raw_input("Press the <ENTER> key to continue")
+# raw_input("Press the <ENTER> key to continue")
 
 ############### the probabilistic convergence ###############
 
