@@ -186,7 +186,7 @@ pygame.init()  # initialize the pygame
 nodes_plt = np.array([trigrid_to_cartesian(pos) for pos in nodes])
 (xmin, ymin) = np.amin(nodes_plt, axis=0)
 (xmax, ymax) = np.amax(nodes_plt, axis=0)
-world_size = (xmax-xmin + 2.0, ymax-ymin + 2.0)  # extra length for clearance
+world_size = (xmax-xmin + 5.0, ymax-ymin + 2.0)  # extra length for clearance
 pixels_per_length = 50  # resolution for converting from world to display
 # display origin is at left top corner
 screen_size = (int(round(world_size[0] * pixels_per_length)),
@@ -208,6 +208,8 @@ nodes_plt = nodes_plt - centroid_temp + (world_size[0]/2.0, world_size[1]/2.0)
 nodes_disp = [world_to_display(nodes_plt[i], world_size, screen_size)
               for i in range(net_size)]
 
+# background_color = (255,255,255)
+# node_color = (0,0,0)
 # draw the network for the first time
 screen.fill(background_color)
 # draw the connecting lines
@@ -220,6 +222,7 @@ for i in range(net_size):
     pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
 # highlight the node with maximum individual dependency
 # pygame.draw.circle(screen, subgroup_color, nodes_disp[node_max], node_size, 0)
+# pygame.draw.circle(screen, node_color, nodes_disp[node_max], node_size*2, 2)
 pygame.display.update()
 
 # hold the program here to check the netwrok
