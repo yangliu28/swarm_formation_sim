@@ -27,9 +27,9 @@
 # of p_members.
 
 # 01/19/2018
-# Testing an invented concept called "holistic dependency", for measuring the degree of how
-# much partial nodes are being depended on than others for maintaining the network
-# connectivity in the holistic view. The final name of the concept may change.
+# Testing an invented concept called "holistic dependency", for measuring how much the most
+# depended node is being depended on more than others for maintaining the network connectivity
+# in the holistic view. The final name of the concept may change.
 
 
 import pygame
