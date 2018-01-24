@@ -128,7 +128,7 @@ def main():
     # show the figure, press to exit
     fig.show()
     # choose one of the following two lines
-    time.sleep(1)  # hold the figure for 1 sec and exit
+    time.sleep(0.5)  # hold the figure for 1 sec and exit
     # raw_input("<Press enter to close>")  # wait enter key command to exit
     plt.close(fig)
 
