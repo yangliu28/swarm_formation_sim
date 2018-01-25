@@ -2,15 +2,10 @@
 # First section is copied verbatim, algorithm tests are carried on in second section for the
 # preferability distribution evolution.
 
-# command line arguments formats:
-    # ex1: "gen_save initial_gen target_gen"
-        # ex1 will generate two formations, and save both to files.
-    # ex2: "gen_discard initial_gen target_read target_filename"
-        # ex2 will generate initial formation, and read target formation from file
-        # generated formation will be discarded
-    # ex3: "gen_save initial_read initial_filename target_gen"
-        # ex3 will read initial formation from file, and generate target formation
-        # generated target formation will be saved
+# arguments format:
+# '-i': filename of the initial loop formation; default is generate the initial formation
+# '-t': filename of the target loop formation; default is generate the target formation
+# '--gensave': option to all or none of the generated formations; default is discard
 
 # Revised algorithm in the second section:
 # New algorithm combines weighted averaging, linear multiplier and power function methods.
@@ -45,66 +40,32 @@ from formation_functions import *
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 
-import sys, os, math, random, time
+import sys, os, math, random, time, getopt
 import numpy as np
 
-# Read simulation options from passed arguments, the structure is:
-# 1st argument decides whether to save all or none of generated formations.
-    # 'gen_save' will save all generated formations, 'gen_discard' will discard them
-# 2nd argument decides whether initial formation is from random generation or file
-    # 'initial_gen' is for random generation, 'initial_read' is for read from file
-# If 2nd argument is 'initial_read', 3rd argument will be the filename for the formation
-# Next argument decides whether target formation is from random generation or file
-    # 'target_gen' is for random generation, 'target_read' is for read from file
-# If previous argument is 'target_read', next argument will be the corresponding filename.
-# All the formation data will be read from folder 'loop-data'.
-# Any generated formation will be saved as a file under folder 'loop-data'.
-save_opt = True  # variable indicating if need to save generated formations
-form_opts = [0,0]  # variable for the results parsed from arguments
-    # first value for initial formation, second for target
+# read simulation options from arguments
+gen_save = False  # indicating whether saving all or none generated formations
+form_opts = [0,0]  # indicating where the initial and target formation comes from
     # '0' for randomly generated
     # '1' for read from file
-form_files = [0,0]  # filename for the formation if read from file
-# following starts to read initial formation option
-# start with argv[1], argv[0] is for the filename of this script when run in command line
-save_option = sys.argv[1]
-if save_option == 'gen_save':
-    save_opt = True
-elif save_option == 'gen_discard':
-    save_opt = False
-else:
-    # unregognized argument for saving formations
-    print 'arg "{}" for saving generated formations is invalid'.format(save_option)
-initial_option = sys.argv[2]
-if initial_option == 'initial_gen':
-    form_opts[0] = 0
-elif initial_option == 'initial_read':
-    form_opts[0] = 1
-    # get the filename for the initial formation
-    form_files[0] = sys.argv[3]
-else:
-    # unrecognized argument for initial formation
-    print 'arg "{}" for initial formation is invalid'.format(initial_option)
+form_files = [0,0]  # filenames for the formations if read from file
+try:
+    opts, args = getopt.getopt(sys.argv[1:], 'i:t:', ['gensave'])
+except getopt.GetoptError as err:
+    print str(err)
     sys.exit()
-# continue to read target formation option
-target_option = 0
-if form_opts[0] == 0:
-    target_option = sys.argv[3]
-else:
-    target_option = sys.argv[4]
-if target_option == 'target_gen':
-    form_opts[1] = 0
-elif target_option == 'target_read':
-    form_opts[1] = 1
-    # get the filename for the target formation
-    if form_opts[0] == 0:
-        form_files[1] = sys.argv[4]
-    else:
-        form_files[1] = sys.argv[5]
-else:
-    # unregocnized argument for target formation
-    print 'arg "{}" for target formation is invalid'.format(target_option)
-    sys.exit()
+for opt,arg in opts:
+    if opt == '-i':
+        # read initial formation from file
+        form_opts[0] = 1
+        form_files[0] = arg  # get the filename of the initial formation
+    elif opt == '-t':
+        # read target formation from file
+        form_opts[1] = 1
+        form_files[1] = arg  # get the filename of the target formation
+    elif opt == '--gensave':
+        # save any generated formations
+        gen_save = True
 
 ########################### start of section 1 ###########################
 
@@ -245,7 +206,7 @@ for i in range(2):
                         print "target formation generated at trial {}".format(trial_count)
                     # print("successful!")
         # if here, a polygon has been successfully generated, save any new formation
-        if not save_opt: continue  # skip following if option is not to save it
+        if not gen_save: continue  # skip following if option is not to save it
         new_filename = get_date_time()
         new_filepath = os.path.join(os.getcwd(), loop_folder, new_filename)
         if os.path.isfile(new_filepath):

@@ -7,6 +7,8 @@
 # input arguments:
 # '-f': filename of the triangle grid network
 # '-d': number of decisions each node can choose from
+# '-r': repeat times of simulation, with different initial random distribution; default=0
+# '--nobargraph': skip the bar graph visualization
 
 # Pygame will be used to animate the dynamic subgroup changes in the network;
 # Matplotlib will be used to draw the unipolarity in a 3D bar graph, the whole decision

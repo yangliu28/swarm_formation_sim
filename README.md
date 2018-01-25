@@ -39,7 +39,7 @@ Loop formation simulation:
 
 Loop reshape simulation:
 
-`python loop_reshape_2_dynamic.py gen_discard initial_read 30-1 target_gen`
+`python loop_reshape_2_dynamic.py -i 30-5 -t 30-9`
 
 Probabilistic convergence algorithm simulation:
 
