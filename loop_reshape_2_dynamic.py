@@ -84,7 +84,7 @@ screen_size = (600, 800)  # width and height in pixels
     # top half for initial formation, bottom half for target formation
 background_color = (0,0,0)  # black background
 robot_color = (255,0,0)  # red for robot and the line segments
-robot_color_p = (255,153,153)  # robot color pink
+robot_color_yellow = (255,255,0)  # yellow for robot
 robot_size = 5  # robot modeled as dot, number of pixels for radius
 sub_thick = 3  # thickness of line segments for connections in the subgroups
 
@@ -655,7 +655,7 @@ while not sim_exit:
                                    bend_const * vect_in)
 
         # update one step of position
-        nodes[0][i] = nodes[0][i] + disp_coef * fb_vect[i]
+        # nodes[0][i] = nodes[0][i] + disp_coef * fb_vect[i]
 
     # use delay to slow down the physics update when bar graph animation is skpped
     # not clean buy quick way to adjust simulation speed
@@ -689,32 +689,34 @@ while not sim_exit:
         # graphics update for the pygame window
         screen.fill(background_color)
         for i in range(2):
-            # draw the nodes and line segments
+            # calculate the display pos for all nodes
             disp_pos = [[0,0] for j in range(poly_n)]
-            # calculate the display pos for all nodes, draw them as red dots
             for j in range(0, poly_n):
                 disp_pos[j] = world_to_display(nodes[i][j], world_size, screen_size)
-                pygame.draw.circle(screen, robot_color, disp_pos[j], robot_size, 0)
-            # draw an outer circle to mark the starting node
-            pygame.draw.circle(screen, robot_color, disp_pos[0], int(robot_size*1.5), 1)
+            # draw the connecting lines
             for j in range(poly_n-1):
                 pygame.draw.line(screen, robot_color, disp_pos[j], disp_pos[j+1])
             pygame.draw.line(screen, robot_color, disp_pos[poly_n-1], disp_pos[0])
-            # draw a thicker line if two neighbors are in same subgroup
-            if i == 1: continue  # skip subgroup visualization for target formation
-            for sub in subgroups:
-                for j in range(len(sub)-1):
-                    pair_l = sub[j]
-                    pair_r = sub[j+1]
-                    # use thick pink lines for connecitons in subgroups
-                    pygame.draw.line(screen, robot_color_p, disp_pos[pair_l],
-                                     disp_pos[pair_r], sub_thick)
-            if len(subgroups) == 1:
-                # draw extra segment for starting and end node
-                pair_l = subgroups[0][-1]
-                pair_r = subgroups[0][0]
-                pygame.draw.line(screen, robot_color_p, disp_pos[pair_l],
-                                 disp_pos[pair_r], sub_thick)
+            # highlight the subgroup connections
+            if i == 0:  # only do this for top formation
+                for sub in subgroups:
+                    for j in range(len(sub)-1):
+                        pair_l = sub[j]
+                        pair_r = sub[j+1]
+                        # use thick yellow lines for connecitons in subgroups
+                        pygame.draw.line(screen, robot_color_yellow, disp_pos[pair_l],
+                                         disp_pos[pair_r], sub_thick)
+                if len(subgroups) == 1:
+                    # draw extra segment for starting and end node
+                    pair_l = subgroups[0][-1]
+                    pair_r = subgroups[0][0]
+                    pygame.draw.line(screen, robot_color_yellow, disp_pos[pair_l],
+                                     disp_pos[pair_r], sub_thick)                
+            # draw all nodes as red dots
+            for j in range(0, poly_n):
+                pygame.draw.circle(screen, robot_color, disp_pos[j], robot_size, 0)
+            # draw an outer circle to mark the starting node
+            pygame.draw.circle(screen, robot_color, disp_pos[0], int(robot_size*1.5), 1)
         pygame.display.update()
 
 

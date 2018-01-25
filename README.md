@@ -12,7 +12,7 @@ All the formation control algorithms simulated here agree on a few conditions of
 
 *formation_functions.py* contains several frequeny used functions for the line and loop formations.
 
-*loop_reshape_1_static.py* is the static version of the loop reshape simulation. Several preliminary algorithms have been tested here, in order to achieve an usable swarm decision convergence. The finalized algorithm has been tested in the dynamic version of the loop reshape simulation.
+*loop_reshape_1_static.py* is the static version of the loop reshape simulation, focusing on the convergence of role assignment. Several tentative algorithms have been tested here. The finalized algorithms are actually in the dynamic version, so just skip this one.
 
 *loop_reshape_2_dynamic.py* is the dynamic version of the loop reshape simulation. A new weighted averaging method is implemented to tolerate the conflict between distribution convergence and better distribution unipolarity. A new SMA-inspired motion strategy is used for the physical motion control of the loop reshape process.
 
