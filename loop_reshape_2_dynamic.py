@@ -6,7 +6,7 @@
 # '-i': filename of the initial loop formation; default is generate the initial formation
 # '-t': filename of the target loop formation; default is generate the target formation
 # '--gensave': option to all or none of the generated formations; default is discard
-# '--nobargraph': option to skip the bar graph visualization
+# '--nobargraph': option to skip the bar graph visualization; default is with bargraph
 
 # Revised algorithm in the second section:
 # New algorithm combines weighted averaging, linear multiplier and power function methods.
@@ -84,7 +84,7 @@ screen_size = (600, 800)  # width and height in pixels
     # top half for initial formation, bottom half for target formation
 background_color = (0,0,0)  # black background
 robot_color = (255,0,0)  # red for robot and the line segments
-robot_color_p = (255,153,153)  # pink for the start robot
+robot_color_p = (255,153,153)  # robot color pink
 robot_size = 5  # robot modeled as dot, number of pixels for radius
 sub_thick = 3  # thickness of line segments for connections in the subgroups
 
@@ -364,17 +364,18 @@ for i in range(poly_n):
         # linearize all probabilities such that sum(pref_dist[i])=1
         pref_dist[i][j] = ang_diff[j]/ang_diff_sum
 
-# matplotlib method of bar graph animation
-# adjust figure and grid size here
-fig = plt.figure(figsize=(16,12), tight_layout=True)
-fig.canvas.set_window_title('Evolution of Preferability Distribution')
-gs = gridspec.GridSpec(5, 6)
-ax = [fig.add_subplot(gs[i]) for i in range(poly_n)]
-rects = []  # bar chart subplot rectangle handler
-x_pos = range(poly_n)
-for i in range(poly_n):
-    rects.append(ax[i].bar(x_pos, pref_dist[i], align='center'))
-    ax[i].set_xlim(-1, poly_n)  # y limit depends on data set
+if show_bargraph:
+    # matplotlib method of bar graph animation
+    # adjust figure and grid size here
+    fig = plt.figure(figsize=(16,12), tight_layout=True)
+    fig.canvas.set_window_title('Evolution of Preferability Distribution')
+    gs = gridspec.GridSpec(5, 6)
+    ax = [fig.add_subplot(gs[i]) for i in range(poly_n)]
+    rects = []  # bar chart subplot rectangle handler
+    x_pos = range(poly_n)
+    for i in range(poly_n):
+        rects.append(ax[i].bar(x_pos, pref_dist[i], align='center'))
+        ax[i].set_xlim(-1, poly_n)  # y limit depends on data set
 
 # the loop
 sim_exit = False  # simulation exit flag
