@@ -6,6 +6,7 @@
 # '-i': filename of the initial loop formation; default is generate the initial formation
 # '-t': filename of the target loop formation; default is generate the target formation
 # '--gensave': option to all or none of the generated formations; default is discard
+# '--nobargraph': option to skip the bar graph visualization
 
 # Revised algorithm in the second section:
 # New algorithm combines weighted averaging, linear multiplier and power function methods.
@@ -44,13 +45,14 @@ import sys, os, math, random, time, getopt
 import numpy as np
 
 # read simulation options from arguments
-gen_save = False  # indicating whether saving all or none generated formations
 form_opts = [0,0]  # indicating where the initial and target formation comes from
     # '0' for randomly generated
     # '1' for read from file
 form_files = [0,0]  # filenames for the formations if read from file
+gen_save = False  # whether saving all or none generated formations
+show_bargraph = True  # whether showing bargraphs of the preference distributions
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'i:t:', ['gensave'])
+    opts, args = getopt.getopt(sys.argv[1:], 'i:t:', ['gensave','nobargraph'])
 except getopt.GetoptError as err:
     print str(err)
     sys.exit()
@@ -66,6 +68,8 @@ for opt,arg in opts:
     elif opt == '--gensave':
         # save any generated formations
         gen_save = True
+    elif opt == '--nobargraph':
+        show_bargraph = False
 
 ########################### start of section 1 ###########################
 
@@ -653,8 +657,8 @@ while not sim_exit:
         nodes[0][i] = nodes[0][i] + disp_coef * fb_vect[i]
 
     # use delay to slow down the physics update when bar graph animation is skpped
-    # not clean buy quick way to adjust simulation pace
-    time.sleep(0.2)  # unit in second
+    # not clean buy quick way to adjust simulation speed
+    time.sleep(0.2)  # in second
 
     # iteration count update
     print("iteration count {}".format(iter_count))
@@ -662,24 +666,24 @@ while not sim_exit:
 
     # graphics update
     if iter_count%graph_iters == 0:
-        
-        # # comment this block if bar graph animation is not needed
-        # # graphics update for the bar graph
-        # # find the largest y data in all distributions as up limit in graphs
-        # y_lim = 0.0
-        # for i in range(poly_n):
-        #     for j in range(poly_n):
-        #         if pref_dist[i][j] > y_lim:
-        #             y_lim = pref_dist[i][j]
-        # y_lim = min(1.0, y_lim*1.1)  # leave some gap
-        # # matplotlib method
-        # for i in range(poly_n):
-        #     for j in range(poly_n):
-        #         rects[i][j].set_height(pref_dist[i][j])
-        #         ax[i].set_title('{} -> {} -> {:.2f}'.format(i, sub_size[i], dist_diff_ratio[i]))
-        #         ax[i].set_ylim(0.0, y_lim)
-        # fig.canvas.draw()
-        # fig.show()
+
+        if show_bargraph:
+            # graphics update for the bar graph
+            # find the largest y data in all distributions as up limit in graphs
+            y_lim = 0.0
+            for i in range(poly_n):
+                for j in range(poly_n):
+                    if pref_dist[i][j] > y_lim:
+                        y_lim = pref_dist[i][j]
+            y_lim = min(1.0, y_lim*1.1)  # leave some gap
+            # matplotlib method
+            for i in range(poly_n):
+                for j in range(poly_n):
+                    rects[i][j].set_height(pref_dist[i][j])
+                    ax[i].set_title('{} -> {} -> {:.2f}'.format(i, sub_size[i], dist_diff_ratio[i]))
+                    ax[i].set_ylim(0.0, y_lim)
+            fig.canvas.draw()
+            fig.show()
 
         # graphics update for the pygame window
         screen.fill(background_color)

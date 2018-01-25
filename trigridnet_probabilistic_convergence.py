@@ -292,7 +292,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
     time_now = pygame.time.get_ticks()  # return milliseconds
     time_last = time_now  # reset as right now
     time_period = 500  # simulation frequency control, will jump the delay if overflow
-    skip_speed_control = True  # if skip speed control, run as fast as it can
+    skip_speed_control = False  # if skip speed control, run as fast as it can
     while not sim_exit:
         # exit the program by close window button, or Esc or Q on keyboard
         for event in pygame.event.get():

@@ -39,11 +39,11 @@ Loop formation simulation:
 
 Loop reshape simulation:
 
-`python loop_reshape_2_dynamic.py -i 30-5 -t 30-9`
+`python loop_reshape_2_dynamic.py -i 30-5 -t 30-9 --nobargraph`
 
 Probabilistic convergence algorithm simulation:
 
-`python trigridnet_probabilistic_convergence.py -f 50-3 -d 30 -r 100 --nobargraph`
+`python trigridnet_probabilistic_convergence.py -f 50-3 -d 30 --nobargraph`
 
 ## License
 See the [LICENSE](LICENSE.md) file for license rights and limitations (MIT).
