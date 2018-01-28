@@ -193,10 +193,13 @@ pixels_per_length = 50  # resolution for converting from world to display
 # display origin is at left top corner
 screen_size = (int(round(world_size[0] * pixels_per_length)),
                int(round(world_size[1] * pixels_per_length)))
-background_color = (0,0,0)
-node_color = (255,0,0)  # red for nodes as dots
-connection_color = (0,0,255)  # blue for regular connecting lines
-subgroup_color = (255,255,0)  # yellow for connecting lines in the subgroups
+color_white = (255,255,255)
+color_black = (0,0,0)
+color_distinct = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
+    (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
+    (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
+    (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
+
 node_size = 5  # node modeled as dot, number of pixels for radius
 # set up the simulation window and surface object
 icon = pygame.image.load("icon_geometry_art.jpg")
@@ -210,21 +213,18 @@ nodes_plt = nodes_plt - centroid_temp + (world_size[0]/2.0, world_size[1]/2.0)
 nodes_disp = [world_to_display(nodes_plt[i], world_size, screen_size)
               for i in range(net_size)]
 
-# background_color = (255,255,255)
-# node_color = (0,0,0)
 # draw the network for the first time
-screen.fill(background_color)
+screen.fill(color_white)  # fill the background
 # draw the connecting lines
 for i in range(net_size):
     for j in range(i+1, net_size):
         if connections[i][j]:
-            pygame.draw.line(screen, node_color, nodes_disp[i], nodes_disp[j])
+            pygame.draw.line(screen, color_black, nodes_disp[i], nodes_disp[j])
 # draw the nodes as dots
 for i in range(net_size):
-    pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
+    pygame.draw.circle(screen, color_black, nodes_disp[i], node_size, 0)
 # highlight the node with maximum individual dependency
-# pygame.draw.circle(screen, subgroup_color, nodes_disp[node_max], node_size, 0)
-# pygame.draw.circle(screen, node_color, nodes_disp[node_max], node_size*2, 2)
+# pygame.draw.circle(screen, color_black, nodes_disp[node_max], node_size*2, 2)
 pygame.display.update()
 
 # hold the program here to check the netwrok
@@ -450,13 +450,13 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
 
         # graphics animation, both pygame window and matplotlib window
         # 1.pygame window for dynamics of network's subgroups
-        screen.fill(background_color)
+        screen.fill(color_white)
         # draw the regualr connecting lines
         for i in range(net_size):
             for j in range(i+1, net_size):
                 if connections[i][j]:
-                    pygame.draw.line(screen, connection_color,
-                                     nodes_disp[i], nodes_disp[j], 3)
+                    pygame.draw.line(screen, color_black,
+                                     nodes_disp[i], nodes_disp[j])
         # draw the connecting lines marking subgroups
         for sub in subgroups:
             sub_len = len(sub)
@@ -467,11 +467,11 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                     # check if two nodes in one subgroup is connected
                     if connections[i_node][j_node]:
                         # wider lines for subgroup connections
-                        pygame.draw.line(screen, subgroup_color,
+                        pygame.draw.line(screen, color_black,
                                          nodes_disp[i_node], nodes_disp[j_node], 3)
         # draw the nodes as dots
         for i in range(net_size):
-            pygame.draw.circle(screen, node_color, nodes_disp[i], node_size, 0)
+            pygame.draw.circle(screen, color_black, nodes_disp[i], node_size, 0)
         pygame.display.update()
         # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
         if not nobargraph:

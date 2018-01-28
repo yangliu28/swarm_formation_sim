@@ -88,6 +88,11 @@ robot_color_yellow = (255,255,0)  # yellow for robot
 robot_size = 5  # robot modeled as dot, number of pixels for radius
 sub_thick = 3  # thickness of line segments for connections in the subgroups
 
+background_color = (255,255,255)
+robot_color = (0,0,0)
+robot_color_yellow = (0,0,0)
+sub_thick = 4
+
 # set up the simulation window and surface object
 icon = pygame.image.load("icon_geometry_art.jpg")
 pygame.display.set_icon(icon)
@@ -719,4 +724,4 @@ while not sim_exit:
             pygame.draw.circle(screen, robot_color, disp_pos[0], int(robot_size*1.5), 1)
         pygame.display.update()
 
-
+    raw_input("<Press Enter to continue>")
