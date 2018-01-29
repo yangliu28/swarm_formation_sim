@@ -14,9 +14,9 @@
 # resulting distribution can be very poor), a revised weighted averaging method was
 # implemented here to ensure as much convergence as possible. Each node is given a new
 # piece of information, that is how many nodes in the adjacent block agree on which target
-# node they should be. (This adjacent block is referred as a subgroup.) This information
-# will help to resolve any conflict on the boundary of two subgroups. And ideally, the
-# subgroup with higher number of nodes should win. With this conflict resolving mechanism,
+# node they should be. (This adjacent block is referred as a group.) This information
+# will help to resolve any conflict on the boundary of two groups. And ideally, the
+# group with higher number of nodes should win. With this conflict resolving mechanism,
 # the linear multiplier method is used to improve the unipolarity of the distributions. This
 # method has similar effect of previous power function method with bigger than 1 exponent,
 # but in a slower and constant growing rate. The linear multiplier is only used when two
@@ -82,16 +82,12 @@ loop_folder = 'loop-data'
 # parameters for display, window origin is at left up corner
 screen_size = (600, 800)  # width and height in pixels
     # top half for initial formation, bottom half for target formation
-background_color = (0,0,0)  # black background
-robot_color = (255,0,0)  # red for robot and the line segments
-robot_color_yellow = (255,255,0)  # yellow for robot
-robot_size = 5  # robot modeled as dot, number of pixels for radius
-sub_thick = 3  # thickness of line segments for connections in the subgroups
+color_black = (0,0,0)
+color_white = (255,255,255)
 
-background_color = (255,255,255)
-robot_color = (0,0,0)
-robot_color_yellow = (0,0,0)
-sub_thick = 4
+
+robot_size = 5  # robot modeled as dot, number of pixels for radius
+group_line_wid = 4  # width of the connecting lines in the group
 
 # set up the simulation window and surface object
 icon = pygame.image.load("icon_geometry_art.jpg")
@@ -288,20 +284,20 @@ for i in range(2):
         nodes[i,:,1] = nodes[i,:,1] - geometry_center[1] + world_size[1]/4
 
 # draw the two polygons
-screen.fill(background_color)
+screen.fill(color_white)
 for i in range(2):
     # draw the nodes and line segments
     disp_pos = [[0,0] for j in range(poly_n)]
     # calculate the display pos for all nodes, draw them as red dots
     for j in range(0, poly_n):
         disp_pos[j] = world_to_display(nodes[i][j], world_size, screen_size)
-        pygame.draw.circle(screen, robot_color, disp_pos[j], robot_size, 0)
+        pygame.draw.circle(screen, color_black, disp_pos[j], robot_size, 0)
     # draw an outer circle to mark the starting node
-    pygame.draw.circle(screen, robot_color, disp_pos[0], int(robot_size*1.5), 1)
+    pygame.draw.circle(screen, color_black, disp_pos[0], int(robot_size*1.5), 1)
     # line segments for connecitons on the loop
     for j in range(poly_n-1):
-        pygame.draw.line(screen, robot_color, disp_pos[j], disp_pos[j+1])
-    pygame.draw.line(screen, robot_color, disp_pos[poly_n-1], disp_pos[0])
+        pygame.draw.line(screen, color_black, disp_pos[j], disp_pos[j+1])
+    pygame.draw.line(screen, color_black, disp_pos[poly_n-1], disp_pos[0])
 pygame.display.update()
 
 ########################### start of section 2 ###########################
@@ -335,11 +331,11 @@ pref_dist = np.zeros((poly_n, poly_n))
 # variable indicating which target node has largest probability in the distributions
 # this also represents which node it mostly prefers
 domi_node = [0 for i in range(poly_n)]  # dominant node in the distributions
-# divide nodes on loop to subgroups based on dominant node
-# only adjacent block of nodes are in same subgroup if they agree on dominant node
-subgroups = []  # lists of adjacent nodes inside
-# variable indicating how many nodes are there in the same subgroup with host node
-sub_size = []  # size of the subgroup the host node is in
+# divide nodes on loop to groups based on dominant node
+# only adjacent block of nodes are in same group if they agree on dominant node
+groups = []  # lists of adjacent nodes inside
+# variable indicating how many nodes are there in the same group with host node
+group_sizes = []  # size of the group the host node is in
 # overflow threshold for the distribution difference
 dist_diff_thres = 0.3
 # variable for ratio of distribution difference to threshold, for tuning growing rate
@@ -411,27 +407,27 @@ while not sim_exit:
                 domi_node_t = j
                 domi_prob_t = pref_dist[i][j]
         domi_node[i] = domi_node_t
-    # update the subgroups
-    subgroups = [[0]]  # initialize with a node 0 robot
+    # update the groups
+    groups = [[0]]  # initialize with a node 0 robot
     for i in range(1, poly_n):
         if (domi_node[i-1]+1)%poly_n == domi_node[i]:  # i-1 and i agree on dominant node
             # simply add i to same group with i-1
-            subgroups[-1].append(i)
+            groups[-1].append(i)
         else:
-            # add a new group for node i in subgroups
-            subgroups.append([i])
-    # check if starting and ending robots should be in same subgroups
-    if (domi_node[poly_n-1]+1)%poly_n == domi_node[0] and len(subgroups)>1:
-        # add the first subgroup to the last subgroup
-        for i in subgroups[0]:
-            subgroups[-1].append(i)
-        subgroups.pop(0)  # pop out the first subgroup
-    # update subgroup size
-    sub_size = [0 for i in range(poly_n)]  # initialize with all 0
-    for sub in subgroups:
-        sub_size_t = len(sub)
-        for i in sub:
-            sub_size[i] = sub_size_t
+            # add a new group for node i in groups
+            groups.append([i])
+    # check if starting and ending robots should be in same groups
+    if (domi_node[poly_n-1]+1)%poly_n == domi_node[0] and len(groups)>1:
+        # add the first group to the last group
+        for i in groups[0]:
+            groups[-1].append(i)
+        groups.pop(0)  # pop out the first group
+    # update group size
+    group_sizes = [0 for i in range(poly_n)]  # initialize with all 0
+    for group in groups:
+        group_size_t = len(group)
+        for i in group:
+            group_sizes[i] = group_size_t
 
     # preferability distribution evolution
     pref_dist_t = np.copy(pref_dist)  # deep copy the 'pref_dist', intermediate variable
@@ -452,8 +448,8 @@ while not sim_exit:
         if (domi_node[i_l]+1)%poly_n == domi_node[i]: converge_l = True
         converge_r = False
         if (domi_node[i_r]-1)%poly_n == domi_node[i]: converge_r = True
-        # weighted averaging depending on subgroup property
-        if converge_l and converge_r:  # all three neighbors are in the same subgroup
+        # weighted averaging depending on group property
+        if converge_l and converge_r:  # all three neighbors are in the same group
             # step 1: take equal weighted average on all three distributions
             dist_sum = 0
             for j in range(poly_n):
@@ -512,15 +508,15 @@ while not sim_exit:
                 dist_diff_ratio[i] = 1.0  # for debugging, ratio overflowed
         else:  # at least one side has not converged yet
             dist_diff_ratio[i] = -1.0  # indicating linear multiplier was not used
-            # take unequal weight in the averaging process based on subgroup property
-            sub_size_l = sub_size[i_l]
-            sub_size_r = sub_size[i_r]
+            # take unequal weight in the averaging process based on group property
+            group_size_l = group_sizes[i_l]
+            group_size_r = group_sizes[i_r]
             # taking the weighted average
             dist_sum = 0
             for j in range(poly_n):
-                # weight on left is sub_size_l, on host is 1, on right is sub_size_r
-                pref_dist[i][j] = (dist_l[j]*sub_size_l + pref_dist[i][j] +
-                                   dist_r[j]*sub_size_r)
+                # weight on left is group_size_l, on host is 1, on right is group_size_r
+                pref_dist[i][j] = (dist_l[j]*group_size_l + pref_dist[i][j] +
+                                   dist_r[j]*group_size_r)
                 dist_sum = dist_sum + pref_dist[i][j]
             pref_dist[i] = pref_dist[i]/dist_sum
 
@@ -658,9 +654,8 @@ while not sim_exit:
         # add the bending effect initialized by the host node itself
         fb_vect[i] = fb_vect[i] + ((inter_targ[domi_node[i]]-inter_curr[i])*
                                    bend_const * vect_in)
-
-        # update one step of position
-        # nodes[0][i] = nodes[0][i] + disp_coef * fb_vect[i]
+        # update positions once, comment below if wishing to see the decision process only
+        nodes[0][i] = nodes[0][i] + disp_coef * fb_vect[i]
 
     # use delay to slow down the physics update when bar graph animation is skpped
     # not clean buy quick way to adjust simulation speed
@@ -686,13 +681,13 @@ while not sim_exit:
             for i in range(poly_n):
                 for j in range(poly_n):
                     rects[i][j].set_height(pref_dist[i][j])
-                    ax[i].set_title('{} -> {} -> {:.2f}'.format(i, sub_size[i], dist_diff_ratio[i]))
+                    ax[i].set_title('{} -> {} -> {:.2f}'.format(i, group_sizes[i], dist_diff_ratio[i]))
                     ax[i].set_ylim(0.0, y_lim)
             fig.canvas.draw()
             fig.show()
 
         # graphics update for the pygame window
-        screen.fill(background_color)
+        screen.fill(color_white)
         for i in range(2):
             # calculate the display pos for all nodes
             disp_pos = [[0,0] for j in range(poly_n)]
@@ -700,28 +695,29 @@ while not sim_exit:
                 disp_pos[j] = world_to_display(nodes[i][j], world_size, screen_size)
             # draw the connecting lines
             for j in range(poly_n-1):
-                pygame.draw.line(screen, robot_color, disp_pos[j], disp_pos[j+1])
-            pygame.draw.line(screen, robot_color, disp_pos[poly_n-1], disp_pos[0])
-            # highlight the subgroup connections
+                pygame.draw.line(screen, color_black, disp_pos[j], disp_pos[j+1])
+            pygame.draw.line(screen, color_black, disp_pos[poly_n-1], disp_pos[0])
+            # highlight the group connections
             if i == 0:  # only do this for top formation
-                for sub in subgroups:
-                    for j in range(len(sub)-1):
-                        pair_l = sub[j]
-                        pair_r = sub[j+1]
-                        # use thick yellow lines for connecitons in subgroups
-                        pygame.draw.line(screen, robot_color_yellow, disp_pos[pair_l],
-                                         disp_pos[pair_r], sub_thick)
-                if len(subgroups) == 1:
+                for group in groups:
+                    for j in range(len(group)-1):
+                        pair_l = group[j]
+                        pair_r = group[j+1]
+                        # use thick yellow lines for connecitons in groups
+                        pygame.draw.line(screen, color_black, disp_pos[pair_l],
+                                         disp_pos[pair_r], group_line_wid)
+                if len(groups) == 1:
                     # draw extra segment for starting and end node
-                    pair_l = subgroups[0][-1]
-                    pair_r = subgroups[0][0]
-                    pygame.draw.line(screen, robot_color_yellow, disp_pos[pair_l],
-                                     disp_pos[pair_r], sub_thick)                
+                    pair_l = groups[0][-1]
+                    pair_r = groups[0][0]
+                    pygame.draw.line(screen, color_black, disp_pos[pair_l],
+                                     disp_pos[pair_r], group_line_wid)
             # draw all nodes as red dots
             for j in range(0, poly_n):
-                pygame.draw.circle(screen, robot_color, disp_pos[j], robot_size, 0)
+                pygame.draw.circle(screen, color_black, disp_pos[j], robot_size, 0)
             # draw an outer circle to mark the starting node
-            pygame.draw.circle(screen, robot_color, disp_pos[0], int(robot_size*1.5), 1)
+            pygame.draw.circle(screen, color_black, disp_pos[0], int(robot_size*1.5), 1)
         pygame.display.update()
 
-    raw_input("<Press Enter to continue>")
+    # hold the program to check the networks
+    # raw_input("<Press Enter to continue>")

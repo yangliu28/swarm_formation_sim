@@ -202,11 +202,12 @@ screen_size = (int(round(world_size[0] * pixels_per_length)),
 color_white = (255,255,255)
 color_black = (0,0,0)
 # a set of 20 distinct colors (black and white excluded)
-color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
+distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
     (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
     (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
 node_size = 5  # node modeled as dot, number of pixels for radius
+group_line_width = 4  # width of the connecting lines inside the groups
 # set up the simulation window and surface object
 icon = pygame.image.load("icon_geometry_art.jpg")
 pygame.display.set_icon(icon)
@@ -520,11 +521,12 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                     # check if two nodes in one group is connected
                     if connections[j_node][k_node]:
                         # wider lines for group connections
-                        pygame.draw.line(screen, color_set[group_colors[i]],
-                                         nodes_disp[j_node], nodes_disp[k_node], 3)
+                        pygame.draw.line(screen, distinct_color_set[group_colors[i]],
+                            nodes_disp[j_node], nodes_disp[k_node], group_line_width)
         # draw the nodes as dots
         for i in range(net_size):
-            pygame.draw.circle(screen, color_set[node_colors[i]], nodes_disp[i], node_size, 0)
+            pygame.draw.circle(screen, distinct_color_set[node_colors[i]],
+                nodes_disp[i], node_size, 0)
         pygame.display.update()
         # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
         if not nobargraph:
