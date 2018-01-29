@@ -444,9 +444,9 @@ while not sim_exit:
             group_sizes[i] = group_size_t
     # update the exhibited decision for the groups
     for i in range(len(groups)):
-        group_deci[i] = (domi_node[groups[i][0]] - groups[i][0]) % poly_n
+        group_deci.append((domi_node[groups[i][0]] - groups[i][0]) % poly_n)
 
-    # update colors for the exhibited decisions, groups, and nodes
+    # update colors for the exhibited decisions
     if not color_initialized:
         color_initialized = True
         select_set = range(20)  # the initial selecting set
@@ -473,8 +473,26 @@ while not sim_exit:
         for i in range(len(groups)):
             if deci_colors[group_deci[i]] == -1:
                 if len(select_set) == 0:
-                    # construct a new select_set 
-
+                    # construct a new select_set
+                    color_assigns_min = min(color_assigns)
+                    color_assigns_temp = [j - color_assigns_min for j in color_assigns]
+                    select_set = range(20)
+                    for j in range(20):
+                        if color_assigns_temp[j] != 0:
+                            select_set.remove(j)
+                # if here, the select_set is good to go
+                chosen_color = np.random.choice(select_set)
+                select_set.remove(chosen_color)
+                deci_colors[group_deci[i]] = chosen_color  # assign the chosen color
+                # increase the assignments of chosen color by 1
+                color_assigns[chosen_color] = color_assigns[chosen_color] + 1
+    # update the color for the groups and nodes
+    group_colors = []
+    for i in range(len(groups)):
+        color_temp = deci_colors[group_deci[i]]
+        group_colors.append(color_temp)  # color for the group
+        for node in groups[i]:
+            node_colors[node] = color_temp  # color for the node
 
     # preferability distribution evolution
     pref_dist_t = np.copy(pref_dist)  # deep copy the 'pref_dist', intermediate variable
@@ -744,24 +762,29 @@ while not sim_exit:
             for j in range(poly_n-1):
                 pygame.draw.line(screen, color_black, disp_pos[j], disp_pos[j+1])
             pygame.draw.line(screen, color_black, disp_pos[poly_n-1], disp_pos[0])
-            # highlight the group connections
-            if i == 0:  # only do this for top formation
-                for group in groups:
-                    for j in range(len(group)-1):
-                        pair_l = group[j]
-                        pair_r = group[j+1]
-                        # use thick yellow lines for connecitons in groups
-                        pygame.draw.line(screen, color_black, disp_pos[pair_l],
-                                         disp_pos[pair_r], group_line_wid)
+            # draw the group connections and nodes for top and bottom formations
+            if i == 0:  # for top formation
+                # highlight the group connections
+                for j in range(len(groups)):
+                    for k in range(len(groups[j])-1):
+                        pair_l = groups[j][k]
+                        pair_r = groups[j][k+1]
+                        pygame.draw.line(screen, distinct_color_set[group_colors[j]],
+                            disp_pos[pair_l], disp_pos[pair_r], group_line_wid)
                 if len(groups) == 1:
                     # draw extra segment for starting and end node
                     pair_l = groups[0][-1]
                     pair_r = groups[0][0]
-                    pygame.draw.line(screen, color_black, disp_pos[pair_l],
-                                     disp_pos[pair_r], group_line_wid)
-            # draw all nodes as red dots
-            for j in range(0, poly_n):
-                pygame.draw.circle(screen, color_black, disp_pos[j], robot_size, 0)
+                    pygame.draw.line(screen, distinct_color_set[group_colors[0]],
+                        disp_pos[pair_l], disp_pos[pair_r], group_line_wid)
+                # draw all nodes as their group colors
+                for j in range(poly_n):
+                    pygame.draw.circle(screen, distinct_color_set[node_colors[j]],
+                        disp_pos[j], robot_size, 0)
+            else:  # for bottom formation
+                # draw all nodes as black dots
+                for j in range(poly_n):
+                    pygame.draw.circle(screen, color_black, disp_pos[j], robot_size, 0)
             # draw an outer circle to mark the starting node
             pygame.draw.circle(screen, color_black, disp_pos[0], int(robot_size*1.5), 1)
         pygame.display.update()

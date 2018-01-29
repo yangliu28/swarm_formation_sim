@@ -395,7 +395,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
             for i in range(len(groups)):
                 if deci_colors[group_deci[i]] == -1:
                     if len(select_set) == 0:
-                        # construct the new select_set
+                        # construct a new select_set
                         color_assigns_min = min(color_assigns)
                         color_assigns_temp = [j - color_assigns_min for j in color_assigns]
                         select_set = range(20)
