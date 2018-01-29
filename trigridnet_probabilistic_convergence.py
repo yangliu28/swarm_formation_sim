@@ -262,6 +262,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
     color_initialized = False  # whether the color assignment has been done for the first time
     deci_colors = [-1 for i in range(deci_num)]  # color index for each exhibited decision
         # -1 for not assigned
+    color_assigns = [0 for i in range(20)]  # number of assignments for each color
     group_colors = []  # color for the groups
     node_colors = [0 for i in range(net_size)]  # color for the nodes
     # Difference of two distributions is the sum of absolute values of differences
@@ -326,7 +327,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
 
         # 2.update the groups
         groups = []  # empty the group container
-        group_deci = []  # the dominant decision for the groups
+        group_deci = []  # the exhibited decision of the groups
         # a diminishing global pool for node indices, for nodes not yet assigned into groups
         n_pool = range(net_size)
         # start searching groups one by one from the global node pool
@@ -365,23 +366,59 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                     p_index = p_index + 1  # shift right one position
             # all connected members for this group have been located
             groups.append(group_temp)  # append the new group
-            
-        # update the group color
+            group_deci.append(deci_domi[first_member])  # append new group's exhibited decision
+        # update the colors for the exhibited decisions
         if not color_initialized:
             color_initialized = True
+            select_set = range(20)  # the initial selecting set
+            all_deci_set = set(group_deci)  # put all exhibited decisions in a set
+            for deci in all_deci_set:  # avoid checking duplicate decisions
+                if len(select_set) == 0:
+                    select_set = range(20)  # start a new set to select from
+                chosen_color = np.random.choice(select_set)
+                select_set.remove(chosen_color)
+                deci_colors[deci] = chosen_color  # assign the chosen color to decision
+                # increase the asssignments of chosen color by 1
+                color_assigns[chosen_color] = color_assigns[chosen_color] + 1
+        else:
+            # remove the color for a decision, if it's no longer the decision of any group
+            all_deci_set = set(group_deci)
+            for i in range(deci_num):
+                if deci_colors[i] != -1:  # there was a color assigned before
+                    if i not in all_deci_set:
+                        # decrease the assignments of chosen color by 1
+                        color_assigns[deci_colors[i]] = color_assigns[deci_colors[i]] - 1
+                        deci_colors[i] = -1  # remove the assigned color
+            # assign color for an exhibited decision if not assigned
+            select_set = []  # set of colors to select from, start from empty
+            for i in range(len(groups)):
+                if deci_colors[group_deci[i]] == -1:
+                    if len(select_set) == 0:
+                        # construct the new select_set
+                        color_assigns_min = min(color_assigns)
+                        color_assigns_temp = [i - color_assigns_min for i in color_assigns]
+                        select_set = range(20)
+                        for j in range(20):
+                            if color_assigns_temp[j] != 0:
+                                select_set.remove(j)
+                    # if here, the select_set is good to go
+                    chosen_color = np.random.choice(select_set)
+                    select_set.remove(chosen_color)
+                    deci_colors[group_deci[i]] = chosen_color  # assign the chosen color
+                    # increase the assignments of chosen color by 1
+                    color_assigns[chosen_color] = color_assigns[chosen_color] + 1
+        # update the colors for the groups
+        group_colors = []
+        for i in range(len(groups)):
+            group_colors.append(deci_colors[group_deci[i]])
 
-
-        # 3.update the group size for each node it is in
-        traverse_list = range(net_size)  # remove when debugged
-             # used to check if all nodes have been assigned a group size
-        for group in groups:
-            size_temp = len(group)
-            for i in group:
-                group_sizes[i] = size_temp
-                traverse_list.remove(i)
-        if len(traverse_list) != 0:
-            print("group sizes check error")
-            sys.exit()
+        # 3.update the group size for each node
+        for i in range(len(groups)):
+            size_temp = len(groups[i])
+            color_temp = group_colors[i]
+            for node in groups[i]:
+                group_sizes[node] = size_temp
+                node_colors[node] = color_temp  # update the color for each node
 
         # the decision distribution evolution
         converged_all = True  # flag for convergence of entire network
@@ -473,21 +510,21 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                 if connections[i][j]:
                     pygame.draw.line(screen, color_black,
                                      nodes_disp[i], nodes_disp[j])
-        # draw the connecting lines marking groups
-        for group in groups:
-            group_len = len(group)
-            for i in range(group_len):
-                for j in range(i+1, group_len):
-                    i_node = group[i]
-                    j_node = group[j]
+        # draw the connecting lines marking the groups
+        for i in range(len(groups)):
+            group_len = len(groups[i])
+            for j in range(group_len):
+                for k in range(i+1, group_len):
+                    j_node = groups[i][j]
+                    k_node = groups[i][k]
                     # check if two nodes in one group is connected
-                    if connections[i_node][j_node]:
+                    if connections[j_node][k_node]:
                         # wider lines for group connections
-                        pygame.draw.line(screen, color_black,
-                                         nodes_disp[i_node], nodes_disp[j_node], 3)
+                        pygame.draw.line(screen, color_set[group_colors[i]],
+                                         nodes_disp[j_node], nodes_disp[k_node], 3)
         # draw the nodes as dots
         for i in range(net_size):
-            pygame.draw.circle(screen, color_black, nodes_disp[i], node_size, 0)
+            pygame.draw.circle(screen, color_set[node_colors[i]], nodes_disp[i], node_size, 0)
         pygame.display.update()
         # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
         if not nobargraph:
