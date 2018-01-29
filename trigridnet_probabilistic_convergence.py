@@ -10,28 +10,34 @@
 # '-r': repeat times of simulation, with different initial random distribution; default=0
 # '--nobargraph': option to skip the bar graph visualization
 
-# Pygame will be used to animate the dynamic subgroup changes in the network;
+# Pygame will be used to animate the dynamic group changes in the network;
 # Matplotlib will be used to draw the unipolarity in a 3D bar graph, the whole decision
 # distribution is not necessary.
 
-# Algorithm to update the subgroups in 2D triangle grid network:
-# Using a pool of indices for nodes that have not been subgrouped, those labeled into a
-# subgroup will be remove from the pool. As long as the pool is not enpty, a while loop
-# will continue searching subgroups one by one. In the loop, it initialize a new subgroup
+# Algorithm to update the groups in 2D triangle grid network:
+# Using a pool of indices for nodes that have not been grouped, those labeled into a
+# group will be remove from the pool. As long as the pool is not enpty, a while loop
+# will continue searching groups one by one. In the loop, it initialize a new group
 # with first node in the pool. It also initialize a fifo-like variable(p_members) for
-# potential members of this subgroup, and an index variable(p_index) for iterating through
+# potential members of this group, and an index variable(p_index) for iterating through
 # the potential members. If p_members[p_index] doesn't share same decidion with first node,
 # p_index increases by 1, will check next value in p_members. If it does, then a new member
-# for this subgroup has been found, it will be removed from the pool and p_members, and added
-# to current subgroup. The new subgroup member will also introduce its neighbors as new
-# potential members, but they should not be in p_members and current subgroup, and should be
-# in node pool. The member search for this subgroup will end if p_index iterates to the end
+# for this group has been found, it will be removed from the pool and p_members, and added
+# to current group. The new group member will also introduce its neighbors as new
+# potential members, but they should not be in p_members and current group, and should be
+# in node pool. The member search for this group will end if p_index iterates to the end
 # of p_members.
 
 # 01/19/2018
 # Testing an invented concept called "holistic dependency", for measuring how much the most
 # depended node is being depended on more than others for maintaining the network connectivity
 # in the holistic view. The final name of the concept may change.
+
+# 01/29/2018
+# Dr. Lee suggest adding colors to different groups. A flashy idea I though at first, but
+# after reconsidering, it has a much better demonstration, and not difficult to do at all.
+# Link of a list of 20 distinct colors:
+# https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
 
 
 import pygame
@@ -195,11 +201,11 @@ screen_size = (int(round(world_size[0] * pixels_per_length)),
                int(round(world_size[1] * pixels_per_length)))
 color_white = (255,255,255)
 color_black = (0,0,0)
-color_distinct = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
+# a set of 20 distinct colors (black and white excluded)
+color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
     (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
     (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
-
 node_size = 5  # node modeled as dot, number of pixels for radius
 # set up the simulation window and surface object
 icon = pygame.image.load("icon_geometry_art.jpg")
@@ -250,9 +256,14 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
     avg_dist_id_sort = np.argsort(mean_temp)[::-1]
     # the dominant decision of all nodes
     deci_domi = np.argmax(deci_dist, axis=1)
-    # only adjacent block of nodes sharing same dominant decision belongs to same subgroup
-    subgroups = []  # seperate lists of node indices for all subgroups
-    subsizes = [0 for i in range(net_size)]  # the subgroup size that each node belongs to
+    # only adjacent block of nodes sharing same dominant decision belongs to same group
+    groups = []  # put nodes in groups by their local convergence
+    group_sizes = [0 for i in range(net_size)]  # the group size that each node belongs to
+    color_initialized = False  # whether the color assignment has been done for the first time
+    deci_colors = [-1 for i in range(deci_num)]  # color index for each exhibited decision
+        # -1 for not assigned
+    group_colors = []  # color for the groups
+    node_colors = [0 for i in range(net_size)]  # color for the nodes
     # Difference of two distributions is the sum of absolute values of differences
     # of all individual probabilities.
     # Overflow threshold for the distribution difference. Distribution difference larger than
@@ -308,27 +319,28 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         if sim_pause: continue
 
         # prepare information for the decision distribution evolution
-        # including 1.dominant decisions, 2.subgroups, and 3.subgroup sizes
+        # including 1.dominant decisions, 2.groups, and 3.group sizes
 
         # 1.update the dominant decision for all nodes
         deci_domi = np.argmax(deci_dist, axis=1)
 
-        # 2.update the subgroups
-        subgroups = []  # empty the subgroups container
-        # a diminishing global pool for node indices, for nodes not yet assigned into subgroups
+        # 2.update the groups
+        groups = []  # empty the group container
+        group_deci = []  # the dominant decision for the groups
+        # a diminishing global pool for node indices, for nodes not yet assigned into groups
         n_pool = range(net_size)
-        # start searching subgroups one by one from the global node pool
+        # start searching groups one by one from the global node pool
         while len(n_pool) != 0:
-            # start a new subgroup, with first node in the n_pool
-            first_member = n_pool[0]  # first member of this subgroup
-            subgroup_temp = [first_member]  # current temporary subgroup
+            # start a new group, with first node in the n_pool
+            first_member = n_pool[0]  # first member of this group
+            group_temp = [first_member]  # current temporary group
             n_pool.pop(0)  # pop out first node in the pool
-            # a list of potential members for current subgroup
-            # this list may increase when new members of subgroup are discovered
+            # a list of potential members for current group
+            # this list may increase when new members of group are discovered
             p_members = connection_lists[first_member][:]
-            # an index for iterating through p_members, in searching subgroup members
+            # an index for iterating through p_members, in searching group members
             p_index = 0  # if it climbs to the end, the searching ends
-            # index of dominant decision for current subgroup
+            # index of dominant decision for current group
             current_domi = deci_domi[first_member]
             # dynamically iterating through p_members with p_index
             while p_index < len(p_members):  # index still in valid range
@@ -338,12 +350,12 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                     p_members.remove(new_member)  # remove it from p_members list
                         # but not increase p_index, because new value in p_members will flush in
                     n_pool.remove(new_member)  # remove it from the global node pool
-                    subgroup_temp.append(new_member)  # add it to current subgroup
+                    group_temp.append(new_member)  # add it to current group
                     # check if new potential members are available, due to new node discovery
                     p_members_new = connection_lists[new_member]  # new potential members
                     for member in p_members_new:
                         if member not in p_members:  # should not already in p_members
-                            if member not in subgroup_temp:  # should not in current subgroup
+                            if member not in group_temp:  # should not in current group
                                 if member in n_pool:  # should be available in global pool
                                     # if conditions satisfied, it is qualified as a potential member
                                     p_members.append(member)  # append at the end
@@ -351,20 +363,24 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                     # a boundary node(share different decision) has been met
                     # leave it in p_members, will help to avoid checking back again on this node
                     p_index = p_index + 1  # shift right one position
-            # all connected members for this subgroup have been located
-            subgroups.append(subgroup_temp)  # append the new subgroup
-            # the end of searching for one subgroup
+            # all connected members for this group have been located
+            groups.append(group_temp)  # append the new group
+            
+        # update the group color
+        if not color_initialized:
+            color_initialized = True
 
-        # 3.update the subgroup size each node is in
+
+        # 3.update the group size for each node it is in
         traverse_list = range(net_size)  # remove when debugged
-             # used to check if all nodes have been assigned a subgroup size
-        for sub in subgroups:
-            size_temp = len(sub)
-            for i in sub:
-                subsizes[i] = size_temp
+             # used to check if all nodes have been assigned a group size
+        for group in groups:
+            size_temp = len(group)
+            for i in group:
+                group_sizes[i] = size_temp
                 traverse_list.remove(i)
         if len(traverse_list) != 0:
-            print("subgroup sizes check error")
+            print("group sizes check error")
             sys.exit()
 
         # the decision distribution evolution
@@ -439,17 +455,17 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                     pass
             else:  # at least one neighbor has different opinion with host
                 converged_all = False  # the network is not converged
-                # take unequal weights in the averaging process based on subgroup sizes
-                deci_dist[i] = deci_dist_t[i]*subsizes[i]  # start with host itself
+                # take unequal weights in the averaging process based on group sizes
+                deci_dist[i] = deci_dist_t[i]*group_sizes[i]  # start with host itself
                 for neighbor in connection_lists[i]:
                     # accumulate neighbor's distribution
-                    deci_dist[i] = deci_dist[i] + deci_dist_t[neighbor]*subsizes[neighbor]
+                    deci_dist[i] = deci_dist[i] + deci_dist_t[neighbor]*group_sizes[neighbor]
                 # normalize the distribution
                 sum_temp = np.sum(deci_dist[i])
                 deci_dist[i] = deci_dist[i] / sum_temp
 
         # graphics animation, both pygame window and matplotlib window
-        # 1.pygame window for dynamics of network's subgroups
+        # 1.pygame window for dynamics of network's groups
         screen.fill(color_white)
         # draw the regualr connecting lines
         for i in range(net_size):
@@ -457,16 +473,16 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                 if connections[i][j]:
                     pygame.draw.line(screen, color_black,
                                      nodes_disp[i], nodes_disp[j])
-        # draw the connecting lines marking subgroups
-        for sub in subgroups:
-            sub_len = len(sub)
-            for i in range(sub_len):
-                for j in range(i+1, sub_len):
-                    i_node = sub[i]
-                    j_node = sub[j]
-                    # check if two nodes in one subgroup is connected
+        # draw the connecting lines marking groups
+        for group in groups:
+            group_len = len(group)
+            for i in range(group_len):
+                for j in range(i+1, group_len):
+                    i_node = group[i]
+                    j_node = group[j]
+                    # check if two nodes in one group is connected
                     if connections[i_node][j_node]:
-                        # wider lines for subgroup connections
+                        # wider lines for group connections
                         pygame.draw.line(screen, color_black,
                                          nodes_disp[i_node], nodes_disp[j_node], 3)
         # draw the nodes as dots
