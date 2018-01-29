@@ -396,7 +396,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                     if len(select_set) == 0:
                         # construct the new select_set
                         color_assigns_min = min(color_assigns)
-                        color_assigns_temp = [i - color_assigns_min for i in color_assigns]
+                        color_assigns_temp = [j - color_assigns_min for j in color_assigns]
                         select_set = range(20)
                         for j in range(20):
                             if color_assigns_temp[j] != 0:
@@ -514,7 +514,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         for i in range(len(groups)):
             group_len = len(groups[i])
             for j in range(group_len):
-                for k in range(i+1, group_len):
+                for k in range(j+1, group_len):
                     j_node = groups[i][j]
                     k_node = groups[i][k]
                     # check if two nodes in one group is connected
@@ -547,6 +547,8 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         # iteration count
         print "iteration {}".format(iter_count)
         iter_count = iter_count + 1
+        # hold the program to check the network
+        # raw_input("<Press Enter to continue>")
 
         # exit as soon as the network is converged
         if converged_all:
