@@ -35,6 +35,10 @@
 # host node along central axis. This feedback is also modeled as a rotating spring. This two
 # combined spring force can reshape the loop to desired loop formation.
 
+# 01/29/2018
+# Adding colors to simulation after testing it on another consensus algorithm simulation.
+# An exhibited decision for a group is necessary to assign the colors. There was no such
+# concept before, so the exhibited decision is defined as first node's choice.
 
 import pygame
 from formation_functions import *
@@ -84,8 +88,11 @@ screen_size = (600, 800)  # width and height in pixels
     # top half for initial formation, bottom half for target formation
 color_black = (0,0,0)
 color_white = (255,255,255)
-
-
+# a set of 20 distinct colors (black and white excluded)
+distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
+    (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
+    (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
+    (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
 robot_size = 5  # robot modeled as dot, number of pixels for radius
 group_line_wid = 4  # width of the connecting lines in the group
 
@@ -330,12 +337,18 @@ inter_targ = inter_ang[1][:]  # interior angles of target formation
 pref_dist = np.zeros((poly_n, poly_n))
 # variable indicating which target node has largest probability in the distributions
 # this also represents which node it mostly prefers
-domi_node = [0 for i in range(poly_n)]  # dominant node in the distributions
+domi_node = [0 for i in range(poly_n)]  # dominant node for the distributions
 # divide nodes on loop to groups based on dominant node
 # only adjacent block of nodes are in same group if they agree on dominant node
 groups = []  # lists of adjacent nodes inside
 # variable indicating how many nodes are there in the same group with host node
-group_sizes = []  # size of the group the host node is in
+group_sizes = [0 for i in range(poly_n)]  # size of the group the node is in
+color_initialized = False  # whether the color assignment has run the first time
+deci_colors = [-1 for i in range(poly_n)]  # color index for each exhibited decision
+    # -1 for not assigned
+color_assigns = [0 for i in range(20)]  # number of assignments for each color
+group_colors = []  # color for the groups
+node_colors = [0 for i in range(poly_n)]  # color for the nodes
 # overflow threshold for the distribution difference
 dist_diff_thres = 0.3
 # variable for ratio of distribution difference to threshold, for tuning growing rate
@@ -349,7 +362,7 @@ linear_const = 1.0
 bend_const = 0.8
 disp_coef = 0.5  # coefficient from feedback vector to displacement
 
-# calculate the initial preferability distribution and dominant nodes
+# calculate the initial preferability distribution
 for i in range(poly_n):
     # the angle difference of inter_curr[i] to all angles in inter_targ
     ang_diff = [0 for j in range(poly_n)]
@@ -409,6 +422,7 @@ while not sim_exit:
         domi_node[i] = domi_node_t
     # update the groups
     groups = [[0]]  # initialize with a node 0 robot
+    group_deci = []  # the exhibited decision of the groups
     for i in range(1, poly_n):
         if (domi_node[i-1]+1)%poly_n == domi_node[i]:  # i-1 and i agree on dominant node
             # simply add i to same group with i-1
@@ -428,6 +442,39 @@ while not sim_exit:
         group_size_t = len(group)
         for i in group:
             group_sizes[i] = group_size_t
+    # update the exhibited decision for the groups
+    for i in range(len(groups)):
+        group_deci[i] = (domi_node[groups[i][0]] - groups[i][0]) % poly_n
+
+    # update colors for the exhibited decisions, groups, and nodes
+    if not color_initialized:
+        color_initialized = True
+        select_set = range(20)  # the initial selecting set
+        all_deci_set = set(group_deci)  # put all exhibited decisions in a set
+        for deci in all_deci_set:  # avoid checking duplicate decisions
+            if len(select_set) == 0:
+                select_set = range(20)  # start a new set to select from
+            chosen_color = np.random.choice(select_set)
+            select_set.remove(chosen_color)
+            deci_colors[deci] = chosen_color  # assign the chosen color to decision
+            # increase the assignments of chosen color by 1
+            color_assigns[chosen_color] = color_assigns[chosen_color] + 1
+    else:
+        # remove the color for a decision, if it's no longer the decision of any group
+        all_deci_set = set(group_deci)
+        for i in range(poly_n):
+            if deci_colors[i] != -1:  # there was a color assigned before
+                if i not in all_deci_set:
+                    # decrease the assignments of chosen color by 1
+                    color_assigns[deci_colors[i]] = color_assigns[deci_colors[i]] - 1
+                    deci_colors[i] = -1  # remove the assigned color
+        # assign color for an exhibited decision if not assigned
+        select_set = []  # set of colors to select from, start from empty
+        for i in range(len(groups)):
+            if deci_colors[group_deci[i]] == -1:
+                if len(select_set) == 0:
+                    # construct a new select_set 
+
 
     # preferability distribution evolution
     pref_dist_t = np.copy(pref_dist)  # deep copy the 'pref_dist', intermediate variable

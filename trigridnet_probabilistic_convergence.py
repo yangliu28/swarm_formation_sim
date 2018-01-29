@@ -379,7 +379,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                 chosen_color = np.random.choice(select_set)
                 select_set.remove(chosen_color)
                 deci_colors[deci] = chosen_color  # assign the chosen color to decision
-                # increase the asssignments of chosen color by 1
+                # increase the assignments of chosen color by 1
                 color_assigns[chosen_color] = color_assigns[chosen_color] + 1
         else:
             # remove the color for a decision, if it's no longer the decision of any group
