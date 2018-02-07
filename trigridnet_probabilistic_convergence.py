@@ -251,7 +251,7 @@ pygame.display.update()
 
 # the closely located 10 nodes for network 100-3
 # command_nodes = [0,1,2,5,7,10,11,12,13,35]  # in the middle
-command_nodes = [22,34,36,50,57,61,72,87,91,92]  # in the top right corner
+# command_nodes = [22,34,36,50,57,61,72,87,91,92]  # in the top right corner
 
 all_steps = [0 for i in range(repeat_times)]  # steps taken to converge for all simulations
 all_deci_orders = [0 for i in range(repeat_times)]  # the order of the final decisions
@@ -261,9 +261,9 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
 
     # variable for decision distribution of all individuals
     deci_dist = np.random.rand(net_size, deci_num)
-    # tweak the decision distribution for the command nodes
-    for i in command_nodes:
-        deci_dist[i][0] = 1.0  # force the first probability to be the largest
+    # # tweak the decision distribution for the command nodes
+    # for i in command_nodes:
+    #     deci_dist[i][0] = 1.0  # force the first probability to be the largest
     # normalize the random numbers such that the sum is 1.0
     sum_temp = np.sum(deci_dist, axis=1)
     for i in range(net_size):
@@ -395,11 +395,11 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                 if len(select_set) == 0:
                     select_set = range(20)  # start a new set to select from
                 # # force color blue for first decision
-                if deci == 0:
-                    chosen_color = 3
-                else:
-                    chosen_color = np.random.choice(select_set)
-                # chosen_color = np.random.choice(select_set)
+                # if deci == 0:
+                #     chosen_color = 3
+                # else:
+                #     chosen_color = np.random.choice(select_set)
+                chosen_color = np.random.choice(select_set)
                 select_set.remove(chosen_color)
                 deci_colors[deci] = chosen_color  # assign the chosen color to decision
                 # increase the assignments of chosen color by 1
@@ -573,7 +573,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         print "iteration {}".format(iter_count)
         iter_count = iter_count + 1
         # hold the program to check the network
-        raw_input("<Press Enter to continue>")
+        # raw_input("<Press Enter to continue>")
 
         # exit as soon as the network is converged
         if converged_all:
