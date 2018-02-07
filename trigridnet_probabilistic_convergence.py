@@ -35,10 +35,13 @@
 
 # 01/29/2018
 # Dr. Lee suggest adding colors to different groups. A flashy idea I though at first, but
-# after reconsidering, it has a much better demonstration, and not difficult to do at all.
+# after reconsidering, it has a much better visual effect.
 # Link of a list of 20 distinct colors:
 # https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
 
+# 02/06/2018
+# Adding another experiment scenario: for 100 nodes, at the begining, manually forcing
+# closely located 10 nodes to have a specific decision (colored in blue), and run simulation.
 
 import pygame
 import matplotlib.pyplot as plt
