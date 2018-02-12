@@ -257,15 +257,14 @@ pygame.display.update()
 
 ############### the probabilistic convergence ###############
 
-# for network 100-3
-# the closely located 10 nodes to command at beginning of the simulation
-command_nodes_10 = [0,1,2,5,7,10,11,12,13,35]  # in the middle of the network
-# command_nodes_10 = [22,34,36,50,57,61,72,87,91,92]  # in the top right corner
-# the closely located 20 nodes to command during the simulation
-command_nodes_20 = [8,9,20,22,24,27,34,36,44,45,
-                   50,52,57,61,67,72,77,87,91,92]
-iter_cutin = 5  # the 20 nodes command at this time stamp
-
+# # for network 100-3
+# # the closely located 10 nodes to command at beginning of the simulation
+# command_nodes_10 = [0,1,2,5,7,10,11,12,13,35]  # in the middle of the network
+# # command_nodes_10 = [22,34,36,50,57,61,72,87,91,92]  # in the top right corner
+# # the closely located 20 nodes to command during the simulation
+# command_nodes_20 = [8,9,20,22,24,27,34,36,44,45,
+#                    50,52,57,61,67,72,77,87,91,92]
+# iter_cutin = 5  # the 20 nodes command at this time stamp
 
 all_steps = [0 for i in range(repeat_times)]  # steps taken to converge for all simulations
 all_deci_orders = [0 for i in range(repeat_times)]  # the order of the final decisions
@@ -275,9 +274,9 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
 
     # variable for decision distribution of all individuals
     deci_dist = np.random.rand(net_size, deci_num)
-    # tweak the decision distribution for the command nodes
-    for i in command_nodes_10:
-        deci_dist[i][0] = 1.0  # force the first probability to be the largest
+    # # tweak the decision distribution for the command nodes
+    # for i in command_nodes_10:
+    #     deci_dist[i][0] = 1.0  # force the first probability to be the largest
     # normalize the random numbers such that the sum is 1.0
     sum_temp = np.sum(deci_dist, axis=1)
     for i in range(net_size):
@@ -352,13 +351,13 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         # skip the rest if paused
         if sim_pause: continue
 
-        # the 20 nodes start to cut in here
-        if iter_count == iter_cutin:
-            for i in command_nodes_20:
-                deci_dist[i][1] = 1.0  # force the second probability to be the largest
-                # normalize again
-                sum_temp = np.sum(deci_dist[i])
-                deci_dist[i][:] = deci_dist[i][:] / sum_temp
+        # # the 20 nodes start to cut in here
+        # if iter_count == iter_cutin:
+        #     for i in command_nodes_20:
+        #         deci_dist[i][1] = 1.0  # force the second probability to be the largest
+        #         # normalize again
+        #         sum_temp = np.sum(deci_dist[i])
+        #         deci_dist[i][:] = deci_dist[i][:] / sum_temp
 
         # prepare information for the decision distribution evolution
         # including 1.dominant decisions, 2.groups, and 3.group sizes
@@ -416,14 +415,14 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
             for deci in all_deci_set:  # avoid checking duplicate decisions
                 if len(select_set) == 0:
                     select_set = range(20)  # start a new set to select from
-                # force color blue for first decision, color orange for second decision
-                if deci == 0:
-                    chosen_color = 3  # color blue
-                elif deci == 1:
-                    chosen_color = 4  # color orange
-                else:
-                    chosen_color = np.random.choice(select_set)
-                # chosen_color = np.random.choice(select_set)
+                # # force color blue for first decision, color orange for second decision
+                # if deci == 0:
+                #     chosen_color = 3  # color blue
+                # elif deci == 1:
+                #     chosen_color = 4  # color orange
+                # else:
+                #     chosen_color = np.random.choice(select_set)
+                chosen_color = np.random.choice(select_set)
                 select_set.remove(chosen_color)
                 deci_colors[deci] = chosen_color  # assign the chosen color to decision
                 # increase the assignments of chosen color by 1
@@ -450,15 +449,15 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                             if color_assigns_temp[j] != 0:
                                 select_set.remove(j)
                     # if here, the select_set is good to go
-                    # force color orange for second decision
-                    if group_deci[i] == 1:
-                        chosen_color = 4  # color orange
-                    else:
-                        chosen_color = np.random.choice(select_set)
-                    if chosen_color in select_set:
-                        select_set.remove(chosen_color)
-                    # chosen_color = np.random.choice(select_set)
-                    # select_set.remove(chosen_color)
+                    # # force color orange for second decision
+                    # if group_deci[i] == 1:
+                    #     chosen_color = 4  # color orange
+                    # else:
+                    #     chosen_color = np.random.choice(select_set)
+                    # if chosen_color in select_set:
+                    #     select_set.remove(chosen_color)
+                    chosen_color = np.random.choice(select_set)
+                    select_set.remove(chosen_color)
                     deci_colors[group_deci[i]] = chosen_color  # assign the chosen color
                     # increase the assignments of chosen color by 1
                     color_assigns[chosen_color] = color_assigns[chosen_color] + 1
@@ -479,10 +478,10 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         converged_all = True  # flag for convergence of entire network
         deci_dist_t = np.copy(deci_dist)  # deep copy of the 'deci_dist'
         for i in range(net_size):
-            # skip updating the 20 commanding nodes, stubborn in their decisions
-            if i in command_nodes_20:
-                if iter_count >= iter_cutin:
-                    continue
+            # # skip updating the 20 commanding nodes, stubborn in their decisions
+            # if i in command_nodes_20:
+            #     if iter_count >= iter_cutin:
+            #         continue
             host_domi = deci_domi[i]
             converged = True
             for neighbor in connection_lists[i]:
@@ -608,7 +607,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         print "iteration {}".format(iter_count)
         iter_count = iter_count + 1
         # hold the program to check the network
-        raw_input("<Press Enter to continue>")
+        # raw_input("<Press Enter to continue>")
 
         # exit as soon as the network is converged
         if converged_all:
