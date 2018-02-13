@@ -1,8 +1,9 @@
-# This simulation tests the probabilistic convergence algorithm (a collective decision
-# making algorithm) on randomly generated 2D triangle grid network. The algorithm is
-# extracted from previous loop reshape simulations for further testing, so that it can be
-# generally used on 2D random network topologies. The distribution evolution method is very
-# similiar except that more than three nodes are involved in the weighted averaging process.
+# This simulation tests the consensus achievement algorithm (collective decision making
+# algorithm) on randomly generated 2D triangle grid network. The algorithm is extracted
+# from previous loop reshape simulations for further testing, so that it can be generalized
+# to 2D random network topologies. The distribution evolution method is similar to the
+# loop reshape simulation, except more than three nodes are involved in the weighted
+# averaging process.
 
 # input arguments:
 # '-f': filename of the triangle grid network
@@ -323,7 +324,6 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
     dist_diff_power = 0.3
 
     # start the matplotlib window first before the simulation cycle
-    plt.ion()
     fig = plt.figure()
     # fig.canvas.set_window_title('Unipolarity of 2D Triangle Grid Network')
     fig.canvas.set_window_title('Discrete Entropy of the Preference Distributions')
@@ -427,8 +427,8 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                 # # force color blue for first decision, color orange for second decision
                 # if deci == 0:
                 #     chosen_color = 3  # color blue
-                # elif deci == 1:
-                #     chosen_color = 4  # color orange
+                # # elif deci == 1:
+                # #     chosen_color = 4  # color orange
                 # else:
                 #     chosen_color = np.random.choice(select_set)
                 chosen_color = np.random.choice(select_set)
@@ -634,7 +634,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         print "iteration {}".format(iter_count)
         iter_count = iter_count + 1
         # hold the program to check the network
-        raw_input("<Press Enter to continue>")
+        # raw_input("<Press Enter to continue>")
 
         # exit as soon as the network is converged
         if converged_all:
