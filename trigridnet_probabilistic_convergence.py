@@ -50,6 +50,10 @@
 # will reverse to the one insisted by the new 20 nodes.
 # (The program is really messy now.)
 
+# 02/13/2018
+# Replace the unipolarity with discrete entropy for evaluating the decisiveness of the
+# preference distributions. Adding same colors of the consensus groups to the bar graph.
+
 
 import pygame
 import matplotlib.pyplot as plt
@@ -217,6 +221,9 @@ distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,
     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
     (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
     (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
+# convert the color set to float, for use in matplotlib
+distinct_color_set_float = tuple([tuple([color[0]/255.0, color[1]/255.0, color[2]/255.0])
+    for color in distinct_color_set])
 node_size = 5  # node modeled as dot, number of pixels for radius
 group_line_width = 4  # width of the connecting lines inside the groups
 # set up the simulation window and surface object
@@ -316,8 +323,10 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
     dist_diff_power = 0.3
 
     # start the matplotlib window first before the simulation cycle
+    plt.ion()
     fig = plt.figure()
-    fig.canvas.set_window_title('Unipolarity of 2D Triangle Grid Network')
+    # fig.canvas.set_window_title('Unipolarity of 2D Triangle Grid Network')
+    fig.canvas.set_window_title('Discrete Entropy of the Preference Distributions')
     ax = fig.add_subplot(111, projection='3d')
     x_pos = [pos[0] for pos in nodes_plt]  # the positions of the bars
     y_pos = [pos[1] for pos in nodes_plt]
@@ -585,10 +594,28 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
             pygame.draw.circle(screen, distinct_color_set[node_colors[i]],
                 nodes_disp[i], node_size, 0)
         pygame.display.update()
-        # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
+        # # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
+        # if not nobargraph:
+        #     dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
+        #     ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, color='b')
+        #     fig.canvas.draw()
+        #     fig.show()
+        # 2.matplotlib window for 2D bar graph of discrete entropy
         if not nobargraph:
-            dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
-            ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, color='b')
+            # calculate the discrete entropy for all distributions
+            for i in range(net_size):
+                ent = 0
+                for j in range(deci_num):
+                    if deci_dist[i][j] == 0: continue
+                    ent = ent - deci_dist[i][j] * math.log(deci_dist[i][j],2)
+                dz[i] = ent
+            # draw the bar graph
+                # some how the old bars are overlapping the current ones, have to clear the
+                # figure first, and rebuild the bar graph, as a temporary solution
+            fig.clear()
+            ax = fig.add_subplot(111, projection='3d')
+            bar_colors = [distinct_color_set_float[node_colors[i]] for i in range(net_size)]
+            barlist = ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, bar_colors)
             fig.canvas.draw()
             fig.show()
 
@@ -607,7 +634,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         print "iteration {}".format(iter_count)
         iter_count = iter_count + 1
         # hold the program to check the network
-        # raw_input("<Press Enter to continue>")
+        raw_input("<Press Enter to continue>")
 
         # exit as soon as the network is converged
         if converged_all:
