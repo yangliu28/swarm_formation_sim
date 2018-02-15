@@ -36,7 +36,7 @@
 # combined spring force can reshape the loop to desired loop formation.
 
 # 01/29/2018
-# Adding colors to simulation after testing it on another consensus algorithm simulation.
+# Adding colors to simulation after testing it with consensus algorithm simulation.
 # An exhibited decision for a group is necessary to assign the colors. There was no such
 # concept before, so the exhibited decision is defined as first node's choice.
 
@@ -84,7 +84,9 @@ pygame.init()
 loop_folder = 'loop-data'
 
 # parameters for display, window origin is at left up corner
-screen_size = (600, 800)  # width and height in pixels
+# screen_size: width and height in pixels
+# screen_size = (600, 800)  # for network size of 30
+screen_size = (900, 1200)  # for network size of 100
     # top half for initial formation, bottom half for target formation
 color_black = (0,0,0)
 color_white = (255,255,255)
@@ -108,8 +110,12 @@ pygame.display.set_caption("Loop Reshape 2 (dynamic version)")
 world_size = (100.0, 100.0 * screen_size[1]/screen_size[0])
 
 # variables to configure the simulation
-poly_n = 30  # number of nodes for the polygon, also the robot quantity, at least 3
-loop_space = 4.0  # side length of the equilateral polygon
+# poly_n: number of nodes for the polygon, also the robot quantity, at least 3
+# loop_space: side length of the equilateral polygon
+# poly_n = 30  # for network size of 30
+# loop_space = 4.0  # for network size of 30
+poly_n = 100  # for network size of 100
+loop_space = 2.0  # for network size of 100
 # desired loop space is a little over half of communication range
 comm_range = loop_space/0.6
 # upper and lower limits have equal difference to the desired loop space
@@ -307,6 +313,8 @@ for i in range(2):
     pygame.draw.line(screen, color_black, disp_pos[poly_n-1], disp_pos[0])
 pygame.display.update()
 
+raw_input("<Press Enter to continue>")  # halt the program to check the networks
+
 ########################### start of section 2 ###########################
 
 # calculate the interior angles of the two formations
@@ -360,7 +368,9 @@ dist_diff_power = 0.3
 linear_const = 1.0
 # bending spring constant modeling the bending effect from host node itself
 bend_const = 0.8
-disp_coef = 0.5  # coefficient from feedback vector to displacement
+# disp_coef: coefficient from feedback vector to displacement
+# disp_coef = 0.5  # for network size of 30
+disp_coef = 0.2  # for network size of 100
 
 # calculate the initial preferability distribution
 for i in range(poly_n):
