@@ -40,6 +40,9 @@
 # An exhibited decision for a group is necessary to assign the colors. There was no such
 # concept before, so the exhibited decision is defined as first node's choice.
 
+# 02/15/2018
+# Add the regular circle and letter "D" as the target loop formation.
+
 import pygame
 from formation_functions import *
 import matplotlib.pyplot as plt
@@ -85,8 +88,8 @@ loop_folder = 'loop-data'
 
 # parameters for display, window origin is at left up corner
 # screen_size: width and height in pixels
-# screen_size = (600, 800)  # for network size of 30
-screen_size = (900, 1200)  # for network size of 100
+screen_size = (600, 800)  # for network size of 30
+# screen_size = (900, 1200)  # for network size of 100
     # top half for initial formation, bottom half for target formation
 color_black = (0,0,0)
 color_white = (255,255,255)
@@ -112,10 +115,10 @@ world_size = (100.0, 100.0 * screen_size[1]/screen_size[0])
 # variables to configure the simulation
 # poly_n: number of nodes for the polygon, also the robot quantity, at least 3
 # loop_space: side length of the equilateral polygon
-# poly_n = 30  # for network size of 30
-# loop_space = 4.0  # for network size of 30
-poly_n = 100  # for network size of 100
-loop_space = 2.0  # for network size of 100
+poly_n = 30  # for network size of 30
+loop_space = 4.0  # for network size of 30
+# poly_n = 100  # for network size of 100
+# loop_space = 2.0  # for network size of 100
 # desired loop space is a little over half of communication range
 comm_range = loop_space/0.6
 # upper and lower limits have equal difference to the desired loop space
@@ -313,7 +316,7 @@ for i in range(2):
     pygame.draw.line(screen, color_black, disp_pos[poly_n-1], disp_pos[0])
 pygame.display.update()
 
-raw_input("<Press Enter to continue>")  # halt the program to check the networks
+# raw_input("<Press Enter to continue>")  # halt the program to check the networks
 
 ########################### start of section 2 ###########################
 
@@ -330,6 +333,12 @@ for i in range(2):
         vect_l = [node_l[0]-node_h[0], node_l[1]-node_h[1]]  # from host to left
         vect_r = [node_r[0]-node_h[0], node_r[1]-node_h[1]]  # from host to right
         # get the angle rotating from vect_r to vect_l
+        # # temporary fix for square formation
+        # try:
+        #     inter_ang[i][j] = math.acos((vect_l[0]*vect_r[0] + vect_l[1]*vect_r[1])/
+        #                             (loop_space*loop_space))
+        # except:
+        #     inter_ang[i][j] = math.acos(-1.0)
         inter_ang[i][j] = math.acos((vect_l[0]*vect_r[0] + vect_l[1]*vect_r[1])/
                                     (loop_space*loop_space))
         if (vect_r[0]*vect_l[1] - vect_r[1]*vect_l[0]) < 0:
