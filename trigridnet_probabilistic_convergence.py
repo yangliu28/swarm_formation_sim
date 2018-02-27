@@ -55,6 +55,41 @@
 # Replace the unipolarity with discrete entropy for evaluating the decisiveness of the
 # preference distributions. Adding same colors of the consensus groups to the bar graph.
 
+# 02/26/2018
+# (an excursion of thought)
+# Writing a paper and keep revising it totally ruin the fun of developping this simulation.
+# Writing paper is boring to many people I know, but it's specially painful to me in a
+# subconscious way. I have very strong personal style which runs through every aspect of my
+# life, and the style does not mix well with academia. I love simplicity, elegance, and truth.
+# I rarely claim something in my belief, but these I am very proud to have, and have no
+# intention to compromise them with anything. Academic paper as a form to present the
+# state-of-the-art, and to communicate thought, should contain succinct and honest description
+# of the work. However the two advisors I have worked with (I respect them from the deep of my
+# heart) both revised my papers toward being more acceptable by the publishers. Most of the
+# changes like pharsing and some of the restructuring are very good, reflecting their years of
+# academic training. They make the paper more explicit and easy to understand. Others changes,
+# IMHO, are simply trying to elevate the paper, so on first read people would think this is
+# a very good one by those abstract words. This is what makes me suffer. These changes are
+# steering the paper to the opposite of succinct and honesty. For example, if it is only a
+# method to solve a specific problem, saying it is a systematic approach to solve a series
+# of problem, and using abstract words for the technical terms, does not make the work any
+# better. It would only confuse the readers and let them spend more time to dig out the idea.
+# I could never fight my advisors on these changes, they would say it is just a style of
+# writing, and it brings out the potential of the work. This is like to say, our presented
+# technology can do this, can do that, and potentially it could do much more amazing things.
+# I totally hate the last part! It just give people a chance to bragging things they would
+# never reach. As I find out, quite a few published papers that I believe I understand every
+# bit of it, are trying to elevate their content to a level they don't deserve. If I were to
+# rewrite them, I would cut all the crap and leave only the naked truth and idea. Many
+# researcher picked up this habit in their training with publishing papers, like an untold
+# rule. As for my paper, I really wish my work were that good to be entitled to those words,
+# but they are not. Academia is a sublime place in many people's thinking, as in mine. I have
+# very high standards for the graduation of a PhD. If I kept following my style, and be honest
+# with myself, I knew long ago I would never graduate. I am loving it too much to hate it.
+# (addition to the simulation)
+# When visualizing the bar graph for the discrete entropy, adding the summation of all discrete
+# entropy to show how the entropy reduces during the decision making process.
+
 
 import pygame
 import matplotlib.pyplot as plt
