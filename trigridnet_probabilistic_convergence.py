@@ -87,8 +87,8 @@
 # very high standards for the graduation of a PhD. If I kept following my style, and be honest
 # with myself, I knew long ago I would never graduate. I am loving it too much to hate it.
 # (addition to the simulation)
-# When visualizing the bar graph for the discrete entropy, adding the summation of all discrete
-# entropy to show how the entropy reduces during the decision making process.
+# Requested by the paper, when visualizing the bar graph for the discrete entropy, adding the
+# summation of all discrete entropy to show how the entropy reduction works.
 
 
 import pygame
@@ -638,14 +638,17 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         # 2.matplotlib window for 2D bar graph of discrete entropy
         if not nobargraph:
             # calculate the discrete entropy for all distributions
+            ent_sum = 0
             for i in range(net_size):
                 ent = 0
                 for j in range(deci_num):
                     if deci_dist[i][j] == 0: continue
                     ent = ent - deci_dist[i][j] * math.log(deci_dist[i][j],2)
                 dz[i] = ent
+                ent_sum = ent_sum + ent
+            print("summation of entropy of all distributions: {}".format(ent_sum))
             # draw the bar graph
-                # some how the old bars are overlapping the current ones, have to clear the
+                # somehow the old bars are overlapping the current ones, have to clear the
                 # figure first, and rebuild the bar graph, as a temporary solution
             fig.clear()
             ax = fig.add_subplot(111, projection='3d')
