@@ -314,10 +314,10 @@ pygame.display.update()
 # # the closely located 10 nodes to command at beginning of the simulation
 # command_nodes_10 = [0,1,2,5,7,10,11,12,13,35]  # in the middle of the network
 # # command_nodes_10 = [22,34,36,50,57,61,72,87,91,92]  # in the top right corner
-# # the closely located 20 nodes to command during the simulation
-# command_nodes_20 = [8,9,20,22,24,27,34,36,44,45,
-#                    50,52,57,61,67,72,77,87,91,92]
-# iter_cutin = 5  # the 20 nodes command at this time stamp
+# # # the closely located 20 nodes to command during the simulation
+# # command_nodes_20 = [8,9,20,22,24,27,34,36,44,45,
+# #                    50,52,57,61,67,72,77,87,91,92]
+# # iter_cutin = 5  # the 20 nodes command at this time stamp
 
 all_steps = [0 for i in range(repeat_times)]  # steps taken to converge for all simulations
 all_deci_orders = [0 for i in range(repeat_times)]  # the order of the final decisions
@@ -682,7 +682,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         print "iteration {}".format(iter_count)
         iter_count = iter_count + 1
         # hold the program to check the network
-        raw_input("<Press Enter to continue>")
+        # raw_input("<Press Enter to continue>")
 
         # exit as soon as the network is converged
         if converged_all:
