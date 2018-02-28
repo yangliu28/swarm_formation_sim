@@ -90,6 +90,10 @@
 # Requested by the paper, when visualizing the bar graph for the discrete entropy, adding the
 # summation of all discrete entropy to show how the entropy reduction works.
 
+# 02/28/2018
+# Remove color grey, beige, and coral from the distinct color set, avoid blending with white
+# background.
+
 
 import pygame
 import matplotlib.pyplot as plt
@@ -253,15 +257,21 @@ screen_size = (int(round(world_size[0] * pixels_per_length)),
 color_white = (255,255,255)
 color_black = (0,0,0)
 # a set of 20 distinct colors (black and white excluded)
+# distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
+#     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
+#     (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
+#     (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
 distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
-    (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
-    (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
+    (0,128,128), (230,190,255), (170,110,40), (128,0,0),
+    (170,255,195), (128,128,0), (0,0,128))
+color_quantity = 17  # grey is removed, 19 left
 # convert the color set to float, for use in matplotlib
 distinct_color_set_float = tuple([tuple([color[0]/255.0, color[1]/255.0, color[2]/255.0])
     for color in distinct_color_set])
-node_size = 5  # node modeled as dot, number of pixels for radius
-group_line_width = 4  # width of the connecting lines inside the groups
+node_size = 10  # node modeled as dot, number of pixels for radius
+group_line_width = 5  # width of the connecting lines inside the groups
+norm_line_width = 2  # width of other connections
 # set up the simulation window and surface object
 icon = pygame.image.load("icon_geometry_art.jpg")
 pygame.display.set_icon(icon)
@@ -280,7 +290,7 @@ screen.fill(color_white)  # fill the background
 for i in range(net_size):
     for j in range(i+1, net_size):
         if connections[i][j]:
-            pygame.draw.line(screen, color_black, nodes_disp[i], nodes_disp[j])
+            pygame.draw.line(screen, color_black, nodes_disp[i], nodes_disp[j], norm_line_width)
 # draw the nodes as dots
 for i in range(net_size):
     pygame.draw.circle(screen, color_black, nodes_disp[i], node_size, 0)
@@ -337,7 +347,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
     color_initialized = False  # whether the color assignment has been done for the first time
     deci_colors = [-1 for i in range(deci_num)]  # color index for each exhibited decision
         # -1 for not assigned
-    color_assigns = [0 for i in range(20)]  # number of assignments for each color
+    color_assigns = [0 for i in range(color_quantity)]  # number of assignments for each color
     group_colors = []  # color for the groups
     node_colors = [0 for i in range(net_size)]  # color for the nodes
     # Difference of two distributions is the sum of absolute values of differences
@@ -454,11 +464,11 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         # update the colors for the exhibited decisions
         if not color_initialized:
             color_initialized = True
-            select_set = range(20)  # the initial selecting set
+            select_set = range(color_quantity)  # the initial selecting set
             all_deci_set = set(group_deci)  # put all exhibited decisions in a set
             for deci in all_deci_set:  # avoid checking duplicate decisions
                 if len(select_set) == 0:
-                    select_set = range(20)  # start a new set to select from
+                    select_set = range(color_quantity)  # start a new set to select from
                 # # force color blue for first decision, color orange for second decision
                 # if deci == 0:
                 #     chosen_color = 3  # color blue
@@ -488,8 +498,8 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                         # construct a new select_set
                         color_assigns_min = min(color_assigns)
                         color_assigns_temp = [j - color_assigns_min for j in color_assigns]
-                        select_set = range(20)
-                        for j in range(20):
+                        select_set = range(color_quantity)
+                        for j in range(color_quantity):
                             if color_assigns_temp[j] != 0:
                                 select_set.remove(j)
                     # if here, the select_set is good to go
@@ -611,7 +621,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
             for j in range(i+1, net_size):
                 if connections[i][j]:
                     pygame.draw.line(screen, color_black,
-                                     nodes_disp[i], nodes_disp[j])
+                                     nodes_disp[i], nodes_disp[j], norm_line_width)
         # draw the connecting lines marking the groups
         for i in range(len(groups)):
             group_len = len(groups[i])
@@ -672,7 +682,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
         print "iteration {}".format(iter_count)
         iter_count = iter_count + 1
         # hold the program to check the network
-        # raw_input("<Press Enter to continue>")
+        raw_input("<Press Enter to continue>")
 
         # exit as soon as the network is converged
         if converged_all:
