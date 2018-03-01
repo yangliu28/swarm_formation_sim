@@ -43,6 +43,10 @@
 # 02/15/2018
 # Add the regular circle and letter "D" as the target loop formation.
 
+# 02/28/2018
+# 
+
+
 import pygame
 from formation_functions import *
 import matplotlib.pyplot as plt
@@ -98,7 +102,7 @@ distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,
     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
     (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
     (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
-robot_size = 5  # robot modeled as dot, number of pixels for radius
+robot_size = 7  # robot modeled as dot, number of pixels for radius
 group_line_wid = 4  # width of the connecting lines in the group
 
 # set up the simulation window and surface object
