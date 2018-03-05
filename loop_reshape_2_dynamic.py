@@ -43,9 +43,6 @@
 # 02/15/2018
 # Add the regular circle and letter "D" as the target loop formation.
 
-# 02/28/2018
-# 
-
 
 import pygame
 from formation_functions import *

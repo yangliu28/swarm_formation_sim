@@ -92,7 +92,7 @@
 
 # 02/28/2018
 # Remove color grey, beige, and coral from the distinct color set, avoid blending with white
-# background.
+# background. Make the node size larger.
 
 
 import pygame
@@ -310,17 +310,19 @@ pygame.display.update()
 
 ############### the probabilistic convergence ###############
 
-# # for network 100-3
-# # the closely located 10 nodes to command at beginning of the simulation
+# for network 100-3
+# the closely located 10 nodes to command at beginning of the simulation
 # command_nodes_10 = [0,1,2,5,7,10,11,12,13,35]  # in the middle of the network
-# # command_nodes_10 = [22,34,36,50,57,61,72,87,91,92]  # in the top right corner
-# # # the closely located 20 nodes to command during the simulation
-# # command_nodes_20 = [8,9,20,22,24,27,34,36,44,45,
-# #                    50,52,57,61,67,72,77,87,91,92]
-# # iter_cutin = 5  # the 20 nodes command at this time stamp
+# command_nodes_10 = [22,34,36,50,57,61,72,87,91,92]  # top right corner
+# command_nodes_10 = [87,91,72,92,61,57,36,50,34,22]  # top right corner, sort from boundary inward
+# # the closely located 20 nodes to command during the simulation
+# command_nodes_20 = [8,9,20,22,24,27,34,36,44,45,
+#                    50,52,57,61,67,72,77,87,91,92]
+# iter_cutin = 5  # the 20 nodes command at this time stamp
 
 all_steps = [0 for i in range(repeat_times)]  # steps taken to converge for all simulations
 all_deci_orders = [0 for i in range(repeat_times)]  # the order of the final decisions
+steps_seed = []  # number of steps for converged simulations with seed robots
 for sim_index in range(repeat_times):  # repeat the simulation for these times
 
     print("\n{}th simulation".format(sim_index))
@@ -693,14 +695,22 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
             print(avg_dist_id_sort)
             break
 
-        # record result of this simulation
-        all_steps[sim_index] = iter_count - 1
-        all_deci_orders[sim_index] = list(avg_dist_id_sort).index(deci_domi[0]) + 1
+    # record result of this simulation
+    all_steps[sim_index] = iter_count - 1
+    all_deci_orders[sim_index] = list(avg_dist_id_sort).index(deci_domi[0]) + 1
+    if deci_domi[0] == 0:
+        steps_seed.append(iter_count - 1)
 
 # report statistic result if simulation runs more than once
 if repeat_times > 1:
     print("\nstatistics\nsteps to converge: {}".format(all_steps))
     print("final decision in order: {}".format(all_deci_orders))
     print("average steps: {}".format(np.mean(np.array(all_steps))))
+    # # statistics for simulations with seed robots
+    # print("{} out of {} trials follow command from seed robots".format(
+    #     len(steps_seed), repeat_times))
+    # if len(steps_seed) != 0:
+    #     print(steps_seed)
+    #     print("\ton average of {} steps".format(np.mean(steps_seed)))
 
 
