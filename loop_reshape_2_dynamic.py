@@ -41,7 +41,7 @@
 # concept before, so the exhibited decision is defined as first node's choice.
 
 # 02/15/2018
-# Add the regular circle and letter "D" as the target loop formation.
+# Add the square and circle as the targets for loop reshape.
 
 
 import pygame
