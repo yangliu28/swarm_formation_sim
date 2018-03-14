@@ -41,7 +41,7 @@ Loop reshape simulation:
 
 `python loop_reshape_2_dynamic.py -i 30-5 -t 30-9 --nobargraph`
 
-Probabilistic convergence algorithm simulation:
+Probabilistic consensus algorithm simulation:
 
 `python trigridnet_probabilistic_consensus.py -f 50-3 -d 30 --nobargraph`
 
