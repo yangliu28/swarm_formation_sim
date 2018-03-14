@@ -276,7 +276,7 @@ norm_line_width = 2  # width of other connections
 icon = pygame.image.load("icon_geometry_art.jpg")
 pygame.display.set_icon(icon)
 screen = pygame.display.set_mode(screen_size)
-pygame.display.set_caption("Probabilistic Convergence of 2D Triangle Grid Network")
+pygame.display.set_caption("Probabilistic Consensus of 2D Triangle Grid Network")
 
 # shift the node display positions to the middle of the window
 centroid_temp = np.mean(nodes_plt, axis=0)
@@ -308,7 +308,7 @@ pygame.display.update()
 # hold the program here to check the netwrok
 # raw_input("Press the <ENTER> key to continue")
 
-############### the probabilistic convergence ###############
+############### the probabilistic consensus ###############
 
 # for network 100-3
 # the closely located 10 nodes to command at beginning of the simulation
@@ -344,7 +344,7 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
     deci_domi = np.argmax(deci_dist, axis=1)
     print deci_domi
     # only adjacent block of nodes sharing same dominant decision belongs to same group
-    groups = []  # put nodes in groups by their local convergence
+    groups = []  # put nodes in groups by their local consensus
     group_sizes = [0 for i in range(net_size)]  # the group size that each node belongs to
     color_initialized = False  # whether the color assignment has been done for the first time
     deci_colors = [-1 for i in range(deci_num)]  # color index for each exhibited decision
