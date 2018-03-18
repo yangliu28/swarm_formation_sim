@@ -20,6 +20,7 @@
 import pygame
 import matplotlib.pyplot as plt
 from trigridnet_generator import *
+from formation_functions import *
 import numpy as np
 import os, getopt, sys, time
 
@@ -37,7 +38,7 @@ except getopt.GetoptError as err:
     print str(err)
     sys.exit()
 for opt,arg in opts:
-    if opt = '-f':
+    if opt == '-f':
         net_filename = arg
         net_filepath = os.path.join(os.getcwd(), net_folder, net_filename)
         # check if this file exists
@@ -50,6 +51,84 @@ for opt,arg in opts:
         nobargraph = True
 
 # read the network from file
-nodes = []  # the node positions in the form of triangle grid network
+nodes_tri = []
+# nodes_tri: node positions in the triangle grid network
+# nodes_cart: node positions in Cartesian coordinates
+# nodes_disp: node positions for display
+f = open(net_filepath, 'r')
+new_line = f.readline()
+while len(new_line) != 0:
+    pos_str = new_line[0:-1].split(' ')
+    pos = [int(pos_str[0]), int(pos_str[1])]
+    nodes_tri.append(pos)
+    new_line = f.readline()
+
+# generate the connection matrix, 0 for not connected, 1 for connected
+connections = np.zeros((net_size, net_size))
+for i in range(net_size):
+    for j in range(i+1, net_size):
+        diff_x = nodes_tri[i][0] - nodes_tri[j][0]
+        diff_y = nodes_tri[i][1] - nodes_tri[j][1]
+        if abs(diff_x) + abs(diff_y) == 1 or diff_x * diff_y == -1:
+            connections[i,j] = 1
+            connections[j,i] = 1
+# connection list indexed by node
+connection_lists = []
+for i in range(net_size):
+    connection_lists.append(list(np.where(connections[i] == 1)[0]))
+
+# plot the network as dots and lines in pygame window
+pygame.init()
+nodes_cart = np.array([trigrid_to_cartesian(pos) for pos in nodes_tri])
+# find appropriate window size to fit current network
+(xmin, ymin) = np.amin(nodes_cart, axis=0)
+(xmax, ymax) = np.amax(nodes_cart, axis=0)
+clearance = 2.0
+world_size = (xmax-xmin + clearance, ymax-ymin + clearance)
+pixels_per_length = 50  # corresponds to 1.0 length in cartesian world
+screen_size = (int(round(world_size[0] * pixels_per_length)),
+               int(round(world_size[1] * pixels_per_length)))
+node_size = 8
+line_width = 4
+# colors
+color_white = (255,255,255)
+color_black = (0,0,0)
+distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
+    (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
+    (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
+    (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
+# simulation window
+icon = pygame.image.load("icon_geometry_art.jpg")
+pygame.display.set_icon(icon)
+screen = pygame.display.set_mode(screen_size)
+pygame.display.set_caption("Role Assignment on 2D Triangle Grid Network")
+
+# node display positions
+center_temp = (nodes_cart.max(axis=0) + nodes_cart.min(axis=0)) / 2.0
+nodes_cart = nodes_cart - center_temp + (world_size[0]/2.0, world_size[1]/2.0)
+nodes_disp = [world_to_display(nodes_cart[i], world_size, screen_size)
+              for i in range(net_size)]
+
+# draw the network for the first time
+screen.fill(color_white)
+for i in range(net_size):
+    for j in range(i+1, net_size):
+        if connections[i,j]:
+            pygame.draw.line(screen, color_black, nodes_disp[i], nodes_disp[j], line_width)
+for i in range(net_size):
+    pygame.draw.circle(screen, color_black, nodes_disp[i], node_size, 0)
+pygame.display.update()
+
+
+
+
+
+
+
+
+
+raw_input("Press <ENTER> to continue")
+
+
 
 
