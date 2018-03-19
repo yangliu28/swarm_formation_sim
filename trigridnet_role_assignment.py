@@ -131,24 +131,20 @@ pygame.display.update()
 # robots next to it will have gradient value of 1, then robots next to them have gradient value
 # of 2. The robots are forming nested-ring patterns. The message will only be transmitted from
 # a low gradient robot to a high gradient one. In this way, one message from source will travel
-# through all other robots, without resonating inside the swarm. Since every robot in this
-# application will transmit its own message, the robot needs to calculate the gradient value
-# of all message sources.
+# through all other robots, without resonating infinitely inside the swarm. Since every robot
+# in this application will transmit its own message, the robot needs to calculate the gradient
+# value of all message sources.
 
-# Distributed gradient map calculation:
-# At the beginning, the robots don't know the gradient value to a particular message source.
-# The message transmitted from the source robot contains a gradient header of value 0. When
-# the robots next to it receives the message for the first time, they find the gradient value
-# for this particular source has not been initialized yet, they will increase the gradient
-# header by 1, and take it as its gradient value for that source. When transmitting it again,
-# if it knows the neighbors' gradient to the same source, it will decide whether to transmit
-# the received message based on the gradient(only transmit if neighbor has larger gradient).
-# If gradient is unknown, it will transmit the message anyway. If a robot has already decided
-# the gradient for the source, and receives the message that contains same gradient value,
-# the robot knows in this way the gradient of that neighbor.
+# To construct the gradient values in a distributed way, when messages are received from a new
+# message source, the robot will take the minimum gradient value plus 1 as its gradient for
+# that message source. In this way each robot will build the gradient values on-the-go for any
+# other message source. A little more complicated algorithm for constructing gradient values
+# is also developed to deal with any unstable communication for message transmissions.
 
+# However, to simplify the role assignment simulation, the gradient map is pre-calculated.
+# The following is a lot like calculating the holistic dependency, searching the shortest path
+# between two robots.
 
-# pre-calculated
 
 
 
