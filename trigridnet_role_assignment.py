@@ -104,7 +104,7 @@ screen = pygame.display.set_mode(screen_size)
 pygame.display.set_caption("Role Assignment on 2D Triangle Grid Network")
 
 # node display positions
-center_temp = (nodes_cart.max(axis=0) + nodes_cart.min(axis=0)) / 2.0
+center_temp = (nodes_cart.max(axis=0) + nodes_cart.min(axis=0))/2.0
 nodes_cart = nodes_cart - center_temp + (world_size[0]/2.0, world_size[1]/2.0)
 nodes_disp = [world_to_display(nodes_cart[i], world_size, screen_size)
               for i in range(net_size)]
@@ -119,16 +119,36 @@ for i in range(net_size):
     pygame.draw.circle(screen, color_black, nodes_disp[i], node_size, 0)
 pygame.display.update()
 
+# raw_input("Press <ENTER> to continue")
+
+########## the role assignment algorithm ##########
+
+# Gradient value method for information flow control:
+# This gradient method was first used in the early simulations of Kilobot project, for a robot
+# to localize itself in a swarm in order to do formation control. The gradient value indicates
+# the distance from a particular source, and can be used here to guarantee the information
+# flows only forward, instead of backward. If the source robot has gradient value of 0, all the
+# robots next to it will have gradient value of 1, then robots next to them have gradient value
+# of 2. The robots are forming nested-ring patterns. The message will only be transmitted from
+# a low gradient robot to a high gradient one. In this way, one message from source will travel
+# through all other robots, without resonating inside the swarm. Since every robot in this
+# application will transmit its own message, the robot needs to calculate the gradient value
+# of all message sources.
+
+# Distributed gradient map calculation:
+# At the beginning, the robots don't know the gradient value to a particular message source.
+# The message transmitted from the source robot contains a gradient header of value 0. When
+# the robots next to it receives the message for the first time, they find the gradient value
+# for this particular source has not been initialized yet, they will increase the gradient
+# header by 1, and take it as its gradient value for that source. When transmitting it again,
+# if it knows the neighbors' gradient to the same source, it will decide whether to transmit
+# the received message based on the gradient(only transmit if neighbor has larger gradient).
+# If gradient is unknown, it will transmit the message anyway. If a robot has already decided
+# the gradient for the source, and receives the message that contains same gradient value,
+# the robot knows in this way the gradient of that neighbor.
 
 
-
-
-
-
-
-
-raw_input("Press <ENTER> to continue")
-
+# pre-calculated
 
 
 
