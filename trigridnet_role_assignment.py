@@ -24,7 +24,8 @@ from formation_functions import *
 import numpy as np
 import os, getopt, sys, time
 
-import pandas
+import pandas as pd
+pd.set_option('display.max_columns', None)
 
 net_folder = 'trigrid-networks'
 net_filename = '30-1'  # default network
@@ -153,9 +154,9 @@ pool_gradient = 1  # gradient of the connections in the pool
 pool_conn = {}
 for i in range(net_size):
     pool_conn[i] = connection_lists[i][:]  # start with gradient 1 connections
-active_keys = range(net_size)
-while len(active_keys) != 0:
-    for source in active_keys:
+while len(pool_conn.keys()) != 0:
+    source_deactivate = []
+    for source in pool_conn:
         targets_temp = []  # the new targets
         for target in pool_conn[source]:
             for target_new in connection_lists[target]:
@@ -164,16 +165,16 @@ while len(active_keys) != 0:
                     gradient[source, target_new] = pool_gradient + 1
                     targets_temp.append(target_new)
         if len(targets_temp) == 0:
-            active_keys.remove(source)
+            source_deactivate.append(source)
         else:
             pool_conn[source] = targets_temp[:]  # update with new targets
+    for source in source_deactivate:
+        pool_conn.pop(source)  # remove the finished sources
     pool_gradient = pool_gradient + 1
 
-for i in range(net_size):
-    for j in range(i+1,net_size):
-        if gradient[i,j] != gradient[j,i]: print "{}-{} not symmetry".format(i,j)
+# print pd.DataFrame(gradient, range(net_size), range(net_size))
+# raw_input("Press <ENTER> to continue")
 
-print pandas.DataFrame(gradient, range(net_size), range(net_size))
-raw_input("Press <ENTER> to continue")
+
 
 
