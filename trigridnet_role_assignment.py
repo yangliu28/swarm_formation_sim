@@ -24,6 +24,8 @@ from formation_functions import *
 import numpy as np
 import os, getopt, sys, time
 
+import pandas
+
 net_folder = 'trigrid-networks'
 net_filename = '30-1'  # default network
 net_size = 30  # default network size
@@ -79,6 +81,7 @@ for i in range(net_size):
 
 # plot the network as dots and lines in pygame window
 pygame.init()
+font = pygame.font.SysFont("Cabin", 14)
 nodes_cart = np.array([trigrid_to_cartesian(pos) for pos in nodes_tri])
 # find appropriate window size to fit current network
 (xmin, ymin) = np.amin(nodes_cart, axis=0)
@@ -117,9 +120,9 @@ for i in range(net_size):
             pygame.draw.line(screen, color_black, nodes_disp[i], nodes_disp[j], line_width)
 for i in range(net_size):
     pygame.draw.circle(screen, color_black, nodes_disp[i], node_size, 0)
+    text = font.render(str(i), True, color_black)
+    screen.blit(text, (nodes_disp[i][0]+12, nodes_disp[i][1]-12))
 pygame.display.update()
-
-# raw_input("Press <ENTER> to continue")
 
 ########## the role assignment algorithm ##########
 
@@ -127,24 +130,50 @@ pygame.display.update()
 # This gradient method was first used in the early simulations of Kilobot project, for a robot
 # to localize itself in a swarm in order to do formation control. The gradient value indicates
 # the distance from a particular source, and can be used here to guarantee the information
-# flows only forward, instead of backward. If the source robot has gradient value of 0, all the
-# robots next to it will have gradient value of 1, then robots next to them have gradient value
-# of 2. The robots are forming nested-ring patterns. The message will only be transmitted from
-# a low gradient robot to a high gradient one. In this way, one message from source will travel
-# through all other robots, without resonating infinitely inside the swarm. Since every robot
-# in this application will transmit its own message, the robot needs to calculate the gradient
+# flows only forward, instead of backward. If the source node has gradient value of 0, all the
+# nodes next to it will have gradient value of 1, then nodes next to them have gradient value
+# of 2. These nodes are forming nested-ring patterns. The message will only be transmitted from
+# a low gradient node to a high gradient one. In this way, one message from source will travel
+# through all other nodes, without resonating infinitely inside the network. Since every node
+# in this application will transmit its own message, the node needs to calculate the gradient
 # value of all message sources.
 
 # To construct the gradient values in a distributed way, when messages are received from a new
-# message source, the robot will take the minimum gradient value plus 1 as its gradient for
-# that message source. In this way each robot will build the gradient values on-the-go for any
+# message source, the node will take the minimum gradient value plus 1 as its gradient for
+# that message source. In this way each node will build the gradient values on-the-go for any
 # other message source. A little more complicated algorithm for constructing gradient values
 # is also developed to deal with any unstable communication for message transmissions.
 
 # However, to simplify the role assignment simulation, the gradient map is pre-calculated.
-# The following is a lot like calculating the holistic dependency, searching the shortest path
-# between two robots.
+# Although I could use algorithm similar in the holistic dependency calculation, a new one that
+# searching the shortest path between any two nodes is investigated in the following.
+gradient = np.copy(connections)  # build gradient map on the connection map
+    # gradient[i,j] indicates gradient value of node j, to message source i
+pool_gradient = 1  # gradient of the connections in the pool
+pool_conn = {}
+for i in range(net_size):
+    pool_conn[i] = connection_lists[i][:]  # start with gradient 1 connections
+active_keys = range(net_size)
+while len(active_keys) != 0:
+    for source in active_keys:
+        targets_temp = []  # the new targets
+        for target in pool_conn[source]:
+            for target_new in connection_lists[target]:
+                if target_new == source: continue  # skip itself
+                if gradient[source, target_new] == 0:
+                    gradient[source, target_new] = pool_gradient + 1
+                    targets_temp.append(target_new)
+        if len(targets_temp) == 0:
+            active_keys.remove(source)
+        else:
+            pool_conn[source] = targets_temp[:]  # update with new targets
+    pool_gradient = pool_gradient + 1
 
+for i in range(net_size):
+    for j in range(i+1,net_size):
+        if gradient[i,j] != gradient[j,i]: print "{}-{} not symmetry".format(i,j)
 
+print pandas.DataFrame(gradient, range(net_size), range(net_size))
+raw_input("Press <ENTER> to continue")
 
 

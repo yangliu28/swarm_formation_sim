@@ -178,7 +178,7 @@ for i in range(net_size):
 # calculate the "holistic dependency"
 calculate_h_dependency = False  # option for calculating holistic dependency
 # this computation takes significant time when net_size is above 50
-# the algorithm below has been optimized to the most efficient I can
+# the algorithm below has been optimized to the best efficient I can achieve
 if calculate_h_dependency:
     dependencies = [0.0 for i in range(net_size)]  # individual dependency for each robot
     holistic_dependency_abs = 0.0  # absolute holistic dependency
