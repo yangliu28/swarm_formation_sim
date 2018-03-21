@@ -1,15 +1,15 @@
 # This simulation tests a distributed role assignment algorithm, for robot swarm starting
 # at arbitrary triangle grid network, to perform one-to-one role assignment. The assigned
 # roles are abstract and represented as index numbers. The primary goal of this role
-# assignment algorithm is to have all robots agree on the one-to-one assignment scheme,
+# assignment algorithm is to have all nodes agree on the one-to-one assignment scheme,
 # instead of coming up with the best assignment scheme.
 
-# Inter-robot communication is used to let one robot know the status of another robot that
+# Inter-node communication is used to let one node know the status of another node that
 # is not directly connected. Enabling message convey is what I consider the most convenient
-# way to resolve conflict when two robots decide on the same assigned role. Although in this
-# way, it is possible for each robot to have the information of all the other robots, and
+# way to resolve conflict when two nodes decide on the same assigned role. Although in this
+# way, it is possible for each node to have the information of all the other nodes, and
 # thus it could become a distributed master control algorithm, we still consider the proposed
-# algorithm a distributed one. Because we limit the information each robot will store, and
+# algorithm a distributed one. Because we limit the information each node will store, and
 # the local computation performed, so the algorithm is still robust.
 
 # The communication delay is also reflected in the simulation, one step in simulation will
@@ -182,7 +182,7 @@ for i in range(net_size):  # message source i
         gradient_temp[j] = gradients[i] - gradients[i,j]
     gradients_rel.append(gradient_temp)
 
-# list the neighbors a robot can send message to regarding a message source
+# list the neighbors a node can send message to regarding a message source
 neighbors_send = [[[] for j in range(net_size)] for i in range(net_size)]
     # neighbors_send[i][j][k] means, if message from source i is received in j,
     # it could be send to k
@@ -199,14 +199,19 @@ for i in range(net_size):
     pref_dist[i,:] = pref_dist[i,:] / sum_temp[i]
 roles = np.argmax(pref_dist)  # the chosen role
 
-# received message container for all robots
+# the local role assignment information
+local_assignment = [[[-1, 0, -1] for j in range(net_size)] for i in range(net_size)]
+# local_assignment[i][j] is local assignment information of node i for node j
+# first number is chosen position, second is probability, third is time stamp
+
+# received message container for all nodes
 message_rx = [[] for i in range(net_size)]
 # for each message entry, it containts:
-    # ID of message source
-    # its preferred position
-    # probability on preferred position
-    # time stamp
-# all robots transmit once their chosen role before the loop
+    # message[0]: ID of message source
+    # message[1]: its preferred position
+    # message[2]: probability on preferred position
+    # message[3]: time stamp
+# all nodes transmit once their chosen role before the loop
 transmission_total = 0  # count message transmissions for each iteration
 iter_count = 0  # also used as time stamp in message
 for source in range(net_size):
@@ -215,12 +220,12 @@ for source in range(net_size):
         message_rx[target].append(message_temp)
         transmission_total = transmission_total + 1
 
+transmit_flag = [[False for j in range(net_size)] for i in range(net_size)]
+converged = [False for i in range(net_size)]
+
 # solid circle for undetermined role assignment scheme
 # solid circle with color for conflicting in role assignment
 # empty circle for converged role assignment scheme
-
-assignment_chosen_position = [[] for i in range(net_size)]
-assignment_choosing_robots
 
 sim_exit = False
 sim_pause = False
@@ -246,9 +251,13 @@ while not sim_exit:
     # transfer messages to the processing buffer, and empty the receiver
     message_rx_buf = [[[k for k in j] for j in i] for i in message_rx]
     message_rx = [[] for i in range(net_size)]
-    for i in range(net_size):
-
-
+    for i in range(net_size):  # messages received by node i
+        for message in message_rx_buf[i]:
+            source = message[0]
+            position = message[1]
+            probability = message[2]
+            time_stamp = message[3]
+            if 
 
 
 # hold the simulation window to exit manually
