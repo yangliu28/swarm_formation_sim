@@ -26,6 +26,7 @@ import os, getopt, sys, time
 
 import pandas as pd
 pd.set_option('display.max_columns', None)
+# print pd.DataFrame(gradients, range(net_size), range(net_size))
 
 net_folder = 'trigrid-networks'
 net_filename = '30-1'  # default network
@@ -148,9 +149,9 @@ pygame.display.update()
 # However, to simplify the role assignment simulation, the gradient map is pre-calculated.
 # Although I could use algorithm similar in the holistic dependency calculation, a new one that
 # searching the shortest path between any two nodes is investigated in the following.
-gradient = np.copy(connections)  # build gradient map on the connection map
-    # gradient[i,j] indicates gradient value of node j, to message source i
-pool_gradient = 1  # gradient of the connections in the pool
+gradients = np.copy(connections)  # build gradient map on the connection map
+    # gradients[i,j] indicates gradient value of node j, to message source i
+pool_gradient = 1  # gradients of the connections in the pool
 pool_conn = {}
 for i in range(net_size):
     pool_conn[i] = connection_lists[i][:]  # start with gradient 1 connections
@@ -161,8 +162,8 @@ while len(pool_conn.keys()) != 0:
         for target in pool_conn[source]:
             for target_new in connection_lists[target]:
                 if target_new == source: continue  # skip itself
-                if gradient[source, target_new] == 0:
-                    gradient[source, target_new] = pool_gradient + 1
+                if gradients[source, target_new] == 0:
+                    gradients[source, target_new] = pool_gradient + 1
                     targets_temp.append(target_new)
         if len(targets_temp) == 0:
             source_deactivate.append(source)
@@ -172,9 +173,85 @@ while len(pool_conn.keys()) != 0:
         pool_conn.pop(source)  # remove the finished sources
     pool_gradient = pool_gradient + 1
 
-# print pd.DataFrame(gradient, range(net_size), range(net_size))
-# raw_input("Press <ENTER> to continue")
+# calculate the relative gradient values
+gradients_rel = []
+    # gradients_rel[i][j,k] refers to gradient of k relative to j with message source i
+for i in range(net_size):  # message source i
+    gradient_temp = np.zeros((net_size, net_size))
+    for j in range(net_size):  # in the view point of j
+        gradient_temp[j] = gradients[i] - gradients[i,j]
+    gradients_rel.append(gradient_temp)
+
+# list the neighbors a robot can send message to regarding a message source
+neighbors_send = [[[] for j in range(net_size)] for i in range(net_size)]
+    # neighbors_send[i][j][k] means, if message from source i is received in j,
+    # it could be send to k
+for i in range(net_size):  # message source i
+    for j in range(net_size):  # in the view point of j
+        for neighbor in connection_lists[j]:
+            if gradients_rel[i][j,neighbor] == 1:
+                neighbors_send[i][j].append(neighbor)
+
+# generate the initial preference distribution
+pref_dist = np.random.rand(net_size, net_size)
+sum_temp = np.sum(pref_dist, axis=1)
+for i in range(net_size):
+    pref_dist[i,:] = pref_dist[i,:] / sum_temp[i]
+roles = np.argmax(pref_dist)  # the chosen role
+
+# received message container for all robots
+message_rx = [[] for i in range(net_size)]
+# for each message entry, it containts:
+    # ID of message source
+    # its preferred position
+    # probability on preferred position
+    # time stamp
+# all robots transmit once their chosen role before the loop
+transmission_total = 0  # count message transmissions for each iteration
+iter_count = 0  # also used as time stamp in message
+for source in range(net_size):
+    message_temp = [source, roles[source], pref_dist[roles[source]], iter_count]
+    for target in connection_lists[source]:  # send to all neighbors
+        message_rx[target].append(message_temp)
+        transmission_total = transmission_total + 1
+
+# solid circle for undetermined role assignment scheme
+# solid circle with color for conflicting in role assignment
+# empty circle for converged role assignment scheme
+
+assignment_chosen_position = [[] for i in range(net_size)]
+assignment_choosing_robots
+
+sim_exit = False
+sim_pause = False
+time_now = pygame.time.get_ticks()
+time_last = time_now
+time_period = 300
+speed_control = True  # set False to skip speed control
+while not sim_exit:
+    # exit the program by close window button, or Esc or Q on keyboard
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sim_exit = True  # exit with the close window button
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE:
+                sim_pause = not sim_pause  # reverse the pause flag
+            if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
+                sim_exit = True  # exit with ESC key or Q key
+
+    # skip the rest if paused
+    if sim_pause: continue
+
+    # process the received messages
+    # transfer messages to the processing buffer, and empty the receiver
+    message_rx_buf = [[[k for k in j] for j in i] for i in message_rx]
+    message_rx = [[] for i in range(net_size)]
+    for i in range(net_size):
 
 
+
+
+# hold the simulation window to exit manually
+raw_input("Role assignment finished, press <ENTER> to exit")
 
 
