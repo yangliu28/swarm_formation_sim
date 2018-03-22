@@ -193,34 +193,44 @@ for i in range(net_size):  # message source i
                 neighbors_send[i][j].append(neighbor)
 
 # generate the initial preference distribution
-pref_dist = np.random.rand(net_size, net_size)
-sum_temp = np.sum(pref_dist, axis=1)
-for i in range(net_size):
-    pref_dist[i,:] = pref_dist[i,:] / sum_temp[i]
-roles = np.argmax(pref_dist)  # the chosen role
+pref_dist = np.random.rand(net_size, net_size)  # no need to normalize it
+chosen_role = np.argmax(pref_dist)  # the chosen role
 
-# the local role assignment information
-local_assignment = [[[-1, 0, -1] for j in range(net_size)] for i in range(net_size)]
-# local_assignment[i][j] is local assignment information of node i for node j
-# first number is chosen position, second is probability, third is time stamp
+# the local assignment information
+local_role_assignment = [[[-1, 0, -1] for j in range(net_size)] for i in range(net_size)]
+    # local_role_assignment[i][j] is local assignment information of node i for node j
+    # first number is chosen role, second is probability, third is time stamp
+local_node_assignment = [[[] for j in range(net_size)] for i in range(net_size)]
+    # local_node_assignment[i][j] is local assignment of node i for role j
+    # contains a list of nodes that choose role j
+# populate the assignment of itself to the local assignment information
+for i in range(net_size):
+    local_role_assignment[i][i][0] = chosen_role[i]
+    local_role_assignment[i][i][1] = pref_dist[i, chosen_role[i]]
+    local_role_assignment[i][i][2] = 0
+    local_node_assignment[i][chosen_role[i]].append(i)
 
 # received message container for all nodes
 message_rx = [[] for i in range(net_size)]
 # for each message entry, it containts:
     # message[0]: ID of message source
-    # message[1]: its preferred position
-    # message[2]: probability on preferred position
+    # message[1]: its preferred role
+    # message[2]: probability of chosen role
     # message[3]: time stamp
 # all nodes transmit once their chosen role before the loop
 transmission_total = 0  # count message transmissions for each iteration
 iter_count = 0  # also used as time stamp in message
 for source in range(net_size):
-    message_temp = [source, roles[source], pref_dist[roles[source]], iter_count]
+    message_temp = [source, chosen_role[source],
+                    pref_dist[source, chosen_role[source]], iter_count]
     for target in connection_lists[source]:  # send to all neighbors
         message_rx[target].append(message_temp)
         transmission_total = transmission_total + 1
 
 transmit_flag = [[False for j in range(net_size)] for i in range(net_size)]
+    # whether node i should transmit received message of node j
+change_flag = [False for i in range(net_size)]
+    # whether node i should change its chosen role
 converged = [False for i in range(net_size)]
 
 # solid circle for undetermined role assignment scheme
@@ -247,17 +257,64 @@ while not sim_exit:
     # skip the rest if paused
     if sim_pause: continue
 
+    iter_count = iter_count + 1
+
     # process the received messages
-    # transfer messages to the processing buffer, and empty the receiver
+    # transfer messages to the processing buffer, then empty the message receiver
     message_rx_buf = [[[k for k in j] for j in i] for i in message_rx]
     message_rx = [[] for i in range(net_size)]
     for i in range(net_size):  # messages received by node i
         for message in message_rx_buf[i]:
             source = message[0]
-            position = message[1]
+            role = message[1]
             probability = message[2]
             time_stamp = message[3]
-            if 
+            if source == i:
+                print "error, node {} receives message of itself".format(i)
+                sys.exit()
+            if time_stamp > local_role_assignment[i][source][3]:
+                # received message will only take any effect if time stamp is new
+                # update local_node_assignment
+                role_old = local_role_assignment[i][source][0]
+                if role_old >= 0:  # has been initialized before, not -1
+                    local_node_assignment[i][role_old].remove(source)
+                local_node_assignment[i][role].append(source)
+                # update local_role_assignment
+                local_role_assignment[i][source][0] = role
+                local_role_assignment[i][source][1] = probability
+                local_role_assignment[i][source][2] = time_stamp
+                transmit_flag[i][j] = True
+                # check conflict with itself
+                if role == chosen_role[i]:
+                    if probability >= pref_dist[i, chosen_role[i]]:
+                        # change its choice after all message received
+                        change_flag[i] = True
+    # change the choice of role for those decide to
+    for i in range(net_size):
+        if change_flag[i]:
+            change_flag[i] = False
+            role_old = chosen_role[i]
+            pref_dist_temp = np.copy(pref_dist[i])
+            pref_dist_temp[chosen_role[i]] = -1  # set to negative to avoid being chosen
+            for j in range(net_size):
+                if len(local_node_assignment[i][j]) != 0:
+                    # eliminate those choices that have been taken
+                    pref_dist_temp[j] = -1
+            role_new = np.argmax(pref_dist_temp)
+            if pref_dist_temp[role_new] < 0:
+                print "error, node {} has no available role".format(i)
+                sys.exit()
+            # role_new is good to go
+            chosen_role[i] = role_new
+            # update local_node_assignment
+            local_node_assignment[i][role_old].remove(i)
+            local_node_assignment[i][role_new].append(i)
+            # update local_role_assignment
+            local_role_assignment[i][i][0] = chosen_role[i]
+            local_role_assignment[i][i][1] = chosen_probability[i]
+            local_role_assignment[i][i][2] = iter_count
+
+
 
 
 # hold the simulation window to exit manually
