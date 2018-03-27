@@ -4,6 +4,9 @@
 # assignment algorithm is to have all nodes agree on the one-to-one assignment scheme,
 # instead of coming up with the best assignment scheme.
 
+# input arguments:
+# '-f': filename of the triangle grid network
+
 # Inter-node communication is used to let one node know the status of another node that
 # is not directly connected. Enabling message convey is what I consider the most convenient
 # way to resolve conflict when two nodes decide on the same assigned role. Although in this
@@ -15,6 +18,11 @@
 # The communication delay is also reflected in the simulation, one step in simulation will
 # update one step of message transmission. Color is used to highlight the conflicts in the
 # role assignment, instead of showing convergence of decisions.
+
+# visualization design:
+# solid black circle for undetermined role assignment scheme
+# solid colored circle for conflicts in role assignment
+# extra circle on node for locally converged role assignment scheme
 
 
 import pygame
@@ -33,11 +41,9 @@ net_filename = '30-1'  # default network
 net_size = 30  # default network size
 net_filepath = os.path.join(os.getcwd(), net_folder, net_filename)
 
-nobargraph = False
-
 # read command line options
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'f:', ['nobargraph'])
+    opts, args = getopt.getopt(sys.argv[1:], 'f:')
 except getopt.GetoptError as err:
     print str(err)
     sys.exit()
@@ -51,8 +57,6 @@ for opt,arg in opts:
             sys.exit()
         # parse the network size
         net_size = int(net_filename.split('-')[0])
-    elif opt == '--nobargraph':
-        nobargraph = True
 
 # read the network from file
 nodes_tri = []
@@ -95,6 +99,7 @@ screen_size = (int(round(world_size[0] * pixels_per_length)),
                int(round(world_size[1] * pixels_per_length)))
 node_size = 8
 line_width = 4
+converge_ring_size = 12
 # colors
 color_white = (255,255,255)
 color_black = (0,0,0)
@@ -126,6 +131,8 @@ for i in range(net_size):
     # text = font.render(str(i), True, color_black)
     # screen.blit(text, (nodes_disp[i][0]+12, nodes_disp[i][1]-12))
 pygame.display.update()
+
+raw_input("press <ENTER> to continue")
 
 ########## the role assignment algorithm ##########
 
@@ -195,7 +202,7 @@ for i in range(net_size):  # message source i
 
 # generate the initial preference distribution
 pref_dist = np.random.rand(net_size, net_size)  # no need to normalize it
-chosen_role = np.argmax(pref_dist)  # the chosen role
+initial_roles = np.argmax(pref_dist, axis=1)  # the chosen role
 
 # the local assignment information
 local_role_assignment = [[[-1, 0, -1] for j in range(net_size)] for i in range(net_size)]
@@ -206,10 +213,10 @@ local_node_assignment = [[[] for j in range(net_size)] for i in range(net_size)]
     # contains a list of nodes that choose role j
 # populate the chosen role of itself to the local assignment information
 for i in range(net_size):
-    local_role_assignment[i][i][0] = chosen_role[i]
-    local_role_assignment[i][i][1] = pref_dist[i, chosen_role[i]]
+    local_role_assignment[i][i][0] = initial_roles[i]
+    local_role_assignment[i][i][1] = pref_dist[i, initial_roles[i]]
     local_role_assignment[i][i][2] = 0
-    local_node_assignment[i][chosen_role[i]].append(i)
+    local_node_assignment[i][initial_roles[i]].append(i)
 
 # received message container for all nodes
 message_rx = [[] for i in range(net_size)]
@@ -222,8 +229,8 @@ message_rx = [[] for i in range(net_size)]
 transmission_total = 0  # count message transmissions for each iteration
 iter_count = 0  # also used as time stamp in message
 for source in range(net_size):
-    message_temp = [source, chosen_role[source],
-                    pref_dist[source, chosen_role[source]], iter_count]
+    chosen_role = local_role_assignment[source][source][0]
+    message_temp = [source, chosen_role, pref_dist[source, chosen_role], iter_count]
     for target in connection_lists[source]:  # send to all neighbors
         message_rx[target].append(message_temp)
         transmission_total = transmission_total + 1
@@ -253,9 +260,9 @@ sim_exit = False
 sim_pause = False
 time_now = pygame.time.get_ticks()
 time_last = time_now
-time_period = 500
+time_period = 2000
 speed_control = True  # set False to skip speed control
-flash_delay = 50
+flash_delay = 200
 while not sim_exit:
     # exit the program by close window button, or Esc or Q on keyboard
     for event in pygame.event.get():
@@ -294,7 +301,7 @@ while not sim_exit:
             if source == i:
                 print "error, node {} receives message of itself".format(i)
                 sys.exit()
-            if time_stamp > local_role_assignment[i][source][3]:
+            if time_stamp > local_role_assignment[i][source][2]:
                 # received message will only take any effect if time stamp is new
                 # update local_node_assignment
                 role_old = local_role_assignment[i][source][0]
@@ -307,19 +314,20 @@ while not sim_exit:
                 local_role_assignment[i][source][2] = time_stamp
                 transmit_flag[i][source] = True
                 # check conflict with itself
-                if role == chosen_role[i]:
-                    if probability >= pref_dist[i, chosen_role[i]]:
+                if role == local_role_assignment[i][i][0]:
+                    if probability >= pref_dist[i, local_role_assignment[i][i][0]]:
                         # change its choice after all message received
                         change_flag[i] = True
                         yield_nodes.append(i)
-                        yield_roles.append(chosen_role[i])
+                        yield_roles.append(local_role_assignment[i][i][0])
     # change the choice of role for those decide to
     for i in range(net_size):
         if change_flag[i]:
             change_flag[i] = False
-            role_old = chosen_role[i]
+            role_old = local_role_assignment[i][i][0]
             pref_dist_temp = np.copy(pref_dist[i])
-            pref_dist_temp[chosen_role[i]] = -1  # set to negative to avoid being chosen
+            pref_dist_temp[local_role_assignment[i][i][0]] = -1
+                # set to negative to avoid being chosen
             for j in range(net_size):
                 if len(local_node_assignment[i][j]) != 0:
                     # eliminate those choices that have been taken
@@ -329,13 +337,12 @@ while not sim_exit:
                 print "error, node {} has no available role".format(i)
                 sys.exit()
             # role_new is good to go
-            chosen_role[i] = role_new
             # update local_node_assignment
             local_node_assignment[i][role_old].remove(i)
             local_node_assignment[i][role_new].append(i)
             # update local_role_assignment
-            local_role_assignment[i][i][0] = chosen_role[i]
-            local_role_assignment[i][i][1] = chosen_probability[i]
+            local_role_assignment[i][i][0] = role_new
+            local_role_assignment[i][i][1] = pref_dist[i][role_new]
             local_role_assignment[i][i][2] = iter_count
             transmit_flag[i][i] = True
     # transmit the received messages or initial new message transmission
@@ -362,16 +369,15 @@ while not sim_exit:
             if converged:
                 scheme_converged[i] = True
 
-    # solid circle for undetermined role assignment scheme
-    # solid circle with color for conflicting in role assignment
-    # extra circle for converged role assignment scheme
-
     # for display, scan the nodes that have detected conflict but not yielding
     persist_nodes = []
     for i in range(net_size):
         if i in yield_nodes: continue
-        if len(local_node_assignment[i][chosen_role[i]]) > 1:
+        if len(local_node_assignment[i][local_role_assignment[i][i][0]]) > 1:
             persist_nodes.append(i)
+
+    # debug print
+    print "iteration {}, total transmission {}".format(iter_count, transmission_total)
 
     # update the display
     for i in range(net_size):
@@ -380,14 +386,14 @@ while not sim_exit:
                 pygame.draw.line(screen, color_black, nodes_disp[i], nodes_disp[j], line_width)
     for i in range(net_size):
         pygame.draw.circle(screen, color_black, nodes_disp[i], node_size, 0)
-    # draw the conflict nodes with color of corresponding role
+    # draw the persisting nodes with color of conflicting role
     for i in persist_nodes:
-        pygame.draw.circle(screen, distinct_color_set[role_color[chosen_role[i]]],
+        pygame.draw.circle(screen, distinct_color_set[role_color[local_role_assignment[i][i][0]]],
             nodes_disp[i], node_size, 0)
-    # draw extra ring on node if local scheme converged
+    # draw extra ring on node if local scheme has converged
     for i in range(net_size):
         if scheme_converged[i]:
-            pygame.draw.circle(screen, color_black, nodes_disp[i], node_size*1.5, 1)
+            pygame.draw.circle(screen, color_black, nodes_disp[i], converge_ring_size, 2)
     pygame.display.update()
     # flash the yielding nodes with color of old role
     for _ in range(3):
@@ -409,12 +415,10 @@ while not sim_exit:
     for i in range(1, net_size):
         all_converged = all_converged and scheme_converged[i]
         if not all_converged: break
-    if all_converged:
-        print("role assignment is all done")
-        sim_exit = True
-
+    if all_converged: sim_exit = True
 
 # hold the simulation window to exit manually
-raw_input("Role assignment finished, press <ENTER> to exit")
+raw_input("role assignment finished, press <ENTER> to exit")
+
 
 
