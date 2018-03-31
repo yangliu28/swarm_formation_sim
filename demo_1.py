@@ -13,15 +13,46 @@
 # the local shape so the loop deforms to the target one. The above steps will be ran repeatedly.
 
 
-# use 'robot' instead of 'node here
 
-# accomodate different network size, 
+# add interaction of mouse to show futher interaction
+
+# use text update in the terminal to show extra information, iterations
+
+# transition between the processes, when to terminate a process and continue next one
+# consensus decision making: subgroup size reaches to total number
+# role assignment: when no conflict
+# loop formation: when local shape accuracy is within a threshold
 
 # note that communication is simulated in the role assignment, but not 
 
 # how to display all the information needed along with the simulation
-# consensus decision making: same color for same chosen decision
-# role assignment
-# loop formation
+# consensus decision making: same color for same chosen decision, of collective shape
+    # guarantee all robots agreed on one choice
+# role assignment: same color for same chosen decision, of target position
+    # guarantee all robots agreed on all different choices
+# loop formation: no colors, empty circle for dormant, filled circle for active
+
+
+import pygame
+from __future__ import print_function
+import sys, getopt
+import numpy as np
+
+swarm_size = 30  # default number of robots in the swarm
+
+# read command line options
+try:
+    opts, args = getopt.getopt(sys.argv[1:], 'n:')
+except getopt.GetoptError as err:
+    print str(err)
+    sys.exit()
+for opt,arg in opts:
+    if opt = '-n':
+        swarm_size = arg
+
+# physical world size
+# simulation window size
+
+robot_poses = []
 
 
