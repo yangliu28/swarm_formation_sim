@@ -12,20 +12,22 @@
 # the robots on the loop. When the robots get their target positions, they dyanmically adjust
 # the local shape so the loop deforms to the target one. The above steps will be ran repeatedly.
 
+# Note that message transmission is simulated only in the role assignment, because communication
+# is specialy depended on and message convey is used as well. While in consensus decision making
+# and shape formation, the delay caused by communication are skipped.
 
 
-# add interaction of mouse to show futher interaction
+
+# add interaction of mouse to show further interaction
 
 # use text update in the terminal to show extra information, iterations
 
-# transition between the processes, when to terminate a process and continue next one
-# consensus decision making: subgroup size reaches to total number
-# role assignment: when no conflict
-# loop formation: when local shape accuracy is within a threshold
+# when to terminate a process and continue next one
+# consensus decision making -> subgroup size reaches to total number
+# role assignment -> when there is no conflict
+# loop formation -> when local shape accuracy is within a threshold
 
-# note that communication is simulated in the role assignment, but not 
-
-# how to display all the information needed along with the simulation
+# the use of colors
 # consensus decision making: same color for same chosen decision, of collective shape
     # guarantee all robots agreed on one choice
 # role assignment: same color for same chosen decision, of target position
