@@ -52,8 +52,26 @@ for opt,arg in opts:
     if opt = '-n':
         swarm_size = arg
 
-# physical world size
-# simulation window size
+# conversion between physical and display world sizes
+# To best display any robot swarm in its appropriate window size, and have enough physical
+# space for the robots to move around, it has been made that the ratio from unit world size
+# to unit display size is fixed. The desired physical space between robots when they do shape
+# formation is also fixed. So a small swarm will have small physical world, and a linearly
+# small display window; vice versa for a large swarm.
+# If the size of the swarm is proportional to the side length of the world, the area of the
+# world will grow too fast. If the swarm size is proportional to the area of the world, when
+# the size of the swarm grow large, it won't be able to be fitted in if performing a line or
+# circle formation. A compromise is to make swarm size proportional to the side length to the
+# power exponent between 1 and 2.
+
+# automatically calculate world_side_coef
+# from a good pair of swarm_size and its world_side_length
+
+power_exponent = 1.5
+world_side_coef = 0.5
+world_side_length = world_side_coef * pow(swarm_size, 1/power_exponent)
+world_size = (world_side_length)
+pixels_per_length = 50  # for converting from physical world to display world
 
 robot_poses = []
 
