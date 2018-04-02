@@ -70,9 +70,15 @@ for opt,arg in opts:
 power_exponent = 1.5
 world_side_coef = 0.5
 world_side_length = world_side_coef * pow(swarm_size, 1/power_exponent)
-world_size = (world_side_length)
+world_size = (world_side_length, world_side_length)  # physical world
+
 pixels_per_length = 50  # for converting from physical world to display world
 
-robot_poses = []
+screen_side_length = pixels_per_length * world_side_length
+screen_size = (screen_side_length, screen_side_length)  # display world
+
+robot_poses = np.random.rand(swarm_size, 2) * world_side_length
+disp_poses = 
+
 
 
