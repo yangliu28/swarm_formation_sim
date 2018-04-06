@@ -83,7 +83,7 @@ screen_size = (screen_side_length, screen_side_length)  # square display world
 print("world_side_length: {}".format(world_side_length))
 print("screen_side_length: {}".format(screen_side_length))
 
-# robot positions
+# robot properties
 robot_poses = np.random.rand(swarm_size, 2) * world_side_length
 # calculate and return the display positions from global variables
 def cal_disp_poses():
@@ -92,13 +92,20 @@ def cal_disp_poses():
     poses_temp = poses_temp * screen_side_length
     return poses_temp.astype(int)
 disp_poses = cal_disp_poses()
+def cal_dist_table():
+    dist_table_temp = np.zeros((swarm_size, swarm_size))  # a symmetric table
+    for i in range(swarm_size):
+        for j in range(swarm_size):
 
-# group properties
-groups = {}
+    return dist_table_temp
+dist_table = cal_dist_table()
+groups = {}  # group properties, may be reused in different purposes in the simulations
 
 # simulation configuration
-comm_range = 0.7  # communication range in the world
-desired_space = comm_range * 0.75
+comm_range = 0.65  # communication range in the world
+desired_space_ratio = 0.8  # ratio of the desired space to the communication range
+    # should be larger than 1/1.414=0.71, to avoid connections crossing each other
+desired_space = comm_range * desired_space_ratio
 
 # visualization configuration
 color_white = (255,255,255)
@@ -127,8 +134,27 @@ pygame.display.update()
 
 raw_input("<Press Enter to continue>")
 
-# the outer loop that run the designed set of operations infinitely
+# the outer loop that run the set of simulations infinitely
 while True:
+
     ########### aggregate together to form a random network ###########
+
+    robot_states = np.array([-1 for i in range(swarm_size)])  # start with state '-1'
+        # '-1' for being single, moving around, not available for connection
+        # '0' for being single, moving around, available for connection
+        # '1' for in a group, adjust position for maintaining connections
+    n1_life_lower = 3  # inclusive
+    n1_life_upper = 8  # exclusive
+    state_n1_life = np.random.randint(n1_life_lower, n1_life_upper, size=swarm_size)
+
+
+
+    # (switching from using 'status' to using 'state': state here refers to being in one
+    # condition from many options, like whether in a group, whether available for connection.
+    # Status usually refers in a series of predefined stages, which goes one way from start
+    # to the end, like referring the progress of a project. While my state may jump back and
+    # forth. It's controversial of which one to use, but 'state' is what I choose.)
+
+
 
 
