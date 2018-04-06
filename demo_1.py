@@ -40,7 +40,7 @@ import pygame
 import sys, getopt
 import numpy as np
 
-swarm_size = 30  # default number of robots in the swarm
+swarm_size = 30  # default size of the swarm
 
 # read command line options
 try:
@@ -93,15 +93,23 @@ def cal_disp_poses():
     return poses_temp.astype(int)
 disp_poses = cal_disp_poses()
 
-# visualization specifications
+# group properties
+groups = {}
+
+# simulation configuration
+comm_range = 0.7  # communication range in the world
+desired_space = comm_range * 0.75
+
+# visualization configuration
 color_white = (255,255,255)
 color_black = (0,0,0)
 distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
     (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
     (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
-node_size = 7
-line_width = 2
+node_size = 5
+node_empty_width = 2
+connection_width = 2
 
 # set up the simulation window
 pygame.init()
@@ -112,10 +120,15 @@ pygame.display.set_caption("Demo 1")
 # draw the network
 screen.fill(color_white)
 for i in range(swarm_size):
-    pygame.draw.circle(screen, color_black, disp_poses[i], node_size, 2)
+    pygame.draw.circle(screen, color_black, disp_poses[i], node_size, node_empty_width)
+    pygame.draw.circle(screen, color_black, disp_poses[i],
+        int(comm_range*pixels_per_length), 1)
 pygame.display.update()
 
 raw_input("<Press Enter to continue>")
 
+# the outer loop that run the designed set of operations infinitely
+while True:
+    ########### aggregate together to form a random network ###########
 
 
