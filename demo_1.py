@@ -83,29 +83,46 @@ screen_size = (screen_side_length, screen_side_length)  # square display world
 print("world_side_length: {}".format(world_side_length))
 print("screen_side_length: {}".format(screen_side_length))
 
-# robot properties
-robot_poses = np.random.rand(swarm_size, 2) * world_side_length
-# calculate and return the display positions from global variables
-def cal_disp_poses():
-    poses_temp = robot_poses / world_side_length
-    poses_temp[:,1] = 1.0 - poses_temp[:,1]
-    poses_temp = poses_temp * screen_side_length
-    return poses_temp.astype(int)
-disp_poses = cal_disp_poses()
-def cal_dist_table():
-    dist_table_temp = np.zeros((swarm_size, swarm_size))  # a symmetric table
-    for i in range(swarm_size):
-        for j in range(swarm_size):
-
-    return dist_table_temp
-dist_table = cal_dist_table()
-groups = {}  # group properties, may be reused in different purposes in the simulations
-
 # simulation configuration
 comm_range = 0.65  # communication range in the world
 desired_space_ratio = 0.8  # ratio of the desired space to the communication range
     # should be larger than 1/1.414=0.71, to avoid connections crossing each other
 desired_space = comm_range * desired_space_ratio
+
+# robot properties
+robot_poses = np.random.rand(swarm_size, 2) * world_side_length  # initialize the robot poses
+dist_table = np.zeros((swarm_size, swarm_size))  # distances between robots
+conn_table = np.zeros((swarm_size, swarm_size))  # connections between robots
+    # 0 for disconnected, 1 for connected
+conn_lists = [[] for i in range(swarm_size)]  # lists of robots connected
+# function to update the distances and connections between the robots
+def conn_update():
+    global dist_table
+    global conn_table
+    global conn_lists
+    conn_lists = [[] for i in range(swarm_size)]  # empty the lists
+    for i in range(swarm_size):
+        for j in range(i+1, swarm_size):
+            dist_temp = np.linalg.norm(robot_poses[i,:] - robot_poses[j,:])
+            dist_table[i,j] = dist_temp
+            dist_table[j,i] = dist_temp
+            if dist_temp > comm_range:
+                conn_table[i,j] = 0
+                conn_table[j,i] = 0
+            else:
+                conn_table[i,j] = 1
+                conn_table[j,i] = 1
+                conn_lists[i].append(j)
+                conn_lists[j].append(i)
+conn_update()  # update the connections
+groups = {}  # group properties, will be reused differently in each simulation
+# function to calculate and return the display positions
+def cal_disp_poses():
+    poses_temp = robot_poses / world_side_length
+    poses_temp[:,1] = 1.0 - poses_temp[:,1]
+    poses_temp = poses_temp * screen_side_length
+    return poses_temp.astype(int)
+disp_poses = cal_disp_poses()  # variable only used when update the display
 
 # visualization configuration
 color_white = (255,255,255)
@@ -134,10 +151,19 @@ pygame.display.update()
 
 raw_input("<Press Enter to continue>")
 
-# the outer loop that run the set of simulations infinitely
+# flow control varialbes shared by all individual simulations
+sim_finished = False
+sim_haulted = False
+time_last = pygame.time.get_ticks()
+time_now = time_last
+frame_period = 100
+sim_freq_control = True
+
+# main loop of the program that run the set of simulations infinitely
+# this loop does not exit unless error thrown out or manually terminated from terminal
 while True:
 
-    ########### aggregate together to form a random network ###########
+    ########### simulation 1: aggregate together to form a random network ###########
 
     robot_states = np.array([-1 for i in range(swarm_size)])  # start with state '-1'
         # '-1' for being single, moving around, not available for connection
@@ -147,13 +173,38 @@ while True:
     n1_life_upper = 8  # exclusive
     state_n1_life = np.random.randint(n1_life_lower, n1_life_upper, size=swarm_size)
 
-
-
     # (switching from using 'status' to using 'state': state here refers to being in one
     # condition from many options, like whether in a group, whether available for connection.
     # Status usually refers in a series of predefined stages, which goes one way from start
     # to the end, like referring the progress of a project. While my state may jump back and
     # forth. It's controversial of which one to use, but 'state' is what I choose.)
+
+    # the loop for simulation 1
+    sim_finished = False
+    sim_haulted = False
+    time_last = pygame.time.get_ticks()
+    time_now = time_last
+    frame_period = 100
+    sim_freq_control = True
+    while not sim_finished:
+        # close window button to exit the entire program;
+        # space key to pause this simulation
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:  # close window button is clicked
+                print("program exit in simulation 1 with close window button")
+                sys.exit()  # exit the entire program
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE:
+                    sim_haulted = not sim_haulted  # reverse the pause flag
+        if sim_haulted: continue
+
+        # simulation frequency control
+        if sim_freq_control:
+            time_now = pygame.time.get_ticks()
+            if (time_now - time_last) > frame_period:
+                time_last = time_now
+            else:
+                continue
 
 
 
