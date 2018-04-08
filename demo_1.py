@@ -96,7 +96,7 @@ conn_table = np.zeros((swarm_size, swarm_size))  # connections between robots
     # 0 for disconnected, 1 for connected
 conn_lists = [[] for i in range(swarm_size)]  # lists of robots connected
 # function to update the distances and connections between the robots
-def conn_update():
+def dist_conn_update():
     global dist_table
     global conn_table
     global conn_lists
@@ -114,15 +114,16 @@ def conn_update():
                 conn_table[j,i] = 1
                 conn_lists[i].append(j)
                 conn_lists[j].append(i)
-conn_update()  # update the connections
-groups = {}  # group properties, will be reused differently in each simulation
+dist_conn_update()  # update the distances and connections
+disp_poses = []  # display positions
 # function to calculate and return the display positions
-def cal_disp_poses():
+def disp_poses_update():
+    global disp_poses
     poses_temp = robot_poses / world_side_length
     poses_temp[:,1] = 1.0 - poses_temp[:,1]
     poses_temp = poses_temp * screen_side_length
-    return poses_temp.astype(int)
-disp_poses = cal_disp_poses()  # variable only used when update the display
+    disp_poses = poses_temp.astype(int)  # convert to int and assign to disp_poses
+disp_poses_update()
 
 # visualization configuration
 color_white = (255,255,255)
@@ -154,8 +155,8 @@ raw_input("<Press Enter to continue>")
 # flow control varialbes shared by all individual simulations
 sim_finished = False
 sim_haulted = False
-time_last = pygame.time.get_ticks()
-time_now = time_last
+time_last = 0.0
+time_now = 0.0
 frame_period = 100
 sim_freq_control = True
 
@@ -165,19 +166,28 @@ while True:
 
     ########### simulation 1: aggregate together to form a random network ###########
 
-    robot_states = np.array([-1 for i in range(swarm_size)])  # start with state '-1'
+    # (switching from using 'status' to using 'state': state here refers to being in one
+    # condition from many options, like whether in a group, whether available for connection.
+    # Status usually refers in a series of predefined stages, which goes one way from start
+    # to the end, like referring the progress of a project. While my state may jump back and
+    # forth. It's controversial of which one to use, but 'state' is what I choose.)
+
+    # robot initialization
+    # all robots start with state '-1', wandering around and ignoring connections
+    robot_states = np.array([-1 for i in range(swarm_size)])
         # '-1' for being single, moving around, not available for connection
         # '0' for being single, moving around, available for connection
         # '1' for in a group, adjust position for maintaining connections
     n1_life_lower = 3  # inclusive
     n1_life_upper = 8  # exclusive
     state_n1_life = np.random.randint(n1_life_lower, n1_life_upper, size=swarm_size)
+    robot_oris = np.random.rand(swarm_size) * 2 * math.pi - math.pi  # in range of [-pi, pi)
 
-    # (switching from using 'status' to using 'state': state here refers to being in one
-    # condition from many options, like whether in a group, whether available for connection.
-    # Status usually refers in a series of predefined stages, which goes one way from start
-    # to the end, like referring the progress of a project. While my state may jump back and
-    # forth. It's controversial of which one to use, but 'state' is what I choose.)
+    groups = {}  # group property
+        # key is the group id, value is a list, in the list:
+        # [0]: a list of robots in the group
+        # [1]: remaining life time of the group
+        # [2]: whether or not being the dominant group
 
     # the loop for simulation 1
     sim_finished = False
@@ -206,6 +216,12 @@ while True:
             else:
                 continue
 
+        dist_conn_update()  # update the "relations" of the robots
+        # schedule any state change based on the current state of the robot
+        for i in range(swarm_size):
+            if robot_states[i] == -1:  # host robot with state '-1'
+                # robot '-1' ignores all '-1' and '0', so remove if there is any
+                if state_n1_life[i] < 0
 
 
 
