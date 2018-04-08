@@ -180,7 +180,7 @@ while True:
         # '1' for in a group, adjust position for maintaining connections
     n1_life_lower = 3  # inclusive
     n1_life_upper = 8  # exclusive
-    state_n1_life = np.random.randint(n1_life_lower, n1_life_upper, size=swarm_size)
+    state_n1_lives = np.random.randint(n1_life_lower, n1_life_upper, size=swarm_size)
     robot_oris = np.random.rand(swarm_size) * 2 * math.pi - math.pi  # in range of [-pi, pi)
 
     groups = {}  # group property
@@ -216,12 +216,27 @@ while True:
             else:
                 continue
 
+        # state transition variables
+        st_n1to0 = []  # list of robots changing to '0' from '-1'
+
+
         dist_conn_update()  # update the "relations" of the robots
-        # schedule any state change based on the current state of the robot
+        # check any state transition, and schedule the tasks
         for i in range(swarm_size):
-            if robot_states[i] == -1:  # host robot with state '-1'
-                # robot '-1' ignores all '-1' and '0', so remove if there is any
-                if state_n1_life[i] < 0
+            if robot_states[i] == -1:  # for host robot with state '-1'
+                if state_n1_lives[i] < 0:
+                    st_n1to0.append(i)  # life of '-1' ends, becoming '0'
+                else:
+                    # robot '-1' is ignoring '-1' and '0'
+                    # so copy the connection list, and remove neighbor of '-1' and '0'
+                    conn_temp  = conn_lists[i][:]
+                    for j in conn_lists[i]:
+                        if robot_states[j] != 1: conn_temp.remove(j)
+
+
+
+
+
 
 
 
