@@ -95,7 +95,7 @@ dist_table = np.zeros((swarm_size, swarm_size))  # distances between robots
 conn_table = np.zeros((swarm_size, swarm_size))  # connections between robots
     # 0 for disconnected, 1 for connected
 conn_lists = [[] for i in range(swarm_size)]  # lists of robots connected
-# function to update the distances and connections between the robots
+# function for all simulations, update the distances and connections between the robots
 def dist_conn_update():
     global dist_table
     global conn_table
@@ -116,7 +116,7 @@ def dist_conn_update():
                 conn_lists[j].append(i)
 dist_conn_update()  # update the distances and connections
 disp_poses = []  # display positions
-# function to calculate and return the display positions
+# function for all simulations, update the display positions
 def disp_poses_update():
     global disp_poses
     poses_temp = robot_poses / world_side_length
@@ -272,16 +272,15 @@ while True:
         st_0to1_new = {}  # robot '0' detects another robot '0', forming new group
             # key is the robot '0', value is the other neighbor robot '0'
 
-        dist_conn_update()  # update the "relations" of the robots
+        # update the "relations" of the robots
+        dist_conn_update()
         # check any state transition, and schedule the tasks
         for i in range(swarm_size):
             if robot_states[i] == -1:  # for host robot with state '-1'
                 if state_n1_lives[i] < 0:
                     st_n1to0.append(i)  # life of '-1' ends, becoming '0'
                 else:
-                    # robot '-1' is ignoring robot '-1' and '0'
-                    # so copy the connection list, and remove neighbor of '-1' and '0'
-                    conn_temp  = conn_lists[i][:]
+                    conn_temp  = conn_lists[i][:]  # a list of connections with only state '1'
                     for j in conn_lists[i]:
                         if robot_states[j] != 1:
                             conn_temp.remove(j)
@@ -298,11 +297,6 @@ while True:
                         vect_temp = robot_poses[i,:] - robot_poses[robot_closest,:]
                         robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
             elif robot_states[i] == 0:  # for host robot with state '0'
-                # ignore '-1'
-                # check '1' first, disassemble conflicting groups, joining the largest group
-                # if no '1', check if any '0', and form new group
-                    # the behavior of forming new group can only be that, two single robot
-                    # both consented exclusively to form the new group
                 state1_list = []  # list of state '1' robots in the connection list
                 state0_list = []  # list of state '0' robots in teh connection list
                 for j in conn_lists[i]:
@@ -326,9 +320,27 @@ while True:
                     # find the closest robot, schedule to start a new group with it
                     st_0to1_new[i] = S1_closest_robot(i, state0_list)
             elif robot_states[i] == 1:  # for host robot with state '1'
-                
+                conn_temp  = conn_lists[i][:]  # a list of connections with only state '1'
+                has_other_group = False  # if there is robot '1' from other group
+                host_group_id = robot_group_ids[i]  # group id of host robot
+                for j in conn_lists[i]:
+                    if robot_states[j] != 1:
+                        conn_temp.remove(j)
+                    else:
+                        if robot_group_ids[j] != host_group_id:
+                            has_other_group = True
+                if has_other_group:
+                    groups_local, group_id_max = S1_robot1_grouping(conn_temp,
+                        robot_group_ids, groups)
+                    # disassmeble all groups except the largest one
+                    for group_id_temp in groups_local.keys():
+                        if (group_id_temp != group_id_max) and (group_id_temp not in st_1ton1):
+                            st_1ton1.append(group_id_temp)  # schedule to disassemble this group
             else:  # to be tested and deleted
                 print("robot state error")
                 sys.exit()
+
+
+
 
 
