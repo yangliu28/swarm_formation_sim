@@ -160,6 +160,49 @@ time_now = 0.0
 frame_period = 100
 sim_freq_control = True
 
+# function for simulation 1, group robot '1's by their group ids, and find the largest group
+def S1_robot1_grouping(robot_list, robot_group_ids, groups):
+    # "robot_list": the list of robot '1's, should not be empty
+    # the input list 'robot_list' should not be empty
+    groups_temp = {}  # key is group id, value is list of robots
+    for i in robot_list:
+        group_id_temp = robot_group_ids[i]
+        if group_id_temp == -1:  # to be tested and deleted
+            print("group id error")
+            sys.exit()
+        if group_id_temp not in groups_temp.keys():
+            groups_temp[group_id_temp] = [j]
+        else:
+            groups_temp[group_id_temp].append(j)
+    group_id_max = -1  # the group with most members
+        # regardless of only one group or multiple groups in groups_temp
+    if len(groups_temp.keys()) > 1:  # there is more than one group
+        # find the largest group and disassemble the rest
+        group_id_max = groups_temp.keys()[0]
+        size_max = len(groups[group_max][0])
+        for group_id_temp in groups_temp.keys()[1:]:
+            size_temp = len(groups[group_id_temp][0])
+            if size_temp > size_max:
+                group_id_max = group_id_temp
+                size_max = size_temp
+    else:  # only one group, automatically the largest one
+        group_id_max = groups_temp.keys()[0]
+    return groups_temp, group_id_max
+
+# function for simulation 1, find the closest robot to a host robot
+# use global variable "dist_table"
+def S1_closest_robot(robot_host, robot_neighbors):
+    # "robot_host": the robot to measure distance from
+    # "robot_neighbors": a list of robots to be compared with
+    robot_closest = robot_neighbors[0]
+    dist_closest = dist_table[robot_host,robot_closest]
+    for i in robot_neighbors[1:]:
+        dist_temp = dist_table[robot_host,i]
+        if dist_temp < dist_closest:
+            robot_closest = i
+            dist_closest = dist_temp
+    return robot_closest
+
 # main loop of the program that run the set of simulations infinitely
 # this loop does not exit unless error thrown out or manually terminated from terminal
 while True:
@@ -224,6 +267,10 @@ while True:
             # list of robots changing to '0' from '-1'
         st_1ton1 = []  # group disassembles either life expires, or triggered by others
             # list of group to be disassembled
+        st_0to1_join = {}  # robot '0' detects robot '1' group, join the group
+            # key is the robot '0', value is the group id
+        st_0to1_new = {}  # robot '0' detects another robot '0', forming new group
+            # key is the robot '0', value is the other neighbor robot '0'
 
         dist_conn_update()  # update the "relations" of the robots
         # check any state transition, and schedule the tasks
@@ -239,45 +286,14 @@ while True:
                         if robot_states[j] != 1:
                             conn_temp.remove(j)
                     if len(conn_temp) != 0:
-                        groups_temp = {}  # group the robot '1's by their group id
-                        for j in conn_temp:
-                            group_id_temp = robot_group_ids[j]
-                            if group_id_temp == -1:  # to be tested and commented
-                                print("error: group id is not assigned for a robot in the group")
-                                sys.exit()
-                            if group_id_temp not in groups_temp.keys():
-                                groups_temp[group_id_temp] = [j]
-                            else:
-                                groups_temp[group_id_temp].append(j)
-                        group_id_max = -1  # the group id in groups_temp with most members
-                            # regardless of only one group or multiple groups in groups_temp
-                        if len(groups_temp.keys()) > 1:
-                            # there is more than one group of robot '1's
-                            # find the largest group and disassemble the rest
-                            group_id_max = groups_temp.keys()[0]
-                            size_max = len(groups[group_max][0])
-                            for group_id_temp in groups_temp.keys()[1:]:
-                                size_temp = len(groups[group_id_temp][0])
-                                if size_temp > size_max:
-                                    group_id_max = group_id_temp
-                                    size_max = size_temp
-                            # disassemble all groups except the largest one
-                            groups_disassemble = groups_temp.keys()[:]
-                            groups_disassemble.remove(group_id_max)  # remove the largest group
-                            for group_id_temp in groups_disassemble:
-                                if group_id_temp not in st_1ton1:
-                                    st_1ton1.append(group_id_temp)
-                        else:
-                            # there is only one group, it is automatically the largest one
-                            group_id_max = groups_temp.keys()[0]
-                        # find the closest robot in group of group_id_max, and be bounced away
-                        robot_closest = groups_temp[group_id_max][0]
-                        dist_closest = dist_table[i,robot_closest]
-                        for j in groups_temp[group_id_max][1:]:
-                            dist_temp = dist_table[i,j]
-                            if dist_temp < dist_closest:
-                                robot_closest = j
-                                dist_closest = dist_temp
+                        groups_local, group_id_max = S1_robot1_grouping(conn_temp,
+                            robot_group_ids, groups)
+                        # disassmeble all groups except the largest one
+                        for group_id_temp in groups_local.keys():
+                            if (group_id_temp != group_id_max) and (group_id_temp not in st_1ton1):
+                                st_1ton1.append(group_id_temp)  # schedule to disassemble this group
+                        # find the closest neighbor in groups_local[group_id_max]
+                        robot_closest = S1_closest_robot(i, groups_local[group_id_max])
                         # change moving direction opposing the closest robot
                         vect_temp = robot_poses[i,:] - robot_poses[robot_closest,:]
                         robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
@@ -297,12 +313,22 @@ while True:
                         state0_list.append(j)
                 if len(state1_list) != 0:
                     # there is state '1' robot in the list, ignoring state '0' robot
-                    
+                    groups_local, group_id_max = S1_robot1_grouping(state1_list,
+                        robot_group_ids, groups)
+                    # disassmeble all groups except the largest one
+                    for group_id_temp in groups_local.keys():
+                        if (group_id_temp != group_id_max) and (group_id_temp not in st_1ton1):
+                            st_1ton1.append(group_id_temp)  # schedule to disassemble this group
+                    # join the the group with the most members
+                    st_0to1_join[i] = group_id_max
                 elif len(state0_list) != 0:
-                    # there is no state '1' robot, but has state '0' robot
+                    # there is no robot '1', but has robot '0'
+                    # find the closest robot, schedule to start a new group with it
+                    st_0to1_new[i] = S1_closest_robot(i, state0_list)
             elif robot_states[i] == 1:  # for host robot with state '1'
-            else:  # to be tested and commented
-                print("error: robot state ambiguous")
+                
+            else:  # to be tested and deleted
+                print("robot state error")
                 sys.exit()
 
 
