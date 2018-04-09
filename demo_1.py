@@ -228,6 +228,7 @@ while True:
     group_id_upper = swarm_size  # group id is integer randomly chosen in [0, group_id_upper)
     robot_group_ids = np.array([-1 for i in range(swarm_size)])  # group id of the robots
         # '-1' for not in a group
+    life_incre = 10  # number of seconds added to the life time of a group when new member joins
 
     groups = {}  # group property
         # key is the group id, value is a list, in the list:
@@ -321,7 +322,7 @@ while True:
                     st_0to1_new[i] = S1_closest_robot(i, state0_list)
             elif robot_states[i] == 1:  # for host robot with state '1'
                 conn_temp  = conn_lists[i][:]  # a list of connections with only state '1'
-                has_other_group = False  # if there is robot '1' from other group
+                has_other_group = False  # whether there is robot '1' from other group
                 host_group_id = robot_group_ids[i]  # group id of host robot
                 for j in conn_lists[i]:
                     if robot_states[j] != 1:
@@ -329,6 +330,7 @@ while True:
                     else:
                         if robot_group_ids[j] != host_group_id:
                             has_other_group = True
+                # disassemble the smaller groups
                 if has_other_group:
                     groups_local, group_id_max = S1_robot1_grouping(conn_temp,
                         robot_group_ids, groups)
@@ -340,7 +342,35 @@ while True:
                 print("robot state error")
                 sys.exit()
 
+        # check if life time of a group expires or not
+        for group_id_temp in groups.keys():
+            if groups[group_id_temp][1] < 0:  # life time of a group ends
+                if group_id_temp not in st_1ton1:
+                    st_1ton1.append(group_id_temp)
 
+        # process the scheduled state transitions, different transition has different priority
+        # 1.st_0to1_join, robot '0' joins a group, becomes '1'
+        for robot_temp in st_0to1_join.keys():
+            group_id_temp = st_0to1_join[robot_temp]  # the id of the group to join
+            # update properties of the robot
+            robot_states[robot_temp] = 1
+            robot_group_ids[robot_temp] = group_id_temp
+            # update properties of the group
+            groups[group_id_temp][0].append(robot_temp)
+            groups[group_id_temp][1] = groups[group_id_temp][1] + life_incre
+        # 2.st_1ton1
+        for group_id_temp in st_1ton1:
+            for robot_temp in groups[group_id_temp][0]:
+                robot_states[robot_temp] = -1
+                robot_group_ids[robot_temp] = -1
+                robot_oris[robot_temp] = np.random.rand() * 2 * math.pi - math.pi
+            groups.pop(group_id_temp)
+        # 3.st_0to1_new
+        # 4.st_n1to0
+
+        # after all state transitions, check if a group becomes dominant
+
+        # after all operations, reduce life time of robot '-1' and groups by frame_period/1000.0
 
 
 
