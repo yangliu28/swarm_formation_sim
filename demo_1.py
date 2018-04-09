@@ -342,7 +342,7 @@ while True:
                 print("robot state error")
                 sys.exit()
 
-        # check if life time of a group expires or not
+        # check the life time of the groups; if expired, schedule disassemble
         for group_id_temp in groups.keys():
             if groups[group_id_temp][1] < 0:  # life time of a group ends
                 if group_id_temp not in st_1ton1:
@@ -366,11 +366,42 @@ while True:
                 robot_oris[robot_temp] = np.random.rand() * 2 * math.pi - math.pi
             groups.pop(group_id_temp)
         # 3.st_0to1_new
+        while len(st_0to1_new.keys()) != 0:
+            pair0 = st_0to1_new.keys()[0]
+            pair1 = st_0to1_new[pair0]
+            st_0to1_new.pop(pair0)
+            if (pair1 in st_0to1_new.keys()) and (st_0to1_new[pair1] == pair0):
+                st_0to1_new.pop(pair1)
+                # forming new group for robot pair0 and pair1
+                group_id_temp = np.random.randint(0, group_id_upper)
+                while group_id_temp in groups.keys():
+                    group_id_temp = np.random.randint(0, group_id_upper)
+                # update properties of the robots
+                robot_states[pair0] = 1
+                robot_states[pair1] = 1
+                robot_group_ids[pair0] = group_id_temp
+                robot_group_ids[pair1] = group_id_temp
+                # update properties of the group
+                groups[group_id_temp] = [[pair0, pair1], [life_incre*2], False]
         # 4.st_n1to0
+        for robot_temp in st_n1to0:
+            robot_states[robot_temp] = 0
 
-        # after all state transitions, check if a group becomes dominant
+        # check if a group becomes dominant
+        for group_id_temp in groups.keys():
+            if len(group[group_id_temp][0]) > swarm_size/2:
+                group[group_id_temp][2] = True
+            else:
+                group[group_id_temp][2] = False
+
+        # update the physics
+
+
+        # update the graphics
+
 
         # after all operations, reduce life time of robot '-1' and groups by frame_period/1000.0
+        # skip life reducing of dominant group
 
 
 
