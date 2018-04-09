@@ -37,7 +37,7 @@
 
 from __future__ import print_function
 import pygame
-import sys, getopt
+import sys, getopt, math
 import numpy as np
 
 swarm_size = 30  # default size of the swarm
@@ -182,6 +182,9 @@ while True:
     n1_life_upper = 8  # exclusive
     state_n1_lives = np.random.randint(n1_life_lower, n1_life_upper, size=swarm_size)
     robot_oris = np.random.rand(swarm_size) * 2 * math.pi - math.pi  # in range of [-pi, pi)
+    group_id_upper = swarm_size  # group id is integer randomly chosen in [0, group_id_upper)
+    robot_group_ids = np.array([-1 for i in range(swarm_size)])  # group id of the robots
+        # '-1' for not in a group
 
     groups = {}  # group property
         # key is the group id, value is a list, in the list:
@@ -217,8 +220,10 @@ while True:
                 continue
 
         # state transition variables
-        st_n1to0 = []  # list of robots changing to '0' from '-1'
-
+        st_n1to0 = []  # robot '-1' gets back to '0' after life time ends
+            # list of robots changing to '0' from '-1'
+        st_1ton1 = []  # group disassembles either life expires, or triggered by others
+            # list of group to be disassembled
 
         dist_conn_update()  # update the "relations" of the robots
         # check any state transition, and schedule the tasks
@@ -227,16 +232,77 @@ while True:
                 if state_n1_lives[i] < 0:
                     st_n1to0.append(i)  # life of '-1' ends, becoming '0'
                 else:
-                    # robot '-1' is ignoring '-1' and '0'
+                    # robot '-1' is ignoring robot '-1' and '0'
                     # so copy the connection list, and remove neighbor of '-1' and '0'
                     conn_temp  = conn_lists[i][:]
                     for j in conn_lists[i]:
-                        if robot_states[j] != 1: conn_temp.remove(j)
-
-
-
-
-
-
+                        if robot_states[j] != 1:
+                            conn_temp.remove(j)
+                    if len(conn_temp) != 0:
+                        groups_temp = {}  # group the robot '1's by their group id
+                        for j in conn_temp:
+                            group_id_temp = robot_group_ids[j]
+                            if group_id_temp == -1:  # to be tested and commented
+                                print("error: group id is not assigned for a robot in the group")
+                                sys.exit()
+                            if group_id_temp not in groups_temp.keys():
+                                groups_temp[group_id_temp] = [j]
+                            else:
+                                groups_temp[group_id_temp].append(j)
+                        group_id_max = -1  # the group id in groups_temp with most members
+                            # regardless of only one group or multiple groups in groups_temp
+                        if len(groups_temp.keys()) > 1:
+                            # there is more than one group of robot '1's
+                            # find the largest group and disassemble the rest
+                            group_id_max = groups_temp.keys()[0]
+                            size_max = len(groups[group_max][0])
+                            for group_id_temp in groups_temp.keys()[1:]:
+                                size_temp = len(groups[group_id_temp][0])
+                                if size_temp > size_max:
+                                    group_id_max = group_id_temp
+                                    size_max = size_temp
+                            # disassemble all groups except the largest one
+                            groups_disassemble = groups_temp.keys()[:]
+                            groups_disassemble.remove(group_id_max)  # remove the largest group
+                            for group_id_temp in groups_disassemble:
+                                if group_id_temp not in st_1ton1:
+                                    st_1ton1.append(group_id_temp)
+                        else:
+                            # there is only one group, it is automatically the largest one
+                            group_id_max = groups_temp.keys()[0]
+                        # find the closest robot in group of group_id_max, and be bounced away
+                        robot_closest = groups_temp[group_id_max][0]
+                        dist_closest = dist_table[i,robot_closest]
+                        for j in groups_temp[group_id_max][1:]:
+                            dist_temp = dist_table[i,j]
+                            if dist_temp < dist_closest:
+                                robot_closest = j
+                                dist_closest = dist_temp
+                        # change moving direction opposing the closest robot
+                        vect_temp = robot_poses[i,:] - robot_poses[robot_closest,:]
+                        robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
+            elif robot_states[i] == 0:  # for host robot with state '0'
+                # ignore '-1'
+                # check '1' first, disassemble conflicting groups, joining the largest group
+                # if no '1', check if any '0', and form new group
+                    # the behavior of forming new group can only be that, two single robot
+                    # both consented exclusively to form the new group
+                state1_list = []  # list of state '1' robots in the connection list
+                state0_list = []  # list of state '0' robots in teh connection list
+                for j in conn_lists[i]:
+                    # ignore state '-1' robots
+                    if robot_states[j] == 1:
+                        state1_list.append(j)
+                    elif robot_states[j] == 0:
+                        state0_list.append(j)
+                if len(state1_list) != 0:
+                    # there is state '1' robot in the list, ignoring state '0' robot
+                    
+                elif len(state0_list) != 0:
+                    # there is no state '1' robot, but has state '0' robot
+            elif robot_states[i] == 1:  # for host robot with state '1'
+            else:  # to be tested and commented
+                print("error: robot state ambiguous")
+                sys.exit()
 
 
