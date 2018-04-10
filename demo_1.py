@@ -31,9 +31,11 @@
 # The percentage of seed robots is a new parameter to study, small percentage results in less
 # robustness of the aggregation process, large percentage results in slow aggregation process.
 
+# When robot travels almost parallel to the boundaries, sometimes it takes a long time for a
+# robot to reach the group. To avoid that, every time a robot is bounced away by the wall, if
+# the leaving direction is too perpendicular, a deviation angle is added to deviation the robot.
 
-# avoid travelling parallel
-# add termination conditions
+
 
 
 # when to terminate a process and continue next one
@@ -77,7 +79,7 @@ for opt,arg in opts:
 # the size of the swarm grow large, it won't be able to be fitted in if performing a line or
 # circle formation. A compromise is to make swarm size proportional to the side length to the
 # power exponent between 1 and 2.
-power_exponent = 1.9  # between 1.0 and 2.0
+power_exponent = 1.95  # between 1.0 and 2.0
     # the larger the parameter, the slower the windows grows with swarm size; vice versa
 # for converting from physical world to display world
 pixels_per_length = 50  # this is to be fixed
@@ -102,7 +104,9 @@ comm_range = 0.65  # communication range in the world
 desired_space_ratio = 0.8  # ratio of the desired space to the communication range
     # should be larger than 1/1.414=0.71, to avoid connections crossing each other
 desired_space = comm_range * desired_space_ratio
-# boundary
+# deviate robot heading, so as to avoid robot travlling perpendicular to the walls
+perp_thres = math.pi/18  # threshold, range from the perpendicular line
+devia_angle = math.pi/9  # deviate these much angle from perpendicualr line
 
 # robot properties
 robot_poses = np.random.rand(swarm_size, 2) * world_side_length  # initialize the robot poses
@@ -229,28 +233,45 @@ def reset_radian(radian):
 
 # general function to check if robot is out of boundary
 # use global variable "world_side_length"
-def robot_boundary_check(robot_pos, robot_ori)
+def robot_boundary_check(robot_pos, robot_ori):
     new_ori = robot_ori
-    ori_updated = False
     if robot_pos[0] >= world_side_length:  # outside of right boundary
         if math.cos(new_ori) > 0:
             new_ori = reset_radian(2*(math.pi/2) - new_ori)
+            # further check if new angle is too much perpendicular
             if new_ori > 0:
-                if (math.pi - new_ori) < 
+                if (math.pi - new_ori) < perp_thres:
+                    new_ori = new_ori - devia_angle
+            else:
+                if (new_ori + math.pi) < perp_thres:
+                    new_ori = new_ori + devia_angle
     elif robot_pos[0] <= 0:  # outside of left boundary
         if math.cos(new_ori) < 0:
             new_ori = reset_radian(2*(math.pi/2) - new_ori)
-            ori_updated = True
+            if new_ori > 0:
+                if new_ori < perp_thres:
+                    new_ori = new_ori + devia_angle
+            else:
+                if (-new_ori) < perp_thres:
+                    new_ori = new_ori - devia_angle
     if robot_pos[1] >= world_side_length:  # outside of top boundary
         if math.sin(new_ori) > 0:
             new_ori = reset_radian(2*(0) - new_ori)
-            ori_updated = True
+            if new_ori > -math.pi/2:
+                if (new_ori + math.pi/2) < perp_thres:
+                    new_ori = new_ori + devia_angle
+            else:
+                if (-math.pi/2 - new_ori) < perp_thres:
+                    new_ori = new_ori - devia_angle
     elif robot_pos[1] <= 0:  # outside of bottom boundary
         if math.sin(new_ori) < 0:
             new_ori = reset_radian(2*(0) - new_ori)
-            ori_updated = True
-    if ori_updated:
-        if new_ori
+            if new_ori > math.pi/2:
+                if (new_ori - math.pi/2) < perp_thres:
+                    new_ori = new_ori + devia_angle
+            else:
+                if (math.pi/2 - new_ori) < perp_thres:
+                    new_ori = new_ori - devia_angle
     return new_ori
 
 # flow control varialbes shared by all individual simulations
@@ -286,7 +307,7 @@ while True:
     robot_n1_lives = np.random.uniform(n1_life_lower, n1_life_upper, swarm_size)
     robot_oris = np.random.rand(swarm_size) * 2 * math.pi - math.pi  # in range of [-pi, pi)
     # deciding the seed robots
-    seed_percentage = 0.15  # the percentage of seed robots in the swarm
+    seed_percentage = 0.1  # the percentage of seed robots in the swarm
     seed_quantity = min(max(int(swarm_size*seed_percentage), 1), swarm_size)
         # no smaller than 1, and no larger than swarm_size
     robot_seeds = [False for i in range(swarm_size)]  # whether a robot is a seed robot
