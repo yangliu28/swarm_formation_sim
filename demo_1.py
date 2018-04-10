@@ -160,6 +160,7 @@ time_last = 0.0
 time_now = 0.0
 frame_period = 100
 sim_freq_control = True
+iter_count = 0
 
 # function for simulation 1, group robot '1's by their group ids, and find the largest group
 def S1_robot1_grouping(robot_list, robot_group_ids, groups):
@@ -180,7 +181,7 @@ def S1_robot1_grouping(robot_list, robot_group_ids, groups):
     if len(groups_temp.keys()) > 1:  # there is more than one group
         # find the largest group and disassemble the rest
         group_id_max = groups_temp.keys()[0]
-        size_max = len(groups[group_max][0])
+        size_max = len(groups[group_id_max][0])
         for group_id_temp in groups_temp.keys()[1:]:
             size_temp = len(groups[group_id_temp][0])
             if size_temp > size_max:
@@ -237,18 +238,18 @@ while True:
         # '-1' for being single, moving around, not available for connection
         # '0' for being single, moving around, available for connection
         # '1' for in a group, adjust position for maintaining connections
-    n1_life_lower = 3  # inclusive
-    n1_life_upper = 8  # exclusive
-    state_n1_lives = np.random.randint(n1_life_lower, n1_life_upper, size=swarm_size)
+    n1_life_lower = 2  # inclusive
+    n1_life_upper = 6  # exclusive
+    robot_n1_lives = np.random.uniform(n1_life_lower, n1_life_upper, swarm_size)
     robot_oris = np.random.rand(swarm_size) * 2 * math.pi - math.pi  # in range of [-pi, pi)
     group_id_upper = swarm_size  # group id is integer randomly chosen in [0, group_id_upper)
     robot_group_ids = np.array([-1 for i in range(swarm_size)])  # group id of the robots
         # '-1' for not in a group
-    life_incre = 10  # number of seconds added to the life time of a group when new robot joins
+    life_incre = 5  # number of seconds added to the life time of a group when new robot joins
     # use moving distance in each simulation step, instead of robot velocity
     # so to make it independent of simulation frequency control
-    step_moving_dist = 0.02  # should be smaller than destination distance error
-    destination_error = 0.05
+    step_moving_dist = 0.05  # should be smaller than destination distance error
+    destination_error = 0.08
     mov_vec_ratio = 0.5  # ratio used when calculating mov vector
 
     groups = {}  # group property
@@ -264,6 +265,7 @@ while True:
     time_now = time_last
     frame_period = 100
     sim_freq_control = True
+    iter_count = 0
     while not sim_finished:
         # close window button to exit the entire program;
         # space key to pause this simulation
@@ -284,6 +286,9 @@ while True:
             else:
                 continue
 
+        print("iteration {}".format(iter_count))
+        iter_count = iter_count + 1
+
         # state transition variables
         st_n1to0 = []  # robot '-1' gets back to '0' after life time ends
             # list of robots changing to '0' from '-1'
@@ -299,7 +304,7 @@ while True:
         # check any state transition, and schedule the tasks
         for i in range(swarm_size):
             if robot_states[i] == -1:  # for host robot with state '-1'
-                if state_n1_lives[i] < 0:
+                if robot_n1_lives[i] < 0:
                     st_n1to0.append(i)  # life of '-1' ends, becoming '0'
                 else:
                     conn_temp  = conn_lists[i][:]  # a list of connections with only state '1'
@@ -383,6 +388,7 @@ while True:
         for group_id_temp in st_1ton1:
             for robot_temp in groups[group_id_temp][0]:
                 robot_states[robot_temp] = -1
+                robot_n1_lives[robot_temp] = np.random.uniform(n1_life_lower, n1_life_upper)
                 robot_group_ids[robot_temp] = -1
                 robot_oris[robot_temp] = np.random.rand() * 2 * math.pi - math.pi
             groups.pop(group_id_temp)
@@ -403,17 +409,17 @@ while True:
                 robot_group_ids[pair0] = group_id_temp
                 robot_group_ids[pair1] = group_id_temp
                 # update properties of the group
-                groups[group_id_temp] = [[pair0, pair1], [life_incre*2], False]
+                groups[group_id_temp] = [[pair0, pair1], life_incre*2, False]
         # 4.st_n1to0
         for robot_temp in st_n1to0:
             robot_states[robot_temp] = 0
 
         # check if a group becomes dominant
         for group_id_temp in groups.keys():
-            if len(group[group_id_temp][0]) > swarm_size/2:
-                group[group_id_temp][2] = True
+            if len(groups[group_id_temp][0]) > swarm_size/2:
+                groups[group_id_temp][2] = True
             else:
-                group[group_id_temp][2] = False
+                groups[group_id_temp][2] = False
 
         # update the physics
         local_conn_lists = [[] for i in range(swarm_size)]  # list of connections in same group
@@ -430,8 +436,8 @@ while True:
                     sys.exit()
                 mov_vec = np.zeros(2)
                 for j in local_conn_lists[i]:
-                    mov_vec = mov_vec + mov_vec_ratio * (dist_table[i,j] - desired_space) *
-                        normalize(robot_poses[j] - robot_poses[i])
+                    mov_vec = mov_vec + (mov_vec_ratio * (dist_table[i,j] - desired_space) *
+                        normalize(robot_poses[j] - robot_poses[i]))
                 if np.linalg.norm(mov_vec) < destination_error:
                     # skip the physics update if within destination error
                     continue
@@ -451,18 +457,18 @@ while True:
                 if math.sin(robot_oris[i]) < 0:
                     robot_oris[i] = reset_radian(2*(0) - robot_oris[i])
             # update one step of move
-            robot_poses[i] = robot_poses[i] + step_moving_dist *
-                np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])])
+            robot_poses[i] = robot_poses[i] + (step_moving_dist *
+                np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])]))
 
         # update the graphics
         disp_poses_update()
         screen.fill(color_white)
         # draw the robots of states '-1' and '0'
         for i in range(swarm_size):
-            if robot_states[i] == -1:
+            if robot_states[i] == -1:  # empty circle for state '-1' robot
                 pygame.draw.circle(screen, color_grey, disp_poses[i],
                     node_size, node_empty_width)
-            elif robot_states[i] == 0:
+            elif robot_states[i] == 0:  # full circle for state '0' robot
                 pygame.draw.circle(screen, color_grey, disp_poses[i],
                     node_size, 0)
         # draw the in-group robots by each group
@@ -484,12 +490,12 @@ while True:
                         conn_draw_sets.append(set([i,j]))
         pygame.display.update()
 
-        # reduce life time of robot '-1' and groups; skip dominant group
+        # reduce life time of robot '-1' and groups
         for i in range(swarm_size):
             if robot_states[i] == -1:
-                state_n1_lives[i] = state_n1_lives[i] - frame_period/1000.0
+                robot_n1_lives[i] = robot_n1_lives[i] - frame_period/1000.0
         for group_id_temp in groups.keys():
-            groups[group_id_temp][1] = groups[group_id_temp][1] - frame_period/1000.0
-
+            if not groups[group_id_temp][2]:  # skip dominant group
+                groups[group_id_temp][1] = groups[group_id_temp][1] - frame_period/1000.0
 
 
