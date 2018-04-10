@@ -103,7 +103,7 @@ def dist_conn_update():
     conn_lists = [[] for i in range(swarm_size)]  # empty the lists
     for i in range(swarm_size):
         for j in range(i+1, swarm_size):
-            dist_temp = np.linalg.norm(robot_poses[i,:] - robot_poses[j,:])
+            dist_temp = np.linalg.norm(robot_poses[i] - robot_poses[j])
             dist_table[i,j] = dist_temp
             dist_table[j,i] = dist_temp
             if dist_temp > comm_range:
@@ -128,6 +128,7 @@ disp_poses_update()
 # visualization configuration
 color_white = (255,255,255)
 color_black = (0,0,0)
+color_grey = (128,128,128)
 distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
     (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
@@ -246,7 +247,7 @@ while True:
     life_incre = 10  # number of seconds added to the life time of a group when new robot joins
     # use moving distance in each simulation step, instead of robot velocity
     # so to make it independent of simulation frequency control
-    step_moving_dist = 0.02
+    step_moving_dist = 0.02  # should be smaller than destination distance error
     destination_error = 0.05
     mov_vec_ratio = 0.5  # ratio used when calculating mov vector
 
@@ -315,7 +316,7 @@ while True:
                         # find the closest neighbor in groups_local[group_id_max]
                         robot_closest = S1_closest_robot(i, groups_local[group_id_max])
                         # change moving direction opposing the closest robot
-                        vect_temp = robot_poses[i,:] - robot_poses[robot_closest,:]
+                        vect_temp = robot_poses[i] - robot_poses[robot_closest]
                         robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
             elif robot_states[i] == 0:  # for host robot with state '0'
                 state1_list = []  # list of state '1' robots in the connection list
@@ -415,21 +416,22 @@ while True:
                 group[group_id_temp][2] = False
 
         # update the physics
+        local_conn_lists = [[] for i in range(swarm_size)]  # list of connections in same group
+            # only for state '1' robot
         for i in range(swarm_size):
-            # change move direction only for robot '1'
+            # change move direction only for robot '1', for adjusting location in group
             if robot_states[i] == 1:
-                conn_temp = []  # list of connections in the same group
                 host_group_id = robot_group_ids[i]
                 for j in conn_lists[i]:
                     if (robot_states[j] == 1) and (robot_group_ids[j] == host_group_id):
-                        conn_temp.append(j)
-                if len(conn_temp) == 0:  # should not happen after parameter tuning
+                        local_conn_lists[i].append(j)
+                if len(local_conn_lists[i]) == 0:  # should not happen after parameter tuning
                     printf("robot {} loses its group {}".format(i, host_group_id))
                     sys.exit()
                 mov_vec = np.zeros(2)
-                for j in conn_temp:
+                for j in local_conn_lists[i]:
                     mov_vec = mov_vec + mov_vec_ratio * (dist_table[i,j] - desired_space) *
-                        normalize(robot_poses[j,:] - robot_poses[i,:])
+                        normalize(robot_poses[j] - robot_poses[i])
                 if np.linalg.norm(mov_vec) < destination_error:
                     # skip the physics update if within destination error
                     continue
@@ -439,33 +441,55 @@ while True:
             if robot_poses[i,0] >= world_side_length:
                 if math.cos(robot_oris[i]) > 0:
                     robot_oris[i] = reset_radian(2*(math.pi/2) - robot_oris[i])
-                    
-            if robots[i].pos[0] >= world_size[0]:  # out of right boundary
-                if math.cos(robots[i].ori) > 0:  # velocity on x is pointing right
-                    robots[i].ori = reset_radian(2*(math.pi/2) - robots[i].ori)
-            elif robots[i].pos[0] <= 0:  # out of left boundary
-                if math.cos(robots[i].ori) < 0:  # velocity on x is pointing left
-                    robots[i].ori = reset_radian(2*(math.pi/2) - robots[i].ori)
-            if robots[i].pos[1] >= world_size[1]:  # out of top boundary
-                if math.sin(robots[i].ori) > 0:  # velocity on y is pointing up
-                    robots[i].ori = reset_radian(2*(0) - robots[i].ori)
-            elif robots[i].pos[1] <= 0:  # out of bottom boundary
-                if math.sin(robots[i].ori) < 0:  # velocity on y is pointing down
-                    robots[i].ori = reset_radian(2*(0) - robots[i].ori)
-
-
-
-            if robot_states[i] != 1:
-                robot_poses[i] = robot_poses[i] + np.array(
-                    [step_moving_dist * math.cos(robot_oris[i]),
-                    step_moving_dist * math.sin(robot_oris[i])])
-
+            elif robot_poses[i,0] <= 0:
+                if math.cos(robot_oris[i]) < 0:
+                    robot_oris[i] = reset_radian(2*(math.pi/2) - robot_oris[i])
+            if robot_poses[i,1] >= world_side_length:
+                if math.sin(robot_oris[i]) > 0:
+                    robot_oris[i] = reset_radian(2*(0) - robot_oris[i])
+            elif robot_poses[i,1] <= 0:
+                if math.sin(robot_oris[i]) < 0:
+                    robot_oris[i] = reset_radian(2*(0) - robot_oris[i])
+            # update one step of move
+            robot_poses[i] = robot_poses[i] + step_moving_dist *
+                np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])])
 
         # update the graphics
+        disp_poses_update()
+        screen.fill(color_white)
+        # draw the robots of states '-1' and '0'
+        for i in range(swarm_size):
+            if robot_states[i] == -1:
+                pygame.draw.circle(screen, color_grey, disp_poses[i],
+                    node_size, node_empty_width)
+            elif robot_states[i] == 0:
+                pygame.draw.circle(screen, color_grey, disp_poses[i],
+                    node_size, 0)
+        # draw the in-group robots by each group
+        for group_id_temp in groups.keys():
+            if groups[group_id_temp][2]:
+                # highlight the dominant group with black color
+                color_group = color_black
+            else:
+                color_group = color_grey
+            conn_draw_sets = []  # avoid draw same connection two times
+            # draw the robots and connections in the group
+            for i in groups[group_id_temp][0]:
+                pygame.draw.circle(screen, color_group, disp_poses[i],
+                    node_size, 0)
+                for j in local_conn_lists[i]:
+                    if set([i,j]) not in conn_draw_sets:
+                        pygame.draw.line(screen, color_group, disp_poses[i],
+                            disp_poses[j], connection_width)
+                        conn_draw_sets.append(set([i,j]))
+        pygame.display.update()
 
-
-        # after all operations, reduce life time of robot '-1' and groups by frame_period/1000.0
-        # skip life reducing of dominant group
+        # reduce life time of robot '-1' and groups; skip dominant group
+        for i in range(swarm_size):
+            if robot_states[i] == -1:
+                state_n1_lives[i] = state_n1_lives[i] - frame_period/1000.0
+        for group_id_temp in groups.keys():
+            groups[group_id_temp][1] = groups[group_id_temp][1] - frame_period/1000.0
 
 
 
