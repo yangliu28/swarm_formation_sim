@@ -12,15 +12,29 @@
 # the robots on the loop. When the robots get their target positions, they dyanmically adjust
 # the local shape so the loop deforms to the target one. The above steps will be ran repeatedly.
 
+# the simulations that run alternatively in this program
+# Simulation 1: aggregate together to form a random network
+# Simulation 2: consensus 1 - decision making on which loop shape to form
+# Simulation 3: consensus 2 - role assignment for the loop shape
+# Simulation 4: form the loop with designated target positions
+
 # Note that message transmission is simulated only in the role assignment, because communication
 # is specialy depended on and message convey is used as well. While in consensus decision making
 # and shape formation, the delay caused by communication are skipped.
 
+# "seed" robot mechanism
+# In simulation 1, a new mechanism is added to accelerate the aggregation. Previous, each
+# robot in the swarm can start a new group with another robot. The result is that, often there
+# are too many small local groups spread out the space, decrease the chance of a large group
+# being formed. The new method is asigning certain number of robots to be "seed" robot. Only
+# seed robot can initialize the forming of a new group, so as to avoid too many local groups.
+# The percentage of seed robots is a new parameter to study, small percentage results in less
+# robustness of the aggregation process, large percentage results in slow aggregation process.
 
 
-# add interaction of mouse to show further interaction
+# avoid travelling parallel
+# add termination conditions
 
-# use text update in the terminal to show extra information, iterations
 
 # when to terminate a process and continue next one
 # consensus decision making -> subgroup size reaches to total number
@@ -80,14 +94,15 @@ world_size = (world_side_length, world_side_length)  # square physical world
 screen_side_length = int(pixels_per_length * world_side_length)
 screen_size = (screen_side_length, screen_side_length)  # square display world
 
-print("world_side_length: {}".format(world_side_length))
-print("screen_side_length: {}".format(screen_side_length))
+# print("world_side_length: {}".format(world_side_length))
+# print("screen_side_length: {}".format(screen_side_length))
 
 # simulation configuration
 comm_range = 0.65  # communication range in the world
 desired_space_ratio = 0.8  # ratio of the desired space to the communication range
     # should be larger than 1/1.414=0.71, to avoid connections crossing each other
 desired_space = comm_range * desired_space_ratio
+# boundary
 
 # robot properties
 robot_poses = np.random.rand(swarm_size, 2) * world_side_length  # initialize the robot poses
@@ -147,20 +162,12 @@ pygame.display.set_caption("Demo 1")
 screen.fill(color_white)
 for i in range(swarm_size):
     pygame.draw.circle(screen, color_black, disp_poses[i], node_size, node_empty_width)
-    pygame.draw.circle(screen, color_black, disp_poses[i],
-        int(comm_range*pixels_per_length), 1)
+    # pygame.draw.circle(screen, color_black, disp_poses[i],
+    #     int(comm_range*pixels_per_length), 1)
 pygame.display.update()
 
+# pause to check the network before the simulations
 raw_input("<Press Enter to continue>")
-
-# flow control varialbes shared by all individual simulations
-sim_finished = False
-sim_haulted = False
-time_last = 0.0
-time_now = 0.0
-frame_period = 100
-sim_freq_control = True
-iter_count = 0
 
 # function for simulation 1, group robot '1's by their group ids, and find the largest group
 def S1_robot1_grouping(robot_list, robot_group_ids, groups):
@@ -220,11 +227,47 @@ def reset_radian(radian):
         radian = radian + 2*math.pi
     return radian
 
+# general function to check if robot is out of boundary
+# use global variable "world_side_length"
+def robot_boundary_check(robot_pos, robot_ori)
+    new_ori = robot_ori
+    ori_updated = False
+    if robot_pos[0] >= world_side_length:  # outside of right boundary
+        if math.cos(new_ori) > 0:
+            new_ori = reset_radian(2*(math.pi/2) - new_ori)
+            if new_ori > 0:
+                if (math.pi - new_ori) < 
+    elif robot_pos[0] <= 0:  # outside of left boundary
+        if math.cos(new_ori) < 0:
+            new_ori = reset_radian(2*(math.pi/2) - new_ori)
+            ori_updated = True
+    if robot_pos[1] >= world_side_length:  # outside of top boundary
+        if math.sin(new_ori) > 0:
+            new_ori = reset_radian(2*(0) - new_ori)
+            ori_updated = True
+    elif robot_pos[1] <= 0:  # outside of bottom boundary
+        if math.sin(new_ori) < 0:
+            new_ori = reset_radian(2*(0) - new_ori)
+            ori_updated = True
+    if ori_updated:
+        if new_ori
+    return new_ori
+
+# flow control varialbes shared by all individual simulations
+sim_haulted = False
+time_last = 0.0
+time_now = 0.0
+frame_period = 100
+sim_freq_control = True
+iter_count = 0
+
 # main loop of the program that run the set of simulations infinitely
 # this loop does not exit unless error thrown out or manually terminated from terminal
 while True:
 
     ########### simulation 1: aggregate together to form a random network ###########
+
+    print("##### simulation 1: network aggregation #####")
 
     # (switching from using 'status' to using 'state': state here refers to being in one
     # condition from many options, like whether in a group, whether available for connection.
@@ -232,7 +275,7 @@ while True:
     # to the end, like referring the progress of a project. While my state may jump back and
     # forth. It's controversial of which one to use, but 'state' is what I choose.)
 
-    # robot initialization
+    # robot perperties
     # all robots start with state '-1', wandering around and ignoring connections
     robot_states = np.array([-1 for i in range(swarm_size)])
         # '-1' for being single, moving around, not available for connection
@@ -242,31 +285,43 @@ while True:
     n1_life_upper = 6  # exclusive
     robot_n1_lives = np.random.uniform(n1_life_lower, n1_life_upper, swarm_size)
     robot_oris = np.random.rand(swarm_size) * 2 * math.pi - math.pi  # in range of [-pi, pi)
+    # deciding the seed robots
+    seed_percentage = 0.15  # the percentage of seed robots in the swarm
+    seed_quantity = min(max(int(swarm_size*seed_percentage), 1), swarm_size)
+        # no smaller than 1, and no larger than swarm_size
+    robot_seeds = [False for i in range(swarm_size)]  # whether a robot is a seed robot
+        # only seed robot can initialize the forming a new group
+    seed_list_temp = np.arange(swarm_size)
+    np.random.shuffle(seed_list_temp)
+    for i in seed_list_temp[:seed_quantity]:
+        robot_seeds[i] = True
+
+    # group properties
+    groups = {}
+        # key is the group id, value is a list, in the list:
+        # [0]: a list of robots in the group
+        # [1]: remaining life time of the group
+        # [2]: whether or not being the dominant group
+    life_incre = 5  # number of seconds added to the life of a group when new robot joins
     group_id_upper = swarm_size  # group id is integer randomly chosen in [0, group_id_upper)
     robot_group_ids = np.array([-1 for i in range(swarm_size)])  # group id of the robots
         # '-1' for not in a group
-    life_incre = 5  # number of seconds added to the life time of a group when new robot joins
+
     # use moving distance in each simulation step, instead of robot velocity
     # so to make it independent of simulation frequency control
     step_moving_dist = 0.05  # should be smaller than destination distance error
     destination_error = 0.08
     mov_vec_ratio = 0.5  # ratio used when calculating mov vector
 
-    groups = {}  # group property
-        # key is the group id, value is a list, in the list:
-        # [0]: a list of robots in the group
-        # [1]: remaining life time of the group
-        # [2]: whether or not being the dominant group
-
     # the loop for simulation 1
-    sim_finished = False
     sim_haulted = False
     time_last = pygame.time.get_ticks()
     time_now = time_last
     frame_period = 100
     sim_freq_control = True
     iter_count = 0
-    while not sim_finished:
+    sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
+    while True:
         # close window button to exit the entire program;
         # space key to pause this simulation
         for event in pygame.event.get():
@@ -286,8 +341,10 @@ while True:
             else:
                 continue
 
-        print("iteration {}".format(iter_count))
+        # increase iteration count
         iter_count = iter_count + 1
+        sys.stdout.write("\riteration {}".format(iter_count))
+        sys.stdout.flush()
 
         # state transition variables
         st_n1to0 = []  # robot '-1' gets back to '0' after life time ends
@@ -399,17 +456,19 @@ while True:
             st_0to1_new.pop(pair0)
             if (pair1 in st_0to1_new.keys()) and (st_0to1_new[pair1] == pair0):
                 st_0to1_new.pop(pair1)
-                # forming new group for robot pair0 and pair1
-                group_id_temp = np.random.randint(0, group_id_upper)
-                while group_id_temp in groups.keys():
+                # only forming a group if there is at least one seed robot in the pair
+                if robot_seeds[pair0] or robot_seeds[pair1]:
+                    # forming new group for robot pair0 and pair1
                     group_id_temp = np.random.randint(0, group_id_upper)
-                # update properties of the robots
-                robot_states[pair0] = 1
-                robot_states[pair1] = 1
-                robot_group_ids[pair0] = group_id_temp
-                robot_group_ids[pair1] = group_id_temp
-                # update properties of the group
-                groups[group_id_temp] = [[pair0, pair1], life_incre*2, False]
+                    while group_id_temp in groups.keys():
+                        group_id_temp = np.random.randint(0, group_id_upper)
+                    # update properties of the robots
+                    robot_states[pair0] = 1
+                    robot_states[pair1] = 1
+                    robot_group_ids[pair0] = group_id_temp
+                    robot_group_ids[pair1] = group_id_temp
+                    # update properties of the group
+                    groups[group_id_temp] = [[pair0, pair1], life_incre*2, False]
         # 4.st_n1to0
         for robot_temp in st_n1to0:
             robot_states[robot_temp] = 0
@@ -444,18 +503,7 @@ while True:
                 else:
                     robot_oris[i] = math.atan2(mov_vec[1], mov_vec[0])  # change direction
             # check if out of boundaries (from previous line formation program)
-            if robot_poses[i,0] >= world_side_length:
-                if math.cos(robot_oris[i]) > 0:
-                    robot_oris[i] = reset_radian(2*(math.pi/2) - robot_oris[i])
-            elif robot_poses[i,0] <= 0:
-                if math.cos(robot_oris[i]) < 0:
-                    robot_oris[i] = reset_radian(2*(math.pi/2) - robot_oris[i])
-            if robot_poses[i,1] >= world_side_length:
-                if math.sin(robot_oris[i]) > 0:
-                    robot_oris[i] = reset_radian(2*(0) - robot_oris[i])
-            elif robot_poses[i,1] <= 0:
-                if math.sin(robot_oris[i]) < 0:
-                    robot_oris[i] = reset_radian(2*(0) - robot_oris[i])
+            robot_oris[i] = robot_boundary_check(robot_poses[i], robot_oris[i])
             # update one step of move
             robot_poses[i] = robot_poses[i] + (step_moving_dist *
                 np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])]))
@@ -497,5 +545,16 @@ while True:
         for group_id_temp in groups.keys():
             if not groups[group_id_temp][2]:  # skip dominant group
                 groups[group_id_temp][1] = groups[group_id_temp][1] - frame_period/1000.0
+
+        # check exit condition of simulation 1
+        if len(groups.keys()) == 1:
+            if len(groups.values()[0][0]) == swarm_size:
+                print("")  # move cursor to the new line
+                print("simulation 1 is finished")
+                # raw_input("<Press Enter to continue>")
+                pygame.time.delay(10000)
+                break
+
+
 
 
