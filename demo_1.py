@@ -203,6 +203,21 @@ def S1_closest_robot(robot_host, robot_neighbors):
             dist_closest = dist_temp
     return robot_closest
 
+# general function to normalize a numpy vector
+def normalize(v):
+    norm = np.linalg.norm(v)
+    if norm == 0:
+        return v
+    return v/norm
+
+# general function to reset radian angle to [-pi, pi)
+def reset_radian(radian):
+    while radian >= math.pi:
+        radian = radian - 2*math.pi
+    while radian < -math.pi:
+        radian = radian + 2*math.pi
+    return radian
+
 # main loop of the program that run the set of simulations infinitely
 # this loop does not exit unless error thrown out or manually terminated from terminal
 while True:
@@ -228,7 +243,12 @@ while True:
     group_id_upper = swarm_size  # group id is integer randomly chosen in [0, group_id_upper)
     robot_group_ids = np.array([-1 for i in range(swarm_size)])  # group id of the robots
         # '-1' for not in a group
-    life_incre = 10  # number of seconds added to the life time of a group when new member joins
+    life_incre = 10  # number of seconds added to the life time of a group when new robot joins
+    # use moving distance in each simulation step, instead of robot velocity
+    # so to make it independent of simulation frequency control
+    step_moving_dist = 0.02
+    destination_error = 0.05
+    mov_vec_ratio = 0.5  # ratio used when calculating mov vector
 
     groups = {}  # group property
         # key is the group id, value is a list, in the list:
@@ -395,6 +415,50 @@ while True:
                 group[group_id_temp][2] = False
 
         # update the physics
+        for i in range(swarm_size):
+            # change move direction only for robot '1'
+            if robot_states[i] == 1:
+                conn_temp = []  # list of connections in the same group
+                host_group_id = robot_group_ids[i]
+                for j in conn_lists[i]:
+                    if (robot_states[j] == 1) and (robot_group_ids[j] == host_group_id):
+                        conn_temp.append(j)
+                if len(conn_temp) == 0:  # should not happen after parameter tuning
+                    printf("robot {} loses its group {}".format(i, host_group_id))
+                    sys.exit()
+                mov_vec = np.zeros(2)
+                for j in conn_temp:
+                    mov_vec = mov_vec + mov_vec_ratio * (dist_table[i,j] - desired_space) *
+                        normalize(robot_poses[j,:] - robot_poses[i,:])
+                if np.linalg.norm(mov_vec) < destination_error:
+                    # skip the physics update if within destination error
+                    continue
+                else:
+                    robot_oris[i] = math.atan2(mov_vec[1], mov_vec[0])  # change direction
+            # check if out of boundaries (from previous line formation program)
+            if robot_poses[i,0] >= world_side_length:
+                if math.cos(robot_oris[i]) > 0:
+                    robot_oris[i] = reset_radian(2*(math.pi/2) - robot_oris[i])
+                    
+            if robots[i].pos[0] >= world_size[0]:  # out of right boundary
+                if math.cos(robots[i].ori) > 0:  # velocity on x is pointing right
+                    robots[i].ori = reset_radian(2*(math.pi/2) - robots[i].ori)
+            elif robots[i].pos[0] <= 0:  # out of left boundary
+                if math.cos(robots[i].ori) < 0:  # velocity on x is pointing left
+                    robots[i].ori = reset_radian(2*(math.pi/2) - robots[i].ori)
+            if robots[i].pos[1] >= world_size[1]:  # out of top boundary
+                if math.sin(robots[i].ori) > 0:  # velocity on y is pointing up
+                    robots[i].ori = reset_radian(2*(0) - robots[i].ori)
+            elif robots[i].pos[1] <= 0:  # out of bottom boundary
+                if math.sin(robots[i].ori) < 0:  # velocity on y is pointing down
+                    robots[i].ori = reset_radian(2*(0) - robots[i].ori)
+
+
+
+            if robot_states[i] != 1:
+                robot_poses[i] = robot_poses[i] + np.array(
+                    [step_moving_dist * math.cos(robot_oris[i]),
+                    step_moving_dist * math.sin(robot_oris[i])])
 
 
         # update the graphics
