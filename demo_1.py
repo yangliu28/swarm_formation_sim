@@ -14,9 +14,9 @@
 
 # the simulations that run alternatively in this program
 # Simulation 1: aggregate together to form a random network
-# Simulation 2: consensus 1 - decision making on which loop shape to form
-# Simulation 3: consensus 2 - role assignment for the loop shape
-# Simulation 4: form the loop with designated target positions
+# Simulation 2: consensus decision making of target loop shape
+# Simulation 3: consensus role assignment for the loop shape
+# Simulation 4: loop formation with designated target positions
 
 # Note that message transmission is simulated only in the role assignment, because communication
 # is specialy depended on and message convey is used as well. While in consensus decision making
@@ -35,7 +35,16 @@
 # robot to reach the group. To avoid that, every time a robot is bounced away by the wall, if
 # the leaving direction is too perpendicular, a deviation angle is added to deviation the robot.
 
+# 04/11/2018
+# In simulation of aggregating to random network, the robots are not required to have a lower
+# limit number of connections when in the group. The result is that, the final network topology
+# is tree branch like, in which most robots are connected in serial. The unintended advantage
+# is the robots are more easily being caught 
+# Advised by Dr. Lee, it is better to have a final network topology in triangle grid, with each
+# robot having more connections. Dr. Lee's purpose is to have the robots evenly distributed in
+# the space
 
+# into triangle grid network, rather than tree branch like network
 
 
 # when to terminate a process and continue next one
@@ -575,5 +584,9 @@ while True:
                 # raw_input("<Press Enter to continue>")
                 pygame.time.delay(10000)
                 break
+
+    ########### simulation 2: consensus decision making of target loop shape ###########
+
+    print("##### simulation 2: decision making #####")
 
 
