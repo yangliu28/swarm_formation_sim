@@ -307,7 +307,7 @@ while True:
     robot_n1_lives = np.random.uniform(n1_life_lower, n1_life_upper, swarm_size)
     robot_oris = np.random.rand(swarm_size) * 2 * math.pi - math.pi  # in range of [-pi, pi)
     # deciding the seed robots
-    seed_percentage = 0.1  # the percentage of seed robots in the swarm
+    seed_percentage = 0.05  # the percentage of seed robots in the swarm
     seed_quantity = min(max(int(swarm_size*seed_percentage), 1), swarm_size)
         # no smaller than 1, and no larger than swarm_size
     robot_seeds = [False for i in range(swarm_size)]  # whether a robot is a seed robot
@@ -575,7 +575,5 @@ while True:
                 # raw_input("<Press Enter to continue>")
                 pygame.time.delay(10000)
                 break
-
-
 
 
