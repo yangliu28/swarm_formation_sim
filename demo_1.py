@@ -169,15 +169,19 @@ for i in seed_list_temp[:seed_quantity]:
 shape_quantity = 30  # also the number of decisions
 shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
 
-
 # visualization configuration
 color_white = (255,255,255)
 color_black = (0,0,0)
 color_grey = (128,128,128)
+# distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
+#     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
+#     (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
+#     (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
 distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
-    (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
-    (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
+    (0,128,128), (230,190,255), (170,110,40), (128,0,0),
+    (170,255,195), (128,128,0), (0,0,128))
+color_quantity = 17
 robot_size_formation = 5  # robot size in formation simulations
 robot_width_empty = 2
 conn_width_formation = 2  # connection line width in formation simulations
@@ -387,7 +391,7 @@ while True:
         # space key to pause this simulation
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
-                print("program exit in simulation 1 with close window button")
+                print("program exit in simulation 1 - sim window closed")
                 sys.exit()  # exit the entire program
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_SPACE:
@@ -647,7 +651,7 @@ while True:
                 ending_period = ending_period - frame_period/1000.0
 
     # # store the variable "robot_poses"
-    # with open('temp.pkl', 'w') as f:
+    # with open('_robot_poses.pkl', 'w') as f:
     #     pickle.dump(robot_poses, f)
     # raw_input("<Press Enter to continue>")
     # break
@@ -655,10 +659,11 @@ while True:
     ########### simulation 2: consensus decision making of target loop shape ###########
 
     # restore variable "robot_poses"
-    with open('temp.pkl') as f:
+    with open('_robot_poses.pkl') as f:
         robot_poses = pickle.load(f)
 
     print("##### simulation 2: decision making #####")
+    # "dist" in the variable may also refer to distribution
 
     dist_conn_update()  # need to update the network only once
     # draw the network first time
@@ -672,17 +677,265 @@ while True:
                     conn_width_thin_consensus)
     pygame.display.update()
 
-    # initialize the decision
+    # initialize the decision making variables
     shape_decision = -1
+    deci_dist = np.random.rand(swarm_size, shape_quantity)
+    sum_temp = np.sum(deci_dist, axis=1)
+    for i in range(swarm_size):
+        deci_dist[i] = deci_dist[i] / sum_temp[i]
+    deci_domi = np.argmax(deci_dist, axis=1)
+    groups = []  # robots reach local consensus are in same group
+    robot_group_sizes = [0 for i in range(swarm_size)]  # group size for each robot
+    # color assignments for the robots and decisions
+    color_initialized = False  # whether color assignment has been done for the first time
+    deci_colors = [-1 for i in range(shape_quantity)]
+    color_assigns = [0 for i in range(color_quantity)]
+    group_colors = []
+    robot_colors = [0 for i in range(swarm_size)]
+    # decision making control variables
+    dist_diff_thres = 0.3
+    dist_diff_ratio = [0.0 for i in range(swarm_size)]
+    dist_diff_power = 0.3
 
     # the loop for simulation 2
     sim_haulted = False
     time_last = pygame.time.get_ticks()
     time_now = time_last
-    frame_period = 100
+    frame_period = 300
     sim_freq_control = True
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))
     while True:
-        pass
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:  # close window button is clicked
+                print("program exit in simulation 2 - sim window closed")
+                sys.exit()  # exit the entire program
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE:
+                    sim_haulted = not sim_haulted  # reverse the pause flag
+        if sim_haulted: continue
+
+        # simulation frequency control
+        if sim_freq_control:
+            time_now = pygame.time.get_ticks()
+            if (time_now - time_last) > frame_period:
+                time_last = time_now
+            else:
+                continue
+
+        # increase iteration count
+        iter_count = iter_count + 1
+        sys.stdout.write("\riteration {}".format(iter_count))
+        sys.stdout.flush()
+
+        # 1.update the dominant decision for all robots
+        deci_domi = np.argmax(deci_dist, axis=1)
+
+        # 2.update the groups
+        groups = []  # empty the group container
+        group_deci = []  # the exhibited decision of the groups
+        robot_pool = range(swarm_size)  # a robot pool, to be assigned into groups
+        while len(robot_pool) != 0:  # searching groups one by one from the global robot pool
+            # start a new group, with first robot in the robot_pool
+            first_member = robot_pool[0]  # first member of this group
+            group_temp = [first_member]  # current temporary group
+            robot_pool.pop(0)  # pop out first robot in the pool
+            # a list of potential members for current group
+            # this list may increase when new members of group are discovered
+            p_members = list(conn_lists[first_member])
+            # an index for iterating through p_members, in searching group members
+            p_index = 0  # if it climbs to the end, the searching ends
+            # index of dominant decision for current group
+            current_domi = deci_domi[first_member]
+            # dynamically iterating through p_members with p_index
+            while p_index < len(p_members):  # index still in valid range
+                if deci_domi[p_members[p_index]] == current_domi:
+                    # a new member has been found
+                    new_member = p_members[p_index]  # get index of the new member
+                    p_members.remove(new_member)  # remove it from p_members list
+                        # but not increase p_index, because new value in p_members will flush in
+                    robot_pool.remove(new_member)  # remove it from the global robot pool
+                    group_temp.append(new_member)  # add it to current group
+                    # check if new potential members are available, due to new robot discovery
+                    p_members_new = conn_lists[new_member]  # new potential members
+                    for member in p_members_new:
+                        if member not in p_members:  # should not already in p_members
+                            if member not in group_temp:  # should not in current group
+                                if member in robot_pool:  # should be available in global pool
+                                    # if conditions satisfied, it is qualified as a potential member
+                                    p_members.append(member)  # append at the end
+                else:
+                    # a boundary robot(share different decision) has been met
+                    # leave it in p_members, will help to avoid checking back again on this robot
+                    p_index = p_index + 1  # shift right one position
+            # all connected members for this group have been located
+            groups.append(group_temp)  # append the new group
+            group_deci.append(deci_domi[first_member])  # append new group's exhibited decision
+        # update the colors for the exhibited decisions
+        if not color_initialized:
+            color_initialized = True
+            select_set = range(color_quantity)  # the initial selecting set
+            all_deci_set = set(group_deci)  # put all exhibited decisions in a set
+            for deci in all_deci_set:  # avoid checking duplicate decisions
+                if len(select_set) == 0:
+                    select_set = range(color_quantity)  # start a new set to select from
+                chosen_color = np.random.choice(select_set)
+                select_set.remove(chosen_color)
+                deci_colors[deci] = chosen_color  # assign the chosen color to decision
+                # increase the assignments of chosen color by 1
+                color_assigns[chosen_color] = color_assigns[chosen_color] + 1
+        else:
+            # remove the color for a decision, if it's no longer the decision of any group
+            all_deci_set = set(group_deci)
+            for i in range(shape_quantity):
+                if deci_colors[i] != -1:  # there was a color assigned before
+                    if i not in all_deci_set:
+                        # decrease the assignments of chosen color by 1
+                        color_assigns[deci_colors[i]] = color_assigns[deci_colors[i]] - 1
+                        deci_colors[i] = -1  # remove the assigned color
+            # assign color for an exhibited decision if not assigned
+            select_set = []  # set of colors to select from, start from empty
+            for i in range(len(groups)):
+                if deci_colors[group_deci[i]] == -1:
+                    if len(select_set) == 0:
+                        # construct a new select_set
+                        color_assigns_min = min(color_assigns)
+                        color_assigns_temp = [j - color_assigns_min for j in color_assigns]
+                        select_set = range(color_quantity)
+                        for j in range(color_quantity):
+                            if color_assigns_temp[j] != 0:
+                                select_set.remove(j)
+                    chosen_color = np.random.choice(select_set)
+                    select_set.remove(chosen_color)
+                    deci_colors[group_deci[i]] = chosen_color  # assign the chosen color
+                    # increase the assignments of chosen color by 1
+                    color_assigns[chosen_color] = color_assigns[chosen_color] + 1
+        # update the colors for the groups
+        group_colors = []
+        for i in range(len(groups)):
+            group_colors.append(deci_colors[group_deci[i]])
+
+        # 3.update the group size for each robot
+        for i in range(len(groups)):
+            size_temp = len(groups[i])
+            color_temp = group_colors[i]
+            for robot in groups[i]:
+                robot_group_sizes[robot] = size_temp
+                robot_colors[robot] = color_temp  # update the color for each robot
+
+        # the decision distribution evolution
+        converged_all = True  # flag for convergence of entire network
+        deci_dist_t = np.copy(deci_dist)  # deep copy of the 'deci_dist'
+        for i in range(swarm_size):
+            host_domi = deci_domi[i]
+            converged = True
+            for neighbor in conn_lists[i]:
+                if host_domi != deci_domi[neighbor]:
+                    converged = False
+                    break
+            # action based on convergence of dominant decision
+            if converged:  # all neighbors have converged with host
+                # step 1: take equally weighted average on all distributions
+                # including host and all neighbors
+                deci_dist[i] = deci_dist_t[i]*1.0  # start with host itself
+                for neighbor in conn_lists[i]:
+                    # accumulate neighbor's distribution
+                    deci_dist[i] = deci_dist[i] + deci_dist_t[neighbor]
+                # normalize the distribution such that sum is 1.0
+                sum_temp = np.sum(deci_dist[i])
+                deci_dist[i] = deci_dist[i] / sum_temp
+                # step 2: increase the unipolarity by applying the linear multiplier
+                # (this step is only for when all neighbors are converged)
+                # First find the largest difference between two distributions in this block
+                # of nodes, including the host and all its neighbors.
+                comb_pool = [i] + list(conn_lists[i])  # add host to a pool with its neighbors
+                    # will be used to form combinations from this pool
+                comb_pool_len = len(comb_pool)
+                dist_diff = []
+                for j in range(comb_pool_len):
+                    for k in range(j+1, comb_pool_len):
+                        j_node = comb_pool[j]
+                        k_node = comb_pool[k]
+                        dist_diff.append(np.sum(abs(deci_dist[j_node] - deci_dist[k_node])))
+                dist_diff_max = max(dist_diff)  # maximum distribution difference of all
+                if dist_diff_max < dist_diff_thres:
+                    # distribution difference is small enough,
+                    # that linear multiplier should be applied to increase unipolarity
+                    dist_diff_ratio = dist_diff_max/dist_diff_thres
+                    # Linear multiplier is generated from value of smaller and larger ends, the
+                    # smaller end is positively related with dist_diff_ratio. The smaller the
+                    # maximum distribution difference, the smaller the dist_diff_ratio, and the
+                    # steeper the linear multiplier.
+                    # '1.0/shape_quantity' is the average value of the linear multiplier
+                    small_end = 1.0/shape_quantity * np.power(dist_diff_ratio, dist_diff_power)
+                    large_end = 2.0/shape_quantity - small_end
+                    # sort the magnitude of the current distribution
+                    dist_temp = np.copy(deci_dist[i])  # temporary distribution
+                    sort_index = range(shape_quantity)
+                    for j in range(shape_quantity-1):  # bubble sort, ascending order
+                        for k in range(shape_quantity-1-j):
+                            if dist_temp[k] > dist_temp[k+1]:
+                                # exchange values in 'dist_temp'
+                                temp = dist_temp[k]
+                                dist_temp[k] = dist_temp[k+1]
+                                dist_temp[k+1] = temp
+                                # exchange values in 'sort_index'
+                                temp = sort_index[k]
+                                sort_index[k] = sort_index[k+1]
+                                sort_index[k+1] = temp
+                    # applying the linear multiplier
+                    for j in range(shape_quantity):
+                        multiplier = small_end + float(j)/(shape_quantity-1) * (large_end-small_end)
+                        deci_dist[i][sort_index[j]] = deci_dist[i][sort_index[j]] * multiplier
+                    # normalize the distribution such that sum is 1.0
+                    sum_temp = np.sum(deci_dist[i])
+                    deci_dist[i] = deci_dist[i]/sum_temp
+                else:
+                    # not applying linear multiplier when distribution difference is large
+                    pass
+            else:  # at least one neighbor has different opinion with host
+                converged_all = False  # the network is not converged
+                # take unequal weights in the averaging process based on group sizes
+                deci_dist[i] = deci_dist_t[i]*robot_group_sizes[i]  # start with host itself
+                for neighbor in conn_lists[i]:
+                    # accumulate neighbor's distribution
+                    deci_dist[i] = deci_dist[i] + deci_dist_t[neighbor]*robot_group_sizes[neighbor]
+                # normalize the distribution
+                sum_temp = np.sum(deci_dist[i])
+                deci_dist[i] = deci_dist[i] / sum_temp
+
+        # update the graphics
+        screen.fill(color_white)
+        # draw the regualr connecting lines
+        for i in range(swarm_size):
+            for j in range(i+1, swarm_size):
+                if conn_table[i,j]:
+                    pygame.draw.line(screen, color_black, disp_poses[i], disp_poses[j],
+                        conn_width_thin_consensus)
+        # draw the connecting lines marking the groups
+        for i in range(len(groups)):
+            group_len = len(groups[i])
+            for j in range(group_len):
+                for k in range(j+1, group_len):
+                    j_node = groups[i][j]
+                    k_node = groups[i][k]
+                    # check if two robots in one group is connected
+                    if conn_table[j_node,k_node]:
+                        pygame.draw.line(screen, distinct_color_set[group_colors[i]],
+                            disp_poses[j_node], disp_poses[k_node], conn_width_thick_consensus)
+        # draw the robots as dots
+        for i in range(swarm_size):
+            pygame.draw.circle(screen, distinct_color_set[robot_colors[i]],
+                disp_poses[i], robot_size_consensus, 0)
+        pygame.display.update()
+
+        # check exit condition for simulations 2
+        if converged_all:
+            shape_decision = deci_domi[0]
+            print("")  # move cursor to the new line
+            print("converged to decision {}".format(shape_decision))
+            print("simulation 2 is finished")
+            raw_input("<Press Enter to continue>")
+            break
+
 
