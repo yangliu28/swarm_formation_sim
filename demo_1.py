@@ -938,4 +938,17 @@ while True:
             raw_input("<Press Enter to continue>")
             break
 
+    ########### simulation 3: consensus role assignment for the loop shape ###########
+
+    print("##### simulation 3: role assignment #####")
+
+
+
+
+
+    ########### simulation 4: loop formation with designated target positions ###########
+
+    print("##### simulation 4: loop formation #####")
+
+
 
