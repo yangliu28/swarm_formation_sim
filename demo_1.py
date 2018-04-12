@@ -63,8 +63,9 @@
 
 from __future__ import print_function
 import pygame
-import sys, getopt, math
+import sys, os, getopt, math
 import numpy as np
+import pickle  # used to debugging multiple simulations
 
 swarm_size = 30  # default size of the swarm
 
@@ -153,6 +154,21 @@ def disp_poses_update():
     poses_temp = poses_temp * screen_side_length
     disp_poses = poses_temp.astype(int)  # convert to int and assign to disp_poses
 disp_poses_update()
+# deciding the seed robots, used in simulations with moving robots
+seed_percentage = 0.1  # the percentage of seed robots in the swarm
+seed_quantity = min(max(int(swarm_size*seed_percentage), 1), swarm_size)
+    # no smaller than 1, and no larger than swarm_size
+robot_seeds = [False for i in range(swarm_size)]  # whether a robot is a seed robot
+    # only seed robot can initialize the forming a new group
+seed_list_temp = np.arange(swarm_size)
+np.random.shuffle(seed_list_temp)
+for i in seed_list_temp[:seed_quantity]:
+    robot_seeds[i] = True
+
+# consensus configuration
+shape_quantity = 30  # also the number of decisions
+shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
+
 
 # visualization configuration
 color_white = (255,255,255)
@@ -180,7 +196,7 @@ for i in range(swarm_size):
     #     int(comm_range*pixels_per_length), 1)
 pygame.display.update()
 
-# pause to check the network before the simulations
+# pause to check the network before the simulations, or for screen recording
 raw_input("<Press Enter to continue>")
 
 # function for simulation 1, group robot '1's by their group ids, and find the largest group
@@ -334,16 +350,6 @@ while True:
     n1_life_upper = 6  # exclusive
     robot_n1_lives = np.random.uniform(n1_life_lower, n1_life_upper, swarm_size)
     robot_oris = np.random.rand(swarm_size) * 2 * math.pi - math.pi  # in range of [-pi, pi)
-    # deciding the seed robots
-    seed_percentage = 0.05  # the percentage of seed robots in the swarm
-    seed_quantity = min(max(int(swarm_size*seed_percentage), 1), swarm_size)
-        # no smaller than 1, and no larger than swarm_size
-    robot_seeds = [False for i in range(swarm_size)]  # whether a robot is a seed robot
-        # only seed robot can initialize the forming a new group
-    seed_list_temp = np.arange(swarm_size)
-    np.random.shuffle(seed_list_temp)
-    for i in seed_list_temp[:seed_quantity]:
-        robot_seeds[i] = True
 
     # group properties
     groups = {}
@@ -641,4 +647,21 @@ while True:
 
     print("##### simulation 2: decision making #####")
 
+    dist_conn_update()  # need to update only once in this simulation
+
+
+
+    # initialize the decision
+    shape_decision = -1
+
+    # the loop for simulation 2
+    sim_haulted = False
+    time_last = pygame.time.get_ticks()
+    time_now = time_last
+    frame_period = 100
+    sim_freq_control = True
+    iter_count = 0
+    sys.stdout.write("iteration {}".format(iter_count))
+    while True:
+        pass
 
