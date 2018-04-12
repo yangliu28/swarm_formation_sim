@@ -65,7 +65,7 @@ from __future__ import print_function
 import pygame
 import sys, os, getopt, math
 import numpy as np
-import pickle  # used to debugging multiple simulations
+import pickle  # for debugging multiple simulations
 
 swarm_size = 30  # default size of the swarm
 
@@ -178,9 +178,12 @@ distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,
     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
     (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
     (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
-node_size = 5
-node_empty_width = 2
-connection_width = 2
+robot_size_formation = 5  # robot size in formation simulations
+robot_width_empty = 2
+conn_width_formation = 2  # connection line width in formation simulations
+robot_size_consensus = 8  # robot size in consensus simulatiosn
+conn_width_thin_consensus = 2  # thin connection line in consensus simulations
+conn_width_thick_consensus = 5  # thick connection line in consensus simulations
 
 # set up the simulation window
 pygame.init()
@@ -191,13 +194,14 @@ pygame.display.set_caption("Demo 1")
 # draw the network
 screen.fill(color_white)
 for i in range(swarm_size):
-    pygame.draw.circle(screen, color_black, disp_poses[i], node_size, node_empty_width)
+    pygame.draw.circle(screen, color_black, disp_poses[i], robot_size_formation,
+        robot_width_empty)
     # pygame.draw.circle(screen, color_black, disp_poses[i],
     #     int(comm_range*pixels_per_length), 1)
 pygame.display.update()
 
 # pause to check the network before the simulations, or for screen recording
-raw_input("<Press Enter to continue>")
+# raw_input("<Press Enter to continue>")
 
 # function for simulation 1, group robot '1's by their group ids, and find the largest group
 def S1_robot1_grouping(robot_list, robot_group_ids, groups):
@@ -378,7 +382,7 @@ while True:
     sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
     swarm_aggregated = False
     ending_period = 3.0  # leave this much time to let robots settle after aggregation is dine
-    while True:
+    while False:
         # close window button to exit the entire program;
         # space key to pause this simulation
         for event in pygame.event.get():
@@ -598,10 +602,10 @@ while True:
         for i in range(swarm_size):
             if robot_states[i] == -1:  # empty circle for state '-1' robot
                 pygame.draw.circle(screen, color_grey, disp_poses[i],
-                    node_size, node_empty_width)
+                    robot_size_formation, robot_width_empty)
             elif robot_states[i] == 0:  # full circle for state '0' robot
                 pygame.draw.circle(screen, color_grey, disp_poses[i],
-                    node_size, 0)
+                    robot_size_formation, 0)
         # draw the in-group robots by each group
         for group_id_temp in groups.keys():
             if groups[group_id_temp][2]:
@@ -613,11 +617,11 @@ while True:
             # draw the robots and connections in the group
             for i in groups[group_id_temp][0]:
                 pygame.draw.circle(screen, color_group, disp_poses[i],
-                    node_size, 0)
+                    robot_size_formation, 0)
                 for j in local_conn_lists[i]:
                     if set([i,j]) not in conn_draw_sets:
                         pygame.draw.line(screen, color_group, disp_poses[i],
-                            disp_poses[j], connection_width)
+                            disp_poses[j], conn_width_formation)
                         conn_draw_sets.append(set([i,j]))
         pygame.display.update()
 
@@ -637,19 +641,36 @@ while True:
             if ending_period <= 0:
                 print("")  # move cursor to the new line
                 print("simulation 1 is finished")
-                # raw_input("<Press Enter to continue>")
-                pygame.time.delay(10000)
+                raw_input("<Press Enter to continue>")
                 break
             else:
                 ending_period = ending_period - frame_period/1000.0
 
+    # # store the variable "robot_poses"
+    # with open('temp.pkl', 'w') as f:
+    #     pickle.dump(robot_poses, f)
+    # raw_input("<Press Enter to continue>")
+    # break
+
     ########### simulation 2: consensus decision making of target loop shape ###########
+
+    # restore variable "robot_poses"
+    with open('temp.pkl') as f:
+        robot_poses = pickle.load(f)
 
     print("##### simulation 2: decision making #####")
 
-    dist_conn_update()  # need to update only once in this simulation
-
-
+    dist_conn_update()  # need to update the network only once
+    # draw the network first time
+    disp_poses_update()
+    screen.fill(color_white)
+    for i in range(swarm_size):
+        pygame.draw.circle(screen, color_black, disp_poses[i], robot_size_consensus, 0)
+        for j in range(i+1, swarm_size):
+            if conn_table[i,j]:
+                pygame.draw.line(screen, color_black, disp_poses[i], disp_poses[j],
+                    conn_width_thin_consensus)
+    pygame.display.update()
 
     # initialize the decision
     shape_decision = -1
