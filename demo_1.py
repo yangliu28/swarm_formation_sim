@@ -63,9 +63,9 @@
 
 from __future__ import print_function
 import pygame
-import sys, os, getopt, math
+import sys, os, getopt, math, random
 import numpy as np
-import pickle  # for debugging multiple simulations
+import pickle  # for debugging multiple simulations, and file read/write
 
 swarm_size = 30  # default size of the swarm
 
@@ -993,7 +993,7 @@ while True:
         # it should be send to k
     for i in range(swarm_size):  # message source i
         for j in range(swarm_size):  # in the view point of j
-            for neighbor in connection_lists[j]:
+            for neighbor in conn_lists[j]:
                 if gradients_rel[i][j,neighbor] == 1:
                     neighbors_send[i][j].append(neighbor)
 
@@ -1032,8 +1032,8 @@ while True:
             message_rx[target].append(message_temp)
             transmission_total = transmission_total + 1
     role_color = [0 for i in range(swarm_size)]  # colors for a conflicting role
-    # Dynamically manage color for conflicting robots is unnecessarily complicated, might as
-    # well assign the colors in advance.
+    # Dynamically manage color for conflicting robots is unnecessarily complicated, might just
+    # assign the colors in advance.
     role_index_pool = range(swarm_size)
     random.shuffle(role_index_pool)
     color_index_pool = range(color_quantity)
@@ -1059,6 +1059,7 @@ while True:
     time_now = time_last
     time_period = 2000  # not frame_period
     sim_freq_control = True
+    flash_delay = 200
     sys.stdout.write("iteration {}".format(iter_count))
     while True:
         for event in pygame.event.get():
@@ -1096,7 +1097,7 @@ while True:
                 probability = message[2]
                 time_stamp = message[3]
                 if source == i:
-                    print "error, robot {} receives message of itself".format(i)
+                    print("error, robot {} receives message of itself".format(i))
                     sys.exit()
                 if time_stamp > local_role_assignment[i][source][2]:
                     # received message will only take any effect if time stamp is new
@@ -1131,7 +1132,7 @@ while True:
                         pref_dist_temp[j] = -1
                 role_new = np.argmax(pref_dist_temp)
                 if pref_dist_temp[role_new] < 0:
-                    print "error, robot {} has no available role".format(i)
+                    print("error, robot {} has no available role".format(i))
                     sys.exit()
                 # role_new is good to go
                 # update local_robot_assignment
@@ -1220,10 +1221,10 @@ while True:
             raw_input("<Press Enter to continue>")
             break
 
-
     ########### simulation 4: loop formation with designated target positions ###########
 
     print("##### simulation 4: loop formation #####")
+
 
 
 
