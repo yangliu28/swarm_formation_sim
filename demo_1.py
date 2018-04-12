@@ -39,12 +39,13 @@
 # In simulation of aggregating to random network, the robots are not required to have a lower
 # limit number of connections when in the group. The result is that, the final network topology
 # is tree branch like, in which most robots are connected in serial. The unintended advantage
-# is the robots are more easily being caught 
-# Advised by Dr. Lee, it is better to have a final network topology in triangle grid, with each
-# robot having more connections. Dr. Lee's purpose is to have the robots evenly distributed in
-# the space
-
-# into triangle grid network, rather than tree branch like network
+# is the robots are more easily being caught in the tree topology.
+# Advised by Dr. Lee, it is better that the final network look like the triangle grid network.
+# In this way the swarm robots will have more evenly distributed coverage over the space.
+# To implement this: when in a group, if a robot has two or more connections, it moves to the
+# destination calculated in the old way. If it has only one connection, it will rotate around
+# counter-clockwise around that neighbor robot, untill it finds another neighbor. Again, there
+# is an exception that the group itself has only two members.
 
 
 # when to terminate a process and continue next one
@@ -240,7 +241,7 @@ def reset_radian(radian):
         radian = radian + 2*math.pi
     return radian
 
-# general function to check if robot is out of boundary
+# general function to steer robot away from wall if out of boundary (following physics)
 # use global variable "world_side_length"
 def robot_boundary_check(robot_pos, robot_ori):
     new_ori = robot_ori
@@ -282,6 +283,24 @@ def robot_boundary_check(robot_pos, robot_ori):
                 if (math.pi/2 - new_ori) < perp_thres:
                     new_ori = new_ori - devia_angle
     return new_ori
+
+# # general function to steer robot away from wall if out of boundary (in random direction)
+# # use global variable "world_side_length"
+# def robot_boundary_check(robot_pos, robot_ori):
+#     new_ori = robot_ori
+#     if robot_pos[0] >= world_side_length:  # outside of right boundary
+#         if math.cos(new_ori) > 0:
+#             new_ori = reset_radian(math.pi/2 + np.random.uniform(0,math.pi))
+#     elif robot_pos[0] <= 0:  # outside of left boundary
+#         if math.cos(new_ori) < 0:
+#             new_ori = reset_radian(-math.pi/2 + np.random.uniform(0,math.pi))
+#     if robot_pos[1] >= world_side_length:  # outside of top boundary
+#         if math.sin(new_ori) > 0:
+#             new_ori = reset_radian(-math.pi + np.random.uniform(0,math.pi))
+#     elif robot_pos[1] <= 0:  # outside of bottom boundary
+#         if math.sin(new_ori) < 0:
+#             new_ori = reset_radian(0 + np.random.uniform(0,math.pi))
+#     return new_ori
 
 # flow control varialbes shared by all individual simulations
 sim_haulted = False
@@ -351,6 +370,8 @@ while True:
     sim_freq_control = True
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
+    swarm_aggregated = False
+    ending_period = 3.0  # leave this much time to let robots settle after aggregation is dine
     while True:
         # close window button to exit the entire program;
         # space key to pause this simulation
@@ -516,6 +537,7 @@ while True:
         for i in range(swarm_size):
             # change move direction only for robot '1', for adjusting location in group
             if robot_states[i] == 1:
+                # find the neighbors in the same group
                 host_group_id = robot_group_ids[i]
                 for j in conn_lists[i]:
                     if (robot_states[j] == 1) and (robot_group_ids[j] == host_group_id):
@@ -523,15 +545,40 @@ while True:
                 if len(local_conn_lists[i]) == 0:  # should not happen after parameter tuning
                     printf("robot {} loses its group {}".format(i, host_group_id))
                     sys.exit()
-                mov_vec = np.zeros(2)
-                for j in local_conn_lists[i]:
-                    mov_vec = mov_vec + (mov_vec_ratio * (dist_table[i,j] - desired_space) *
-                        normalize(robot_poses[j] - robot_poses[i]))
-                if np.linalg.norm(mov_vec) < destination_error:
-                    # skip the physics update if within destination error
-                    continue
-                else:
-                    robot_oris[i] = math.atan2(mov_vec[1], mov_vec[0])  # change direction
+                # calculating the moving direction, based on neighbor situation
+                if (len(local_conn_lists[i]) == 1) and (len(groups[host_group_id][0]) > 2):
+                    # If the robot has only one neighbor, and it is not the case that the group
+                    # has only members, then the robot will try to secure another neighbor, by
+                    # rotating counter-clockwise around this only neighbor.
+                    center = local_conn_lists[i][0]  # the center robot
+                    # use the triangle of (desired_space, dist_table[i,center], step_moving_dist)
+                    if dist_table[i,center] > (desired_space + step_moving_dist):
+                        # moving toward the center robot
+                        robot_oris[i] = math.atan2(robot_poses[center,1] - robot_poses[i,1],
+                            robot_poses[center,0] - robot_poses[i,0])
+                    elif (dist_table[i,center] + step_moving_dist) < desired_space:
+                        # moving away from the center robot
+                        robot_oris[i] = math.atan2(robot_poses[i,1] - robot_poses[center,1],
+                            robot_poses[i,0] - robot_poses[center,0])
+                    else:
+                        # moving tangent along the circle of radius of "desired_space"
+                        robot_oris[i] = math.atan2(robot_poses[i,1] - robot_poses[center,1],
+                            robot_poses[i,0] - robot_poses[center,0])
+                        # interior angle between 
+                        int_angle_temp = math.acos((math.pow(dist_table[i,center],2) +
+                            math.pow(step_moving_dist,2) - math.pow(desired_space,2)) /
+                            (2.0*dist_table[i,center]*step_moving_dist))
+                        robot_oris[i] = reset_radian(robot_oris[i] + (math.pi - int_angle_temp))
+                else:  # the normal situation
+                    # calculate the moving vector, and check if destination is within error range
+                    mov_vec = np.zeros(2)
+                    for j in local_conn_lists[i]:  # accumulate the influence from all neighbors
+                        mov_vec = mov_vec + (mov_vec_ratio * (dist_table[i,j] - desired_space) *
+                            normalize(robot_poses[j] - robot_poses[i]))
+                    if np.linalg.norm(mov_vec) < destination_error:
+                        continue  # skip the physics update if within destination error
+                    else:
+                        robot_oris[i] = math.atan2(mov_vec[1], mov_vec[0])  # change direction
             # check if out of boundaries (from previous line formation program)
             robot_oris[i] = robot_boundary_check(robot_poses[i], robot_oris[i])
             # update one step of move
@@ -577,13 +624,18 @@ while True:
                 groups[group_id_temp][1] = groups[group_id_temp][1] - frame_period/1000.0
 
         # check exit condition of simulation 1
-        if len(groups.keys()) == 1:
-            if len(groups.values()[0][0]) == swarm_size:
+        if not swarm_aggregated:
+            if (len(groups.keys()) == 1) and (len(groups.values()[0][0]) == swarm_size):
+                swarm_aggregated = True  # once aggregated, there is no turning back
+        if swarm_aggregated:
+            if ending_period <= 0:
                 print("")  # move cursor to the new line
                 print("simulation 1 is finished")
                 # raw_input("<Press Enter to continue>")
                 pygame.time.delay(10000)
                 break
+            else:
+                ending_period = ending_period - frame_period/1000.0
 
     ########### simulation 2: consensus decision making of target loop shape ###########
 
