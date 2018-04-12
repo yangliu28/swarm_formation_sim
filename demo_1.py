@@ -168,6 +168,7 @@ for i in seed_list_temp[:seed_quantity]:
 # consensus configuration
 shape_quantity = 30  # also the number of decisions
 shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
+role_assignment_scheme = np.zeros(swarm_size)
 
 # visualization configuration
 color_white = (255,255,255)
@@ -188,6 +189,7 @@ conn_width_formation = 2  # connection line width in formation simulations
 robot_size_consensus = 8  # robot size in consensus simulatiosn
 conn_width_thin_consensus = 2  # thin connection line in consensus simulations
 conn_width_thick_consensus = 5  # thick connection line in consensus simulations
+robot_ring_size = 12  # extra ring on robot in consensus simulations
 
 # set up the simulation window
 pygame.init()
@@ -705,7 +707,7 @@ while True:
     sim_freq_control = True
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))
-    while True:
+    while False:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 2 - sim window closed")
@@ -847,16 +849,16 @@ while True:
                 # step 2: increase the unipolarity by applying the linear multiplier
                 # (this step is only for when all neighbors are converged)
                 # First find the largest difference between two distributions in this block
-                # of nodes, including the host and all its neighbors.
+                # of robots, including the host and all its neighbors.
                 comb_pool = [i] + list(conn_lists[i])  # add host to a pool with its neighbors
                     # will be used to form combinations from this pool
                 comb_pool_len = len(comb_pool)
                 dist_diff = []
                 for j in range(comb_pool_len):
                     for k in range(j+1, comb_pool_len):
-                        j_node = comb_pool[j]
-                        k_node = comb_pool[k]
-                        dist_diff.append(np.sum(abs(deci_dist[j_node] - deci_dist[k_node])))
+                        j_robot = comb_pool[j]
+                        k_robot = comb_pool[k]
+                        dist_diff.append(np.sum(abs(deci_dist[j_robot] - deci_dist[k_robot])))
                 dist_diff_max = max(dist_diff)  # maximum distribution difference of all
                 if dist_diff_max < dist_diff_thres:
                     # distribution difference is small enough,
@@ -917,12 +919,12 @@ while True:
             group_len = len(groups[i])
             for j in range(group_len):
                 for k in range(j+1, group_len):
-                    j_node = groups[i][j]
-                    k_node = groups[i][k]
+                    j_robot = groups[i][j]
+                    k_robot = groups[i][k]
                     # check if two robots in one group is connected
-                    if conn_table[j_node,k_node]:
+                    if conn_table[j_robot,k_robot]:
                         pygame.draw.line(screen, distinct_color_set[group_colors[i]],
-                            disp_poses[j_node], disp_poses[k_node], conn_width_thick_consensus)
+                            disp_poses[j_robot], disp_poses[k_robot], conn_width_thick_consensus)
         # draw the robots as dots
         for i in range(swarm_size):
             pygame.draw.circle(screen, distinct_color_set[robot_colors[i]],
@@ -942,8 +944,281 @@ while True:
 
     print("##### simulation 3: role assignment #####")
 
+    dist_conn_update()  # need to update the network only once
+    # draw the network first time
+    disp_poses_update()
+    screen.fill(color_white)
+    for i in range(swarm_size):
+        pygame.draw.circle(screen, color_black, disp_poses[i], robot_size_consensus, 0)
+        for j in range(i+1, swarm_size):
+            if conn_table[i,j]:
+                pygame.draw.line(screen, color_black, disp_poses[i], disp_poses[j],
+                    conn_width_thin_consensus)
+    pygame.display.update()
 
+    # calculate the gradient map for message transmission
+    gradients = np.copy(conn_table)  # build gradient map on connection map
+    pool_gradient = 1  # gradients of the connections in the pool
+    pool_conn = {}
+    for i in range(swarm_size):
+        pool_conn[i] = conn_lists[i][:]  # start with gradient 1 connections
+    while len(pool_conn.keys()) != 0:
+        source_deactivate = []
+        for source in pool_conn:
+            targets_temp = []  # the new targets
+            for target in pool_conn[source]:
+                for target_new in conn_lists[target]:
+                    if target_new == source: continue  # skip itself
+                    if gradients[source, target_new] == 0:
+                        gradients[source, target_new] = pool_gradient + 1
+                        targets_temp.append(target_new)
+            if len(targets_temp) == 0:
+                source_deactivate.append(source)
+            else:
+                pool_conn[source] = targets_temp[:]  # update with new targets
+        for source in source_deactivate:
+            pool_conn.pop(source)  # remove the finished sources
+        pool_gradient = pool_gradient + 1
+    # calculate the relative gradient values
+    gradients_rel = []
+        # gradients_rel[i][j,k] refers to gradient of k relative to j with message source i
+    for i in range(swarm_size):  # message source i
+        gradient_temp = np.zeros((swarm_size, swarm_size))
+        for j in range(swarm_size):  # in the view point of j
+            gradient_temp[j] = gradients[i] - gradients[i,j]
+        gradients_rel.append(gradient_temp)
+    # list the neighbors a robot can send message to regarding a message source
+    neighbors_send = [[[] for j in range(swarm_size)] for i in range(swarm_size)]
+        # neighbors_send[i][j][k] means, if message from source i is received in j,
+        # it should be send to k
+    for i in range(swarm_size):  # message source i
+        for j in range(swarm_size):  # in the view point of j
+            for neighbor in connection_lists[j]:
+                if gradients_rel[i][j,neighbor] == 1:
+                    neighbors_send[i][j].append(neighbor)
 
+    # initialize the role assignment variables
+    # preference distribution of all robots
+    pref_dist = np.random.rand(swarm_size, swarm_size)  # no need to normalize it
+    initial_roles = np.argmax(pref_dist, axis=1)  # the chosen role
+    # the local assignment information
+    local_role_assignment = [[[-1, 0, -1] for j in range(swarm_size)] for i in range(swarm_size)]
+        # local_role_assignment[i][j] is local assignment information of robot i for robot j
+        # first number is chosen role, second is probability, third is time stamp
+    local_robot_assignment = [[[] for j in range(swarm_size)] for i in range(swarm_size)]
+        # local_robot_assignment[i][j] is local assignment of robot i for role j
+        # contains a list of robots that choose role j
+    # populate the chosen role of itself to the local assignment information
+    for i in range(swarm_size):
+        local_role_assignment[i][i][0] = initial_roles[i]
+        local_role_assignment[i][i][1] = pref_dist[i, initial_roles[i]]
+        local_role_assignment[i][i][2] = 0
+        local_robot_assignment[i][initial_roles[i]].append(i)
+
+    # received message container for all robots
+    message_rx = [[] for i in range(swarm_size)]
+    # for each message entry, it containts:
+        # message[0]: ID of message source
+        # message[1]: its preferred role
+        # message[2]: probability of chosen role
+        # message[3]: time stamp
+    # all robots transmit once their chosen role before the loop
+    transmission_total = 0  # count message transmissions for each iteration
+    iter_count = 0  # also used as time stamp in message
+    for source in range(swarm_size):
+        chosen_role = local_role_assignment[source][source][0]
+        message_temp = [source, chosen_role, pref_dist[source, chosen_role], iter_count]
+        for target in conn_lists[source]:  # send to all neighbors
+            message_rx[target].append(message_temp)
+            transmission_total = transmission_total + 1
+    role_color = [0 for i in range(swarm_size)]  # colors for a conflicting role
+    # Dynamically manage color for conflicting robots is unnecessarily complicated, might as
+    # well assign the colors in advance.
+    role_index_pool = range(swarm_size)
+    random.shuffle(role_index_pool)
+    color_index_pool = range(color_quantity)
+    random.shuffle(color_index_pool)
+    while len(role_index_pool) != 0:
+        role_color[role_index_pool[0]] = color_index_pool[0]
+        role_index_pool.pop(0)
+        color_index_pool.pop(0)
+        if len(color_index_pool) == 0:
+            color_index_pool = range(color_quantity)
+            random.shuffle(color_index_pool)
+
+    # flags
+    transmit_flag = [[False for j in range(swarm_size)] for i in range(swarm_size)]
+        # whether robot i should transmit received message of robot j
+    change_flag = [False for i in range(swarm_size)]
+        # whether robot i should change its chosen role
+    scheme_converged = [False for i in range(swarm_size)]
+
+    # the loop for simulation 3
+    sim_haulted = False
+    time_last = pygame.time.get_ticks()
+    time_now = time_last
+    time_period = 2000  # not frame_period
+    sim_freq_control = True
+    sys.stdout.write("iteration {}".format(iter_count))
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:  # close window button is clicked
+                print("program exit in simulation 3 - sim window closed")
+                sys.exit()  # exit the entire program
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE:
+                    sim_haulted = not sim_haulted  # reverse the pause flag
+        if sim_haulted: continue
+
+        # simulation frequency control
+        if sim_freq_control:
+            time_now = pygame.time.get_ticks()
+            if (time_now - time_last) > time_period:
+                time_last = time_now
+            else:
+                continue
+
+        # increase iteration count
+        iter_count = iter_count + 1
+        sys.stdout.write("\riteration {}".format(iter_count))
+        sys.stdout.flush()
+
+        # process the received messages
+        # transfer messages to the processing buffer, then empty the message receiver
+        message_rx_buf = [[[k for k in j] for j in i] for i in message_rx]
+        message_rx = [[] for i in range(swarm_size)]
+        yield_robots = []  # the robots that are yielding on chosen roles
+        yield_roles = []  # the old roles of yield_robots before yielding
+        for i in range(swarm_size):  # messages received by robot i
+            for message in message_rx_buf[i]:
+                source = message[0]
+                role = message[1]
+                probability = message[2]
+                time_stamp = message[3]
+                if source == i:
+                    print "error, robot {} receives message of itself".format(i)
+                    sys.exit()
+                if time_stamp > local_role_assignment[i][source][2]:
+                    # received message will only take any effect if time stamp is new
+                    # update local_robot_assignment
+                    role_old = local_role_assignment[i][source][0]
+                    if role_old >= 0:  # has been initialized before, not -1
+                        local_robot_assignment[i][role_old].remove(source)
+                    local_robot_assignment[i][role].append(source)
+                    # update local_role_assignment
+                    local_role_assignment[i][source][0] = role
+                    local_role_assignment[i][source][1] = probability
+                    local_role_assignment[i][source][2] = time_stamp
+                    transmit_flag[i][source] = True
+                    # check conflict with itself
+                    if role == local_role_assignment[i][i][0]:
+                        if probability >= pref_dist[i, local_role_assignment[i][i][0]]:
+                            # change its choice after all message received
+                            change_flag[i] = True
+                            yield_robots.append(i)
+                            yield_roles.append(local_role_assignment[i][i][0])
+        # change the choice of role for those decide to
+        for i in range(swarm_size):
+            if change_flag[i]:
+                change_flag[i] = False
+                role_old = local_role_assignment[i][i][0]
+                pref_dist_temp = np.copy(pref_dist[i])
+                pref_dist_temp[local_role_assignment[i][i][0]] = -1
+                    # set to negative to avoid being chosen
+                for j in range(swarm_size):
+                    if len(local_robot_assignment[i][j]) != 0:
+                        # eliminate those choices that have been taken
+                        pref_dist_temp[j] = -1
+                role_new = np.argmax(pref_dist_temp)
+                if pref_dist_temp[role_new] < 0:
+                    print "error, robot {} has no available role".format(i)
+                    sys.exit()
+                # role_new is good to go
+                # update local_robot_assignment
+                local_robot_assignment[i][role_old].remove(i)
+                local_robot_assignment[i][role_new].append(i)
+                # update local_role_assignment
+                local_role_assignment[i][i][0] = role_new
+                local_role_assignment[i][i][1] = pref_dist[i][role_new]
+                local_role_assignment[i][i][2] = iter_count
+                transmit_flag[i][i] = True
+        # transmit the received messages or initial new message transmission
+        transmission_total = 0
+        for transmitter in range(swarm_size):  # transmitter robot
+            for source in range(swarm_size):  # message is for this source robot
+                if transmit_flag[transmitter][source]:
+                    transmit_flag[transmitter][source] = False
+                    message_temp = [source, local_role_assignment[transmitter][source][0],
+                                            local_role_assignment[transmitter][source][1],
+                                            local_role_assignment[transmitter][source][2]]
+                    for target in neighbors_send[source][transmitter]:
+                        message_rx[target].append(message_temp)
+                        transmission_total = transmission_total + 1
+
+        # check if role assignment scheme is converged at every robot
+        for i in range(swarm_size):
+            if not scheme_converged[i]:
+                converged = True
+                for j in range(swarm_size):
+                    if len(local_robot_assignment[i][j]) != 1:
+                        converged  = False
+                        break
+                if converged:
+                    scheme_converged[i] = True
+
+        # for display, scan the robots that have detected conflict but not yielding
+        persist_robots = []
+        for i in range(swarm_size):
+            if i in yield_robots: continue
+            if len(local_robot_assignment[i][local_role_assignment[i][i][0]]) > 1:
+                persist_robots.append(i)
+
+        # update the display
+        for i in range(swarm_size):
+            for j in range(i+1, swarm_size):
+                if conn_table[i,j]:
+                    pygame.draw.line(screen, color_black, disp_poses[i], disp_poses[j],
+                        conn_width_thin_consensus)
+        for i in range(swarm_size):
+            pygame.draw.circle(screen, color_black, disp_poses[i], robot_size_consensus, 0)
+        # draw the persisting robots with color of conflicting role
+        for i in persist_robots:
+            pygame.draw.circle(screen, distinct_color_set[role_color[local_role_assignment[i][i][0]]],
+                disp_poses[i], robot_size_consensus, 0)
+        # draw extra ring on robot if local scheme has converged
+        for i in range(swarm_size):
+            if scheme_converged[i]:
+                pygame.draw.circle(screen, color_black, disp_poses[i],
+                    robot_ring_size, robot_width_empty)
+        pygame.display.update()
+        # flash the yielding robots with color of old role
+        for _ in range(3):
+            # change to color
+            for i in range(len(yield_robots)):
+                pygame.draw.circle(screen, distinct_color_set[role_color[yield_roles[i]]],
+                    disp_poses[yield_robots[i]], robot_size_consensus, 0)
+            pygame.display.update()
+            pygame.time.delay(flash_delay)
+            # change to black
+            for i in range(len(yield_robots)):
+                pygame.draw.circle(screen, color_black,
+                    disp_poses[yield_robots[i]], robot_size_consensus, 0)
+            pygame.display.update()
+            pygame.time.delay(flash_delay)
+
+        # exit the simulation if all role assignment schemes have converged
+        all_converged = scheme_converged[0]
+        for i in range(1, swarm_size):
+            all_converged = all_converged and scheme_converged[i]
+            if not all_converged: break
+        if all_converged:
+            for i in range(swarm_size):
+                role_assignment_scheme[i] = local_role_assignment[0][i][0]
+            print("")  # move cursor to the new line
+            print("converged role assignment scheme: {}".format(role_assignment_scheme))
+            print("simulation 3 is finished")
+            raw_input("<Press Enter to continue>")
+            break
 
 
     ########### simulation 4: loop formation with designated target positions ###########
