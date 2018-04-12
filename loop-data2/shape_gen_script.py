@@ -6,38 +6,93 @@ import pygame
 import numpy as np
 
 
-##### script to generate 30-1-square #####
-swarm_size = 30
-node_poses = np.zeros((swarm_size, 2))
-x = 0.0
-y = 0.0
-# bottom side line
-node_poses[0] = np.array([0.0, 0.0])
-for i in range(1,8):
-    x = x + 1.0
-    node_poses[i] = np.array([x,y])
-# right line line
-x = x + 1.0 / math.sqrt(2)
-y = y + 1.0 / math.sqrt(2)
-node_poses[8] = np.array([x,y])
-for i in range(9,16):
-    y = y + 1.0
-    node_poses[i] = np.array([x,y])
-# top side line
-for i in range(16,23):
-    x = x - 1.0
-    node_poses[i] = np.array([x,y])
-# left side line
-x = x - 1.0 / math.sqrt(2)
-y = y - 1.0 / math.sqrt(2)
-node_poses[23] = np.array([x,y])
-for i in range(24,30):
-    y = y - 1.0
-    node_poses[i] = np.array([x,y])
-print("node_poses: {}".format(node_poses))
-with open('30-1-square', 'w') as f:
-    pickle.dump(node_poses, f)
+# ##### script to generate 30-square #####
+# swarm_size = 30
+# node_poses = np.zeros((swarm_size, 2))
+# x = 0.0
+# y = 0.0
+# # bottom side line
+# # first node starting from bottom left corner
+# node_poses[0] = np.array([0.0, 0.0])
+# for i in range(1,8):
+#     x = x + 1.0
+#     node_poses[i] = np.array([x,y])
+# # right line line
+# x = x + 1.0 / math.sqrt(2)
+# y = y + 1.0 / math.sqrt(2)
+# node_poses[8] = np.array([x,y])
+# for i in range(9,16):
+#     y = y + 1.0
+#     node_poses[i] = np.array([x,y])
+# # top side line
+# for i in range(16,23):
+#     x = x - 1.0
+#     node_poses[i] = np.array([x,y])
+# # left side line
+# x = x - 1.0 / math.sqrt(2)
+# y = y - 1.0 / math.sqrt(2)
+# node_poses[23] = np.array([x,y])
+# for i in range(24,30):
+#     y = y - 1.0
+#     node_poses[i] = np.array([x,y])
+# print("node_poses: {}".format(node_poses))
+# with open('30-square', 'w') as f:
+#     pickle.dump(node_poses, f)
 
+
+# ##### script to generate 100-square #####
+# swarm_size = 100
+# node_poses = np.zeros((swarm_size, 2))
+# x = 0.0
+# y = 0.0
+# # bottom side line
+# node_poses[0] = np.array([0.0, 0.0])
+# for i in range(1,26):
+#     x = x + 1.0
+#     node_poses[i] = np.array([x,y])
+# # right line line
+# for i in range(26,51):
+#     y = y + 1.0
+#     node_poses[i] = np.array([x,y])
+# # top side line
+# for i in range(51,76):
+#     x = x - 1.0
+#     node_poses[i] = np.array([x,y])
+# # left side line
+# for i in range(76,100):
+#     y = y - 1.0
+#     node_poses[i] = np.array([x,y])
+# print("node_poses: {}".format(node_poses))
+# with open('100-square', 'w') as f:
+#     pickle.dump(node_poses, f)
+
+
+# ##### script to generate 30-circle #####
+# swarm_size = 30
+# node_poses = np.zeros((swarm_size, 2))
+# center = np.zeros(2)
+# radius = 0.5 / math.sin(math.pi/swarm_size)
+# # first node starting from left most position
+# for i in range(swarm_size):
+#     ori = -math.pi + 2*math.pi/swarm_size * i
+#     node_poses[i] = center + np.array([radius*math.cos(ori), radius*math.sin(ori)])
+# print("node_poses: {}".format(node_poses))
+# with open('30-circle', 'w') as f:
+#     pickle.dump(node_poses, f)
+
+
+# ##### script to generate 100-circle #####
+# swarm_size = 100
+# node_poses = np.zeros((swarm_size, 2))
+# center = np.zeros(2)
+# radius = 0.5 / math.sin(math.pi/swarm_size)
+# # first node starting from left most position
+# for i in range(swarm_size):
+#     ori = -math.pi + 2*math.pi/swarm_size * i
+#     node_poses[i] = center + np.array([radius*math.cos(ori), radius*math.sin(ori)])
+# print("node_poses: {}".format(node_poses))
+# with open('100-circle', 'w') as f:
+#     pickle.dump(node_poses, f)
 
 
 
