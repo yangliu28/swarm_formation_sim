@@ -393,7 +393,7 @@ while True:
         # space key to pause this simulation
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
-                print("program exit in simulation 1 - sim window closed")
+                print("program exit in simulation 1")
                 sys.exit()  # exit the entire program
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_SPACE:
@@ -417,7 +417,7 @@ while True:
         st_n1to0 = []  # robot '-1' gets back to '0' after life time ends
             # list of robots changing to '0' from '-1'
         st_1ton1 = []  # group disassembles either life expires, or triggered by others
-            # list of group to be disassembled
+            # list of groups to be disassembled
         st_0to1_join = {}  # robot '0' detects robot '1' group, join the group
             # key is the robot '0', value is the group id
         st_0to1_new = {}  # robot '0' detects another robot '0', forming new group
@@ -710,7 +710,7 @@ while True:
     while False:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
-                print("program exit in simulation 2 - sim window closed")
+                print("program exit in simulation 2")
                 sys.exit()  # exit the entire program
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_SPACE:
@@ -1064,7 +1064,7 @@ while True:
     while False:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
-                print("program exit in simulation 3 - sim window closed")
+                print("program exit in simulation 3")
                 sys.exit()  # exit the entire program
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_SPACE:
@@ -1227,16 +1227,87 @@ while True:
     # raw_input("<Press Enter to continue>")
     # break
 
-    ########### simulation 4: loop formation with designated target positions ###########
+    ########### simulation 4: loop shape formation with designated target positions ###########
 
     # restore variable "assignment_scheme"
     with open('v_assignment_scheme') as f:
         assignment_scheme = pickle.load(f)
 
-    print("##### simulation 4: loop formation #####")
+    print("##### simulation 4: loop shape formation #####")
 
+    # robot perperties
+    # all robots start with state '-1'
+    robot_states = np.array([-1 for i in range(swarm_size)])
+        # '-1' for wandering around, ignoring all connections
+        # '0' for wandering around, available to connection
+        # '1' for in a group, order on loop not satisfied, climbing CCW around loop
+        # '2' for in a group, order on loop satisfied
+    n1_life_lower = 2  # inclusive
+    n1_life_upper = 6  # exclusive
+    robot_n1_lives = np.random.uniform(n1_life_lower, n1_life_upper, swarm_size)
+    robot_oris = np.random.rand(swarm_size) * 2 * math.pi - math.pi  # in range of [-pi, pi)
 
+    # group properties
+    groups = {}
+        # key is the group id, value is a list, in the list:
+        # [0]: a list of robots '2' in the group
+        # [1]: a list of robots '1' in the group
+        # [2]: remaining life time of the group
+        # [3]: whether or not being the dominant group
+    life_incre = 5  # number of seconds added to the life of a group when new robot joins
+    group_id_upper = swarm_size  # upper limit of group id
+    robot_group_ids = np.array([-1 for i in range(swarm_size)])  # group id for the robots
+        # '-1' for not in a group
 
+    # use step moving distance in each update, instead of calculating from robot velocity
+    # so to make it independent of simulation frequency control
+    step_moving_dist = 0.05  # should be smaller than destination distance error
+    destination_error = 0.08
+    mov_vec_ratio = 0.5  # ratio used when calculating mov vector
 
+    # the loop for simulation 1
+    sim_haulted = False
+    time_last = pygame.time.get_ticks()
+    time_now = time_last
+    frame_period = 100
+    sim_freq_control = True
+    iter_count = 0
+    sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
+    loop_shape_formed = False
+    while False:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:  # close window button is clicked
+                print("program exit in simulation 4")
+                sys.exit()  # exit the entire program
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE:
+                    sim_haulted = not sim_haulted  # reverse the pause flag
+        if sim_haulted: continue
 
+        # simulation frequency control
+        if sim_freq_control:
+            time_now = pygame.time.get_ticks()
+            if (time_now - time_last) > frame_period:
+                time_last = time_now
+            else:
+                continue
 
+        # increase iteration count
+        iter_count = iter_count + 1
+        sys.stdout.write("\riteration {}".format(iter_count))
+        sys.stdout.flush()
+
+        # state transition variables
+        st_n1to0 = []  # robot '-1' gets back to '0' after life time ends
+            # list of robots changing to '0' from '-1'
+        st_gton1 = []  # group disassembles either life expires, or triggered by others
+            # list of groups to be disassembled
+
+        dist_conn_update()  # update "relations" of the robots
+        # check any state transition, and schedule the tasks
+        for i in rnage(swarm_size):
+            if robot_states[i] == -1:  # for host robot with state '-1'
+                if robot_n1_lives[i] < 0:
+                    st_n1to0.append(i)
+                else:
+                    
