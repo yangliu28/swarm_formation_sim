@@ -168,7 +168,7 @@ for i in seed_list_temp[:seed_quantity]:
 # consensus configuration
 shape_quantity = 30  # also the number of decisions
 shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
-role_assignment_scheme = np.zeros(swarm_size)
+assignment_scheme = np.zeros(swarm_size)
 
 # visualization configuration
 color_white = (255,255,255)
@@ -653,7 +653,7 @@ while True:
                 ending_period = ending_period - frame_period/1000.0
 
     # # store the variable "robot_poses"
-    # with open('_robot_poses.pkl', 'w') as f:
+    # with open('v_robot_poses', 'w') as f:
     #     pickle.dump(robot_poses, f)
     # raw_input("<Press Enter to continue>")
     # break
@@ -661,7 +661,7 @@ while True:
     ########### simulation 2: consensus decision making of target loop shape ###########
 
     # restore variable "robot_poses"
-    with open('_robot_poses.pkl') as f:
+    with open('v_robot_poses') as f:
         robot_poses = pickle.load(f)
 
     print("##### simulation 2: decision making #####")
@@ -1061,7 +1061,7 @@ while True:
     sim_freq_control = True
     flash_delay = 200
     sys.stdout.write("iteration {}".format(iter_count))
-    while True:
+    while False:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 3 - sim window closed")
@@ -1214,16 +1214,28 @@ while True:
             if not all_converged: break
         if all_converged:
             for i in range(swarm_size):
-                role_assignment_scheme[i] = local_role_assignment[0][i][0]
+                assignment_scheme[i] = local_role_assignment[0][i][0]
             print("")  # move cursor to the new line
-            print("converged role assignment scheme: {}".format(role_assignment_scheme))
+            print("converged role assignment scheme: {}".format(assignment_scheme))
             print("simulation 3 is finished")
             raw_input("<Press Enter to continue>")
             break
 
+    # # store the variable "assignment_scheme"
+    # with open('v_assignment_scheme', 'w') as f:
+    #     pickle.dump(assignment_scheme, f)
+    # raw_input("<Press Enter to continue>")
+    # break
+
     ########### simulation 4: loop formation with designated target positions ###########
 
+    # restore variable "assignment_scheme"
+    with open('v_assignment_scheme') as f:
+        assignment_scheme = pickle.load(f)
+
     print("##### simulation 4: loop formation #####")
+
+
 
 
 

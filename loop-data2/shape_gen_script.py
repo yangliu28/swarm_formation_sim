@@ -1,4 +1,5 @@
 # script to generate files for the loop shapes
+# each block of code generates one loop shape
 
 import pickle
 import math
@@ -92,6 +93,53 @@ import numpy as np
 #     node_poses[i] = center + np.array([radius*math.cos(ori), radius*math.sin(ori)])
 # print("node_poses: {}".format(node_poses))
 # with open('100-circle', 'w') as f:
+#     pickle.dump(node_poses, f)
+
+
+# ##### script to generate 30-triangle #####
+# swarm_size = 30
+# node_poses = np.zeros((swarm_size, 2))
+# # first node is at bottom left corner
+# x = 0.0
+# y = 0.0
+# node_poses[0] = np.array([x,y])
+# for i in range(1,11):
+#     x = x + 1.0
+#     node_poses[i] = np.array([x,y])
+# for i in range(11,21):
+#     x = x + 1.0 * math.cos(math.pi*2/3)
+#     y = y + 1.0 * math.sin(math.pi*2/3)
+#     node_poses[i] = np.array([x,y])
+# for i in range(21, 30):
+#     x = x + 1.0 * math.cos(-math.pi*2/3)
+#     y = y + 1.0 * math.sin(-math.pi*2/3)
+#     node_poses[i] = np.array([x,y])
+# print("node_poses: {}".format(node_poses))
+# with open('30-triangle', 'w') as f:
+#     pickle.dump(node_poses, f)
+
+
+# ##### script to generate 100-triangle #####
+# swarm_size = 100
+# node_poses = np.zeros((swarm_size, 2))
+# side_angle = math.acos(17.0/33.0)
+# # first node is at bottom left corner
+# x = 0.0
+# y = 0.0
+# node_poses[0] = np.array([x,y])
+# for i in range(1,35):
+#     x = x + 1.0
+#     node_poses[i] = np.array([x,y])
+# for i in range(35,68):
+#     x = x + 1.0 * math.cos(math.pi-side_angle)
+#     y = y + 1.0 * math.sin(math.pi-side_angle)
+#     node_poses[i] = np.array([x,y])
+# for i in range(68, 100):
+#     x = x + 1.0 * math.cos(-math.pi+side_angle)
+#     y = y + 1.0 * math.sin(-math.pi+side_angle)
+#     node_poses[i] = np.array([x,y])
+# print("node_poses: {}".format(node_poses))
+# with open('100-triangle', 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
