@@ -209,16 +209,13 @@ pygame.display.update()
 # pause to check the network before the simulations, or for screen recording
 # raw_input("<Press Enter to continue>")
 
-# function for simulation 1, group robot '1's by their group ids, and find the largest group
-def S1_robot1_grouping(robot_list, robot_group_ids, groups):
+# function for simulation 1 and 4, group robots by their group ids, and find the largest group
+def S14_robot_grouping(robot_list, robot_group_ids, groups):
     # "robot_list": the list of robot '1's, should not be empty
     # the input list 'robot_list' should not be empty
     groups_temp = {}  # key is group id, value is list of robots
     for i in robot_list:
         group_id_temp = robot_group_ids[i]
-        if group_id_temp == -1:  # to be tested and deleted
-            print("group id error")
-            sys.exit()
         if group_id_temp not in groups_temp.keys():
             groups_temp[group_id_temp] = [j]
         else:
@@ -238,9 +235,9 @@ def S1_robot1_grouping(robot_list, robot_group_ids, groups):
         group_id_max = groups_temp.keys()[0]
     return groups_temp, group_id_max
 
-# function for simulation 1, find the closest robot to a host robot
+# function for simulation 1 and 4, find the closest robot to a host robot
 # use global variable "dist_table"
-def S1_closest_robot(robot_host, robot_neighbors):
+def S14_closest_robot(robot_host, robot_neighbors):
     # "robot_host": the robot to measure distance from
     # "robot_neighbors": a list of robots to be compared with
     robot_closest = robot_neighbors[0]
@@ -416,7 +413,7 @@ while True:
         # state transition variables
         st_n1to0 = []  # robot '-1' gets back to '0' after life time ends
             # list of robots changing to '0' from '-1'
-        st_1ton1 = []  # group disassembles either life expires, or triggered by others
+        st_gton1 = []  # group disassembles either life expires, or triggered by others
             # list of groups to be disassembled
         st_0to1_join = {}  # robot '0' detects robot '1' group, join the group
             # key is the robot '0', value is the group id
@@ -436,14 +433,14 @@ while True:
                         if robot_states[j] != 1:
                             conn_temp.remove(j)
                     if len(conn_temp) != 0:
-                        groups_local, group_id_max = S1_robot1_grouping(conn_temp,
+                        groups_local, group_id_max = S14_robot_grouping(conn_temp,
                             robot_group_ids, groups)
                         # disassmeble all groups except the largest one
                         for group_id_temp in groups_local.keys():
-                            if (group_id_temp != group_id_max) and (group_id_temp not in st_1ton1):
-                                st_1ton1.append(group_id_temp)  # schedule to disassemble this group
+                            if (group_id_temp != group_id_max) and (group_id_temp not in st_gton1):
+                                st_gton1.append(group_id_temp)  # schedule to disassemble this group
                         # find the closest neighbor in groups_local[group_id_max]
-                        robot_closest = S1_closest_robot(i, groups_local[group_id_max])
+                        robot_closest = S14_closest_robot(i, groups_local[group_id_max])
                         # change moving direction opposing the closest robot
                         vect_temp = robot_poses[i] - robot_poses[robot_closest]
                         robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
@@ -458,18 +455,18 @@ while True:
                         state0_list.append(j)
                 if len(state1_list) != 0:
                     # there is state '1' robot in the list, ignoring state '0' robot
-                    groups_local, group_id_max = S1_robot1_grouping(state1_list,
+                    groups_local, group_id_max = S14_robot_grouping(state1_list,
                         robot_group_ids, groups)
                     # disassmeble all groups except the largest one
                     for group_id_temp in groups_local.keys():
-                        if (group_id_temp != group_id_max) and (group_id_temp not in st_1ton1):
-                            st_1ton1.append(group_id_temp)  # schedule to disassemble this group
+                        if (group_id_temp != group_id_max) and (group_id_temp not in st_gton1):
+                            st_gton1.append(group_id_temp)  # schedule to disassemble this group
                     # join the the group with the most members
                     st_0to1_join[i] = group_id_max
                 elif len(state0_list) != 0:
                     # there is no robot '1', but has robot '0'
                     # find the closest robot, schedule to start a new group with it
-                    st_0to1_new[i] = S1_closest_robot(i, state0_list)
+                    st_0to1_new[i] = S14_closest_robot(i, state0_list)
             elif robot_states[i] == 1:  # for host robot with state '1'
                 conn_temp  = conn_lists[i][:]  # a list of connections with only state '1'
                 has_other_group = False  # whether there is robot '1' from other group
@@ -482,12 +479,12 @@ while True:
                             has_other_group = True
                 # disassemble the smaller groups
                 if has_other_group:
-                    groups_local, group_id_max = S1_robot1_grouping(conn_temp,
+                    groups_local, group_id_max = S14_robot_grouping(conn_temp,
                         robot_group_ids, groups)
                     # disassmeble all groups except the largest one
                     for group_id_temp in groups_local.keys():
-                        if (group_id_temp != group_id_max) and (group_id_temp not in st_1ton1):
-                            st_1ton1.append(group_id_temp)  # schedule to disassemble this group
+                        if (group_id_temp != group_id_max) and (group_id_temp not in st_gton1):
+                            st_gton1.append(group_id_temp)  # schedule to disassemble this group
             else:  # to be tested and deleted
                 print("robot state error")
                 sys.exit()
@@ -495,8 +492,8 @@ while True:
         # check the life time of the groups; if expired, schedule disassemble
         for group_id_temp in groups.keys():
             if groups[group_id_temp][1] < 0:  # life time of a group ends
-                if group_id_temp not in st_1ton1:
-                    st_1ton1.append(group_id_temp)
+                if group_id_temp not in st_gton1:
+                    st_gton1.append(group_id_temp)
 
         # process the scheduled state transitions, different transition has different priority
         # 1.st_0to1_join, robot '0' joins a group, becomes '1'
@@ -508,8 +505,8 @@ while True:
             # update properties of the group
             groups[group_id_temp][0].append(robot_temp)
             groups[group_id_temp][1] = groups[group_id_temp][1] + life_incre
-        # 2.st_1ton1
-        for group_id_temp in st_1ton1:
+        # 2.st_gton1
+        for group_id_temp in st_gton1:
             for robot_temp in groups[group_id_temp][0]:
                 robot_states[robot_temp] = -1
                 robot_n1_lives[robot_temp] = np.random.uniform(n1_life_lower, n1_life_upper)
@@ -1246,14 +1243,17 @@ while True:
     n1_life_upper = 6  # exclusive
     robot_n1_lives = np.random.uniform(n1_life_lower, n1_life_upper, swarm_size)
     robot_oris = np.random.rand(swarm_size) * 2 * math.pi - math.pi  # in range of [-pi, pi)
+    robot_key_neighbors = [[] for i in range(swarm_size)]  # key neighbors for robot on loop
+        # for state '1' robot: the robot that it is climbing around
+        # for state '2' robot: the left and right neighbors in serial connection on the loop
+            # exception is the group has only two members, key neighbor will be only one robot
 
     # group properties
     groups = {}
         # key is the group id, value is a list, in the list:
-        # [0]: a list of robots '2' in the group
-        # [1]: a list of robots '1' in the group
-        # [2]: remaining life time of the group
-        # [3]: whether or not being the dominant group
+        # [0]: a list of robots in the group, both state '1' and '2'
+        # [1]: remaining life time of the group
+        # [2]: whether or not being the dominant group
     life_incre = 5  # number of seconds added to the life of a group when new robot joins
     group_id_upper = swarm_size  # upper limit of group id
     robot_group_ids = np.array([-1 for i in range(swarm_size)])  # group id for the robots
@@ -1302,12 +1302,121 @@ while True:
             # list of robots changing to '0' from '-1'
         st_gton1 = []  # group disassembles either life expires, or triggered by others
             # list of groups to be disassembled
+        st_0to1 = {}  # robot '0' detects robot '2', join its group
+            # key is the robot '0', value is the group id
+        st_0to2 = {}  # robot '0' detects another robot '0', forming a new group
+            # key is the robot '0', value is the other neighbor robot '0'
+        st_1to2 = []  # robot '1' is climbing around the loop, and finds its right position
+            # list of robot '1' changing from '1' to '2'
 
         dist_conn_update()  # update "relations" of the robots
         # check any state transition, and schedule the tasks
-        for i in rnage(swarm_size):
+        for i in range(swarm_size):
             if robot_states[i] == -1:  # for host robot with state '-1'
                 if robot_n1_lives[i] < 0:
                     st_n1to0.append(i)
                 else:
-                    
+                    if len(conn_lists[i]) == 0: continue
+                    conn_temp = conn_lists[i][:]
+                    for j in conn_lists[i]:
+                        if (robot_states[j] == -1) or (robot_states[j] == 0):
+                            conn_temp.remove(j)
+                    if len(conn_temp) != 0:
+                        groups_local, group_id_max = S14_robot_grouping(conn_temp,
+                            robot_group_ids, groups)
+                        # disassemble all groups except the largest one
+                        for group_id_temp in groups_local.keys():
+                            if (group_id_temp != group_id_max) and (group_id_temp not in st_gton1):
+                                st_gton1.append(group_id_temp)  # schedule to disassemble this group
+                        # find the closest neighbor in groups_local[group_id_max]
+                        robot_closest = S14_closest_robot(i, groups_local[group_id_max])
+                        # change moving direction opposing the closest robot
+                        vect_temp = robot_poses[i] - robot_poses[robot_closest]
+                        robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
+            elif robot_states[i] == 0:  # for host robot with state '0'
+                if len(conn_lists[i]) == 0: continue
+                state2_list = []
+                state1_list = []
+                state0_list = []
+                for j in conn_lists[i]:
+                    if robot_states[j] == 2:
+                        state2_list.append(j)
+                    elif robot_states[j] == 1:
+                        state1_list.append(j)
+                    elif robot_states[j] == 0:
+                        state0_list.append(j)
+                state2_quantity = len(state2_list)
+                state1_quantity = len(state1_list)
+                state0_quantity = len(state0_list)
+                # disassemble minority groups if there are multiple groups
+                if state2_quantity + state1_quantity > 1:
+                    # there is in-group robot in the neighbors
+                    groups_local, group_id_max = S14_robot_grouping(state2_list+state1_list,
+                        robot_group_ids, groups)
+                    # disassmeble all groups except the largest one
+                    for group_id_temp in groups_local.keys():
+                        if (group_id_temp != group_id_max) and (group_id_temp not in st_gton1):
+                            st_gton1.append(group_id_temp)  # schedule to disassemble this group
+                # actions to the state '2', '1', and '0' robots
+                if state2_quantity != 0:
+                    # join the group with state '2' robots
+                    if state2_quantity == 1:  # only one state '2' robot
+                        # join the group of the state '2' robot
+                        st_0to1[i] = robot_group_ids[state2_list[0]]
+                        robot_key_neighbors[i] = [state2_list[0]]  # add key neighbor
+                    else:  # multiple state '2' robots
+                        # it's possible that the state '2' robots are in different groups
+                        # find the closest one in the largest group, and join the group
+                        groups_local, group_id_max = S14_robot_grouping(state2_list,
+                            robot_group_ids, groups)
+                        robot_closest = S14_closest_robot(i, groups_local[group_id_max])
+                        st_0to1[i] = group_id_max
+                        robot_key_neighbors[i] = [robot_closest]  # add key neighbor
+                elif state1_quantity != 0:
+                    # get repelled away from state '1' robot
+                    if state1_quantity == 1:  # only one state '1' robot
+                        vect_temp = robot_poses[i] - robot_poses[state1_list[0]]
+                        robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
+                    else:
+                        groups_local, group_id_max = S14_robot_grouping(state1_list,
+                            robot_group_ids, groups)
+                        robot_closest = S14_closest_robot(i, groups_local[group_id_max])
+                        vect_temp = robot_poses[i] - robot_poses[robot_closest]
+                        robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
+                elif state0_quantity != 0:
+                    # form new group with state '0' robots
+                    st_0to2[i] = S14_closest_robot(i, state0_list)
+            elif (robot_states[i] == 1) or (robot_states[i] == 2):
+                # disassemble the minority groups
+                state12_list = []  # list of state '1' and '2' robots in the list
+                has_other_group = False
+                host_group_id = robot_group_ids[i]
+                for j in conn_lists[i]:
+                    if (robot_states[j] == 1) or (robot_states[j] == 2):
+                        state12_list.append(j)
+                        if robot_group_ids[j] != host_group_id:
+                            has_other_group = True
+                if has_other_group:
+                    groups_local, group_id_max = S14_robot_grouping(state12_list,
+                        robot_group_ids, groups)
+                    for group_id_temp in groups_local.keys():
+                        if (group_id_temp != group_id_max) and (group_id_temp not in st_gton1):
+                            st_gton1.append(group_id_temp)  # schedule to disassemble this group
+                # check if order on loop is good for state '1' robot
+                if robot_states[i] == 1:
+                    current_key = robot_key_neighbors[i]
+                    next_key = robot_key_neighbors[current_key][-1]
+                    if next_key in conn_lists[i]:  # next key neighbor is detected
+                        role_i = assignment_scheme[i]
+                        role_current_key = assignment_scheme[current_key]
+                        role_next_key = assignment_scheme[next_key]
+                        if len(robot_key_neighbors[current_key]) == 1:
+                            # the situation that there are only two members in the group
+
+
+
+
+
+
+# fill the slot with one robot once each time
+
