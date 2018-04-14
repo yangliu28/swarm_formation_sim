@@ -547,9 +547,11 @@ while True:
             else:
                 groups[group_id_temp][2] = False
 
+        # local connection lists for state '1' robots
+        local_conn_lists = [[] for i in range(swarm_size)]  # connections in same group
+        # temporary variable for robot positions
+        robot_poses_temp = np.copy(robot_poses)
         # update the physics
-        local_conn_lists = [[] for i in range(swarm_size)]  # list of connections in same group
-            # only for state '1' robot
         for i in range(swarm_size):
             # change move direction only for robot '1', for adjusting location in group
             if robot_states[i] == 1:
@@ -598,7 +600,7 @@ while True:
             # check if out of boundaries
             robot_oris[i] = robot_boundary_check(robot_poses[i], robot_oris[i])
             # update one step of move
-            robot_poses[i] = robot_poses[i] + (step_moving_dist *
+            robot_poses_temp[i] = robot_poses[i] + (step_moving_dist *
                 np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])]))
 
         # update the graphics
@@ -1413,7 +1415,25 @@ while True:
                 # check if state '1' robot's order on loop is good
                 if robot_states[i] == 1:
                     current_key = robot_key_neighbors[i][0]
-                    next_key = robot_key_neighbors[current_key][-1]
+                    try:
+                        next_key = robot_key_neighbors[current_key][-1]
+                    except:
+                        print("*** error in line 1419***")
+                        print("identity: current - i - next: {} - {} - {}".format(current_key,
+                            i, next_key))
+                        print("role: current - i - next: {} - {} - {}".format(assignment_scheme[current_key],
+                            assignment_scheme[i], assignment_scheme[next_key]))
+                        print("neighbors: current - i - next: {} - {} - {}".format(
+                            robot_key_neighbors[current_key], robot_key_neighbors[i],
+                            robot_key_neighbors[next_key]))
+                        gid_current = robot_group_ids[current_key]
+                        gid_i = robot_group_ids[i]
+                        print("group id: current - i: {} - {}".format(gid_current,
+                            gid_i))
+                        print("group member: current - i: {} - {}".format(groups[gid_current][0],
+                            groups[gid_i][0]))
+                        pygame.time.delay(1000000)
+                        sys.exit()
                     if next_key in conn_lists[i]:  # next key neighbor is detected
                         role_i = assignment_scheme[i]
                         role_current_key = assignment_scheme[current_key]
@@ -1563,10 +1583,14 @@ while True:
             else:
                 groups[group_id_temp][2] = False
 
+        # temporary variable for robot positions
+        robot_poses_temp = np.copy(robot_poses)
+        no_state1_robot = True
         # update the physics
         for i in range(swarm_size):
             # adjusting moving direction for state '1' and '2' robots
             if robot_states[i] == 1:
+                no_state1_robot = False
                 # rotating around its only key neighbor
                 center = robot_key_neighbors[i][0]  # the center robot
                 # use the triangle of (desired_space, dist_table[i,center], step_moving_dist)
@@ -1617,17 +1641,7 @@ while True:
                     vect_lr = robot_poses[right_key] - robot_poses[left_key]
                     vect_lr_dist = np.linalg.norm(vect_lr)
                     vect_in = np.array([-vect_lr[1], vect_lr[0]]) / vect_lr_dist
-                    try:
-                        inter_curr = math.acos(np.dot(vect_l, vect_r))  # interior angle
-                    except:
-                        print("left_pos-i_pos: {}".format(robot_poses[left_key] - robot_poses[i]))
-                        print("dist_table[i,left]: {}".format(dist_table[i,left_key]))
-                        print("vect_l: {}".format(vect_l))
-                        
-                        print("right_pos-i_pos: {}".format(robot_poses[right_key] - robot_poses[i]))
-                        print("dist_table[i,right]: {}".format(dist_table[i,right_key]))
-                        print("vect_r: {}".format(vect_r))
-                        sys.exit()
+                    inter_curr = math.acos(np.dot(vect_l, vect_r))  # interior angle
                     if np.cross(vect_r, vect_l) < 0:
                         inter_curr = 2*math.pi - inter_curr
                     fb_vect = np.zeros(2)  # feedback vector to accumulate spring effects
@@ -1646,8 +1660,9 @@ while True:
                 # skip for state '1' and '2' robots
                 robot_oris[i] = robot_boundary_check(robot_poses[i], robot_oris[i])
             # update one step of move
-            robot_poses[i] = robot_poses[i] + (step_moving_dist *
+            robot_poses_temp[i] = robot_poses[i] + (step_moving_dist *
                 np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])]))
+        robot_poses = np.copy(robot_poses_temp)
 
         # update the graphics
         disp_poses_update()
@@ -1692,7 +1707,8 @@ while True:
 
         # check exit condition of simulation 4
         if not loop_formed:
-            if (len(groups.keys()) == 1) and (len(groups.values()[0][0]) == swarm_size):
+            if ((len(groups.keys()) == 1) and (len(groups.values()[0][0]) == swarm_size)
+                and no_state1_robot):
                 loop_formed = True
         if loop_formed:
             if ending_period <= 0:
