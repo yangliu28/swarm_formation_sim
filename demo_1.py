@@ -62,6 +62,9 @@
 # loop formation: no colors, empty circle for dormant, filled circle for active
 
 
+# add number of assigned roles to robots in simulation window
+
+
 from __future__ import print_function
 import pygame
 import sys, os, getopt, math, random
@@ -194,6 +197,7 @@ robot_ring_size = 12  # extra ring on robot in consensus simulations
 
 # set up the simulation window
 pygame.init()
+font = pygame.font.SysFont("Cabin", 14)
 icon = pygame.image.load("icon_geometry_art.jpg")
 pygame.display.set_icon(icon)
 screen = pygame.display.set_mode(screen_size)
@@ -1268,7 +1272,7 @@ while True:
     # spring constants in SMA
     linear_const = 1.0
     bend_const = 0.8
-    disp_coef = 0.3
+    disp_coef = 0.5
 
     # the loop for simulation 1
     sim_haulted = False
@@ -1300,8 +1304,8 @@ while True:
 
         # increase iteration count
         iter_count = iter_count + 1
-        sys.stdout.write("\riteration {}".format(iter_count))
-        sys.stdout.flush()
+        # sys.stdout.write("\riteration {}".format(iter_count))
+        # sys.stdout.flush()
 
         # state transition variables
         st_n1to0 = []  # robot '-1' gets back to '0' after life time ends
@@ -1426,7 +1430,7 @@ while True:
                                 if role_next_key > role_current_key:
                                     if (role_i < role_current_key) or (role_i > role_next_key):
                                         # update with next key neighbor
-                                        robot_key_neighbors[i] = next_key
+                                        robot_key_neighbors[i] = [next_key]
                                     else:
                                         # its position on loop is achieved, becoming state '2'
                                         if current_key in st_1to2.keys():
@@ -1436,7 +1440,7 @@ while True:
                                 else:
                                     if (role_i < role_current_key) and (role_i > role_next_key):
                                         # update with next key neighbor
-                                        robot_key_neighbors[i] = next_key
+                                        robot_key_neighbors[i] = [next_key]
                                     else:
                                         # its position on loop is achieved, becoming state '2'
                                         if current_key in st_1to2.keys():
@@ -1451,7 +1455,7 @@ while True:
                                 # the roles of the two robots are on the same side
                                 if (role_i < role_current_key) or (role_i > role_next_key):
                                     # update with next key neighbor
-                                    robot_key_neighbors[i] = next_key
+                                    robot_key_neighbors[i] = [next_key]
                                 else:
                                     # its position on loop is achieved, becoming state '2'
                                     if current_key in st_1to2.keys():
@@ -1462,7 +1466,7 @@ while True:
                                 # the roles of the two robots are on different side
                                 if (role_i < role_current_key) and (role_i > role_next_key):
                                     # update with next key neighbor
-                                    robot_key_neighbors[i] = next_key
+                                    robot_key_neighbors[i] = [next_key]
                                 else:
                                     # its position on loop is achieved, becoming state '2'
                                     if current_key in st_1to2.keys():
@@ -1479,7 +1483,7 @@ while True:
         # process the state transition tasks
         # 1.st_1to2, robot '1' locates its order on loop, becoming '2'
         for left_key in st_1to2.keys():
-            right_key = robot_key_neighbors[left_key][1]
+            right_key = robot_key_neighbors[left_key][-1]
             role_left_key = assignment_scheme[left_key]
             role_right_key = assignment_scheme[right_key]
             joiner = -1  # the accepted joiner in this position
@@ -1503,15 +1507,13 @@ while True:
             robot_states[joiner] = 2
             robot_group_ids[joiner] = group_id_temp
             robot_key_neighbors[joiner] = [left_key, right_key]
-            if len(groups[group_id_temp][0]) == 2:
+            if len(robot_key_neighbors[left_key]) == 1:
                 robot_key_neighbors[left_key] = [right_key, joiner]
                 robot_key_neighbors[right_key] = [joiner, left_key]
             else:
                 robot_key_neighbors[left_key][1] = joiner
                 robot_key_neighbors[right_key][0] = joiner
-            # update the group properties
-            groups[group_id_temp][0].append(joiner)
-            groups[group_id_temp][1] = groups[group_id_temp][1] + life_incre
+            # no need to update the group properties
         # 2.st_0to1, robot '0' joins a group, becoming '1'
         for joiner in st_0to1.keys():
             group_id_temp = st_0to1[joiner]
@@ -1605,9 +1607,9 @@ while True:
                     # normal situation with at least three members in the group
                     group_id_temp = robot_group_ids[i]
                     state2_quantity = 0  # number of state '2' robots
-                    for robot_temp in group[group_id_temp][0]:
+                    for robot_temp in groups[group_id_temp][0]:
                         if robot_states[robot_temp] == 2:
-                            state2_quantity = state1_quantity + 1
+                            state2_quantity = state2_quantity + 1
                     desired_angle = math.pi - 2*math.pi / state2_quantity
                     # use the SMA algorithm to achieve the desired interior angle
                     left_key = robot_key_neighbors[i][0]
@@ -1615,11 +1617,10 @@ while True:
                     vect_l = (robot_poses[left_key] - robot_poses[i]) / dist_table[i,left_key]
                     vect_r = (robot_poses[right_key] - robot_poses[i]) / dist_table[i,right_key]
                     vect_lr = robot_poses[right_key] - robot_poses[left_key]
-                    dist_temp = math.sqrt(vect_lr[0]*vect_lr[0] + vect_lr[1]*vect_lr[1])
-                    vect_in = np.array([-vect_lr[1], vect_lr[0]]) / dist_temp
-                    inter_curr = math.acos(np.dot(vect_l, vect_r) /
-                        (dist_table[i,left_key]*dist_table[i,right_key]))  # interior angle
-                    if np.cross(vect_l, vect_r) > 0:
+                    vect_lr_dist = np.linalg.norm(vect_lr)
+                    vect_in = np.array([-vect_lr[1], vect_lr[0]]) / vect_lr_dist
+                    inter_curr = math.acos(np.dot(vect_l, vect_r))  # interior angle
+                    if np.cross(vect_r, vect_l) < 0:
                         inter_curr = 2*math.pi - inter_curr
                     fb_vect = np.zeros(2)  # feedback vector to accumulate spring effects
                     fb_vect = fb_vect + ((dist_table[i,left_key] - desired_space) *
@@ -1632,11 +1633,11 @@ while True:
                         continue  # stay in position if within destination error
                     else:
                         robot_oris[i] = math.atan2(fb_vect[1], fb_vect[0])
-                # check if out of boundaries
-                robot_oris[i] = robot_boundary_check(robot_poses[i], robot_oris[i])
-                # update one step of move
-                robot_poses[i] = robot_poses[i] + (step_moving_dist *
-                    np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])]))
+            # check if out of boundaries
+            robot_oris[i] = robot_boundary_check(robot_poses[i], robot_oris[i])
+            # update one step of move
+            robot_poses[i] = robot_poses[i] + (step_moving_dist *
+                np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])]))
 
         # update the graphics
         disp_poses_update()
@@ -1649,7 +1650,10 @@ while True:
             elif robot_states[i] == 0:  # full circle for state '0' robot
                 pygame.draw.circle(screen, color_grey, disp_poses[i],
                     robot_size_formation, 0)
-        # draw the in-group robots by each group
+            # draw text of the assigned roles for all robots
+            text = font.render(str(int(assignment_scheme[i])), True, color_grey)
+            screen.blit(text, (disp_poses[i,0]+12, disp_poses[i,1]-12))
+        # draw the in-group robots by group
         for group_id_temp in groups.keys():
             if groups[group_id_temp][2]:
                 # highlight the dominant group with black color
