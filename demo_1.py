@@ -16,7 +16,8 @@
 # Simulation 1: aggregate together to form a random network
 # Simulation 2: consensus decision making of target loop shape
 # Simulation 3: consensus role assignment for the loop shape
-# Simulation 4: loop formation with designated target positions
+# Simulation 4: loop formation with designated role assignment
+# Simulation 5: loop reshaping to chosen shape
 
 # Note that message transmission is simulated only in the role assignment, because communication
 # is specialy depended on and message convey is used as well. While in consensus decision making
@@ -539,7 +540,7 @@ while True:
 
         # check if a group becomes dominant
         for group_id_temp in groups.keys():
-            if len(groups[group_id_temp][0]) > swarm_size/2:
+            if len(groups[group_id_temp][0]) > swarm_size/2.0:
                 groups[group_id_temp][2] = True
             else:
                 groups[group_id_temp][2] = False
@@ -1224,13 +1225,13 @@ while True:
     # raw_input("<Press Enter to continue>")
     # break
 
-    ########### simulation 4: loop shape formation with designated target positions ###########
+    ########### simulation 4: loop formation with designated role assignment ###########
 
     # restore variable "assignment_scheme"
     with open('v_assignment_scheme') as f:
         assignment_scheme = pickle.load(f)
 
-    print("##### simulation 4: loop shape formation #####")
+    print("##### simulation 4: loop formation #####")
 
     # robot perperties
     # all robots start with state '-1'
@@ -1274,7 +1275,7 @@ while True:
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
     loop_shape_formed = False
-    while False:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 4")
@@ -1306,11 +1307,11 @@ while True:
             # key is the robot '0', value is the group id
         st_0to2 = {}  # robot '0' detects another robot '0', forming a new group
             # key is the robot '0', value is the other neighbor robot '0'
-        st_1to2 = []  # robot '1' is climbing around the loop, and finds its right position
-            # list of robot '1' changing from '1' to '2'
+        st_1to2 = {}  # robot '1' is climbing around the loop, and finds its right position
+            # key is the left side of the slot, value is a list of robots intend to join
 
         dist_conn_update()  # update "relations" of the robots
-        # check any state transition, and schedule the tasks
+        # check state transitions, and schedule the tasks
         for i in range(swarm_size):
             if robot_states[i] == -1:  # for host robot with state '-1'
                 if robot_n1_lives[i] < 0:
@@ -1402,7 +1403,7 @@ while True:
                     for group_id_temp in groups_local.keys():
                         if (group_id_temp != group_id_max) and (group_id_temp not in st_gton1):
                             st_gton1.append(group_id_temp)  # schedule to disassemble this group
-                # check if order on loop is good for state '1' robot
+                # check if state '1' robot's order on loop is good
                 if robot_states[i] == 1:
                     current_key = robot_key_neighbors[i]
                     next_key = robot_key_neighbors[current_key][-1]
@@ -1411,12 +1412,204 @@ while True:
                         role_current_key = assignment_scheme[current_key]
                         role_next_key = assignment_scheme[next_key]
                         if len(robot_key_neighbors[current_key]) == 1:
-                            # the situation that there are only two members in the group
+                            # the situation that only two members are in the group
+                            vect_temp = robot_poses[next_key] - robot_poses[current_key]
+                            # deciding which side of vect_temp robot i is at
+                            vect_i = robot_poses[i] - robot_poses[current_key]
+                            side_value = np.cross(vect_i, vect_temp)
+                            if side_value > 0:  # robot i on the right side
+                                if role_next_key > role_current_key:
+                                    if (role_i < role_current_key) or (role_i > role_next_key):
+                                        # update with next key neighbor
+                                        robot_key_neighbors[i] = next_key
+                                    else:
+                                        # its position on loop is achieved, becoming state '2'
+                                        if current_key in st_1to2.keys():
+                                            st_1to2[current_key].append(i)
+                                        else:
+                                            st_1to2[current_key] = [i]
+                                else:
+                                    if (role_i < role_current_key) and (role_i > role_next_key):
+                                        # update with next key neighbor
+                                        robot_key_neighbors[i] = next_key
+                                    else:
+                                        # its position on loop is achieved, becoming state '2'
+                                        if current_key in st_1to2.keys():
+                                            st_1to2[current_key].append(i)
+                                        else:
+                                            st_1to2[current_key] = [i]
+                            else:  # robot i on the left side
+                                pass
+                        else:
+                            # the situation that at least three members are in the group
+                            if role_next_key > role_current_key:
+                                # the roles of the two robots are on the same side
+                                if (role_i < role_current_key) or (role_i > role_next_key):
+                                    # update with next key neighbor
+                                    robot_key_neighbors[i] = next_key
+                                else:
+                                    # its position on loop is achieved, becoming state '2'
+                                    if current_key in st_1to2.keys():
+                                        st_1to2[current_key].append(i)
+                                    else:
+                                        st_1to2[current_key] = [i]
+                            else:
+                                # the roles of the two robots are on different side
+                                if (role_i < role_current_key) and (role_i > role_next_key):
+                                    # update with next key neighbor
+                                    robot_key_neighbors[i] = next_key
+                                else:
+                                    # its position on loop is achieved, becoming state '2'
+                                    if current_key in st_1to2.keys():
+                                        st_1to2[current_key].append(i)
+                                    else:
+                                        st_1to2[current_key] = [i]
+
+        # check the life time of the groups; schedule disassembling if expired
+        for group_id_temp in groups.keys():
+            if groups[group_id_temp][1] < 0:  # life time of a group ends
+                if group_id_temp not in st_gton1:
+                    st_gton1.append(group_id_temp)
+
+        # process the state transition tasks
+        # 1.st_1to2, robot '1' locates its order on loop, becoming '2'
+        for left_key in st_1to2.keys():
+            right_key = robot_key_neighbors[left_key][1]
+            role_left_key = assignment_scheme[left_key]
+            role_right_key = assignment_scheme[right_key]
+            joiner = -1  # the accepted joiner in this position
+            if len(st_1to2[left_key]) == 1:
+                joiner = st_1to2[left_key][0]
+            else:
+                joiner_list = st_1to2[left_key]
+                role_dist_min = swarm_size
+                for joiner_temp in joiner_list:
+                    # find the joiner with closest role to left key neighbor
+                    role_joiner_temp = assignment_scheme[joiner_temp]
+                    role_dist_temp = role_joiner_temp - role_left_key
+                    if role_dist_temp < 0:
+                        role_dist_temp = role_dist_temp + swarm_size
+                    if role_dist_temp < role_dist_min:
+                        joiner = joiner_temp
+                        role_dist_min = role_dist_temp
+            # put in the new joiner
+            # update the robot properties
+            group_id_temp = robot_group_ids[left_key]
+            robot_states[joiner] = 2
+            robot_group_ids[joiner] = group_id_temp
+            robot_key_neighbors[joiner] = [left_key, right_key]
+            if len(groups[group_id_temp][0]) == 2:
+                robot_key_neighbors[left_key] = [right_key, joiner]
+                robot_key_neighbors[right_key] = [joiner, left_key]
+            else:
+                robot_key_neighbors[left_key][1] = joiner
+                robot_key_neighbors[right_key][0] = joiner
+            # update the group properties
+            groups[group_id_temp][0].append(joiner)
+            groups[group_id_temp][1] = groups[group_id_temp][1] + life_incre
+        # 2.st_0to1, robot '0' joins a group, becoming '1'
+        for joiner in st_0to1.keys():
+            group_id_temp = st_0to1[joiner]
+            # update the robot properties
+            robot_states[joiner] = 1
+            robot_group_ids[joiner] = group_id_temp
+            # update the group properties
+            groups[group_id_temp][0].append(joiner)
+            groups[group_id_temp][1] = groups[group_id_temp][1] + life_incre
+        # 3.st_0to2, robot '0' forms new group with '0', both becoming '2'
+        while len(st_0to2.keys()) != 0:
+            pair0 = st_0to2.keys()[0]
+            pair1 = st_0to2[pair0]
+            st_0to2.pop(pair0)
+            if (pair1 in st_0to2.keys()) and (st_0to2[pair1] == pair0):
+                st_0to2.pop(pair1)
+                # only forming a group if there is at least one seed robot in the pair
+                if robot_seeds[pair0] or robot_seeds[pair1]:
+                    # forming new group for robot pair0 and pair1
+                    group_id_temp = np.random.randint(0, group_id_upper)
+                    while group_id_temp in groups.keys():
+                        group_id_temp = np.random.randint(0, group_id_upper)
+                    # update properties of the robots
+                    robot_states[pair0] = 2
+                    robot_states[pair1] = 2
+                    robot_group_ids[pair0] = group_id_temp
+                    robot_group_ids[pair1] = group_id_temp
+                    robot_key_neighbors[pair0] = [pair1]
+                    robot_key_neighbors[pair1] = [pair0]
+                    # update properties of the group
+                    groups[group_id_temp] = [[pair0, pair1], life_incre*2, False]
+        # 4.st_gton1, groups get disassembled, life time ends or triggered by others
+        for group_id_temp in st_gton1:
+            for robot_temp in groups[group_id_temp][0]:
+                robot_states[robot_temp] = -1
+                robot_n1_lives[robot_temp] = np.random.uniform(n1_life_lower, n1_life_upper)
+                robot_group_ids[robot_temp] = -1
+                robot_oris[robot_temp] = np.random.rand() * 2 * math.pi - math.pi
+                robot_key_neighbors[robot_temp] = []
+            groups.pop(group_id_temp)
+        # 5.st_n1to0, life time of robot '-1' ends, get back to '0'
+        for robot_temp in st_n1to0:
+            robot_states[robot_temp] = 0
+
+        # check if a group becomes dominant
+        for group_id_temp in groups.keys():
+            if len(groups[group_id_temp][0]) > swarm_size/2.0:
+                groups[group_id_temp][2] = True
+            else:
+                groups[group_id_temp][2] = False
+
+        # update the physics
+        for i in range(swarm_size):
+            # adjusting moving direction for state '1' and '2' robots
+            if robot_states[i] == 1:
+                # rotating around its only key neighbor
+                center = robot_key_neighbors[i][0]  # the center robot
+                # use the triangle of (desired_space, dist_table[i,center], step_moving_dist)
+                if dist_table[i,center] > (desired_space + step_moving_dist):
+                    # moving toward the center robot
+                    robot_oris[i] = math.atan2(robot_poses[center,1] - robot_poses[i,1],
+                        robot_poses[center,0] - robot_poses[i,0])
+                elif (dist_table[i,center] + step_moving_dist) < desired_space:
+                    # moving away from the center robot
+                    robot_oris[i] = math.atan2(robot_poses[i,1] - robot_poses[center,1],
+                        robot_poses[i,0] - robot_poses[center,0])
+                else:
+                    # moving tangent along the circle of radius of "desired_space"
+                    robot_oris[i] = math.atan2(robot_poses[i,1] - robot_poses[center,1],
+                        robot_poses[i,0] - robot_poses[center,0])
+                    # interior angle between 
+                    int_angle_temp = math.acos((math.pow(dist_table[i,center],2) +
+                        math.pow(step_moving_dist,2) - math.pow(desired_space,2)) /
+                        (2.0*dist_table[i,center]*step_moving_dist))
+                    robot_oris[i] = reset_radian(robot_oris[i] + (math.pi - int_angle_temp))
+            elif robot_states[i] == 2:
+                # adjusting position to maintain the loop
+                if len(robot_key_neighbors[i]) == 1:
+                    # situation that only two robots are in the group
+                    j = robot_key_neighbors[i][0]
+                    if abs(dist_table[i,j] - desired_space) < destination_error:
+                        continue  # skip the physics update if within destination error
+                    else:
+                        if dist_table[i,j] > desired_space:
+                            robot_oris[i] = math.atan2(robot_poses[j,1] - robot_poses[i,1],
+                                robot_poses[j,0] - robot_poses[i,0])
+                        else:
+                            robot_oris[i] = math.atan2(robot_poses[i,1] - robot_poses[j,1],
+                                robot_poses[i,0] - robot_poses[j,0])
+                else:
+                    # normal situation with at least three members in the group
+                    group_id_temp = robot_group_ids[i]
+                    state2_quantity = 0  # number of state '2' robots
+                    for robot_temp in group[group_id_temp][0]:
+                        if robot_states[robot_temp] == 2:
+                            state2_quantity = state1_quantity + 1
+                    desired_angle = math.pi - 2*math.pi / state2_quantity
+                    
+
+    ########### simulation 4: loop reshaping to chosen shape ###########
+
+    print("##### simulation 4: loop reshaping #####")
 
 
 
-
-
-
-# fill the slot with one robot once each time
 
