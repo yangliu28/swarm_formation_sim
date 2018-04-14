@@ -62,8 +62,6 @@
 # loop formation: no colors, empty circle for dormant, filled circle for active
 
 
-# add number of assigned roles to robots in simulation window
-
 
 from __future__ import print_function
 import pygame
@@ -1619,7 +1617,17 @@ while True:
                     vect_lr = robot_poses[right_key] - robot_poses[left_key]
                     vect_lr_dist = np.linalg.norm(vect_lr)
                     vect_in = np.array([-vect_lr[1], vect_lr[0]]) / vect_lr_dist
-                    inter_curr = math.acos(np.dot(vect_l, vect_r))  # interior angle
+                    try:
+                        inter_curr = math.acos(np.dot(vect_l, vect_r))  # interior angle
+                    except:
+                        print("left_pos-i_pos: {}".format(robot_poses[left_key] - robot_poses[i]))
+                        print("dist_table[i,left]: {}".format(dist_table[i,left_key]))
+                        print("vect_l: {}".format(vect_l))
+                        
+                        print("right_pos-i_pos: {}".format(robot_poses[right_key] - robot_poses[i]))
+                        print("dist_table[i,right]: {}".format(dist_table[i,right_key]))
+                        print("vect_r: {}".format(vect_r))
+                        sys.exit()
                     if np.cross(vect_r, vect_l) < 0:
                         inter_curr = 2*math.pi - inter_curr
                     fb_vect = np.zeros(2)  # feedback vector to accumulate spring effects
@@ -1634,7 +1642,9 @@ while True:
                     else:
                         robot_oris[i] = math.atan2(fb_vect[1], fb_vect[0])
             # check if out of boundaries
-            robot_oris[i] = robot_boundary_check(robot_poses[i], robot_oris[i])
+            if (robot_states[i] != 1) and (robot_states[i] != 2):
+                # skip for state '1' and '2' robots
+                robot_oris[i] = robot_boundary_check(robot_poses[i], robot_oris[i])
             # update one step of move
             robot_poses[i] = robot_poses[i] + (step_moving_dist *
                 np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])]))
@@ -1652,7 +1662,7 @@ while True:
                     robot_size_formation, 0)
             # draw text of the assigned roles for all robots
             text = font.render(str(int(assignment_scheme[i])), True, color_grey)
-            screen.blit(text, (disp_poses[i,0]+12, disp_poses[i,1]-12))
+            screen.blit(text, (disp_poses[i,0]+6, disp_poses[i,1]-6))
         # draw the in-group robots by group
         for group_id_temp in groups.keys():
             if groups[group_id_temp][2]:
@@ -1692,6 +1702,10 @@ while True:
                 break
             else:
                 ending_period = ending_period - frame_period/1000.0
+
+
+# allow construction goes out of boundary
+
 
     ########### simulation 5: loop reshaping to chosen shape ###########
 
