@@ -593,7 +593,7 @@ while True:
                         continue  # skip the physics update if within destination error
                     else:
                         robot_oris[i] = math.atan2(mov_vec[1], mov_vec[0])  # change direction
-            # check if out of boundaries (from previous line formation program)
+            # check if out of boundaries
             robot_oris[i] = robot_boundary_check(robot_poses[i], robot_oris[i])
             # update one step of move
             robot_poses[i] = robot_poses[i] + (step_moving_dist *
@@ -1265,6 +1265,10 @@ while True:
     step_moving_dist = 0.05  # should be smaller than destination distance error
     destination_error = 0.08
     mov_vec_ratio = 0.5  # ratio used when calculating mov vector
+    # spring constants in SMA
+    linear_const = 1.0
+    bend_const = 0.8
+    disp_coef = 0.3
 
     # the loop for simulation 1
     sim_haulted = False
@@ -1274,7 +1278,8 @@ while True:
     sim_freq_control = True
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
-    loop_shape_formed = False
+    loop_formed = False
+    ending_period = 3.0  # grace period
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
@@ -1405,7 +1410,7 @@ while True:
                             st_gton1.append(group_id_temp)  # schedule to disassemble this group
                 # check if state '1' robot's order on loop is good
                 if robot_states[i] == 1:
-                    current_key = robot_key_neighbors[i]
+                    current_key = robot_key_neighbors[i][0]
                     next_key = robot_key_neighbors[current_key][-1]
                     if next_key in conn_lists[i]:  # next key neighbor is detected
                         role_i = assignment_scheme[i]
@@ -1588,7 +1593,7 @@ while True:
                     # situation that only two robots are in the group
                     j = robot_key_neighbors[i][0]
                     if abs(dist_table[i,j] - desired_space) < destination_error:
-                        continue  # skip the physics update if within destination error
+                        continue  # stay in position if within destination error
                     else:
                         if dist_table[i,j] > desired_space:
                             robot_oris[i] = math.atan2(robot_poses[j,1] - robot_poses[i,1],
@@ -1604,11 +1609,89 @@ while True:
                         if robot_states[robot_temp] == 2:
                             state2_quantity = state1_quantity + 1
                     desired_angle = math.pi - 2*math.pi / state2_quantity
-                    
+                    # use the SMA algorithm to achieve the desired interior angle
+                    left_key = robot_key_neighbors[i][0]
+                    right_key = robot_key_neighbors[i][1]
+                    vect_l = (robot_poses[left_key] - robot_poses[i]) / dist_table[i,left_key]
+                    vect_r = (robot_poses[right_key] - robot_poses[i]) / dist_table[i,right_key]
+                    vect_lr = robot_poses[right_key] - robot_poses[left_key]
+                    dist_temp = math.sqrt(vect_lr[0]*vect_lr[0] + vect_lr[1]*vect_lr[1])
+                    vect_in = np.array([-vect_lr[1], vect_lr[0]]) / dist_temp
+                    inter_curr = math.acos(np.dot(vect_l, vect_r) /
+                        (dist_table[i,left_key]*dist_table[i,right_key]))  # interior angle
+                    if np.cross(vect_l, vect_r) > 0:
+                        inter_curr = 2*math.pi - inter_curr
+                    fb_vect = np.zeros(2)  # feedback vector to accumulate spring effects
+                    fb_vect = fb_vect + ((dist_table[i,left_key] - desired_space) *
+                        linear_const * vect_l)
+                    fb_vect = fb_vect + ((dist_table[i,right_key] - desired_space) *
+                        linear_const * vect_r)
+                    fb_vect = fb_vect + ((desired_angle - inter_curr) *
+                        bend_const * vect_in)
+                    if np.linalg.norm(fb_vect)*disp_coef < destination_error:
+                        continue  # stay in position if within destination error
+                    else:
+                        robot_oris[i] = math.atan2(fb_vect[1], fb_vect[0])
+                # check if out of boundaries
+                robot_oris[i] = robot_boundary_check(robot_poses[i], robot_oris[i])
+                # update one step of move
+                robot_poses[i] = robot_poses[i] + (step_moving_dist *
+                    np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])]))
 
-    ########### simulation 4: loop reshaping to chosen shape ###########
+        # update the graphics
+        disp_poses_update()
+        screen.fill(color_white)
+        # draw the robots of states '-1' and '0'
+        for i in range(swarm_size):
+            if robot_states[i] == -1:  # empty circle for state '-1' robot
+                pygame.draw.circle(screen, color_grey, disp_poses[i],
+                    robot_size_formation, robot_width_empty)
+            elif robot_states[i] == 0:  # full circle for state '0' robot
+                pygame.draw.circle(screen, color_grey, disp_poses[i],
+                    robot_size_formation, 0)
+        # draw the in-group robots by each group
+        for group_id_temp in groups.keys():
+            if groups[group_id_temp][2]:
+                # highlight the dominant group with black color
+                color_group = color_black
+            else:
+                color_group = color_grey
+            conn_draw_sets = []  # avoid draw same connection two times
+            # draw the robots and connections in the group
+            for i in groups[group_id_temp][0]:
+                pygame.draw.circle(screen, color_group, disp_poses[i],
+                    robot_size_formation, 0)
+                for j in robot_key_neighbors[i]:
+                    if set([i,j]) not in conn_draw_sets:
+                        pygame.draw.line(screen, color_group, disp_poses[i],
+                            disp_poses[j], conn_width_formation)
+                        conn_draw_sets.append(set([i,j]))
+        pygame.display.update()
 
-    print("##### simulation 4: loop reshaping #####")
+        # reduce life time of robot '-1' and groups
+        for i in range(swarm_size):
+            if robot_states[i] == -1:
+                robot_n1_lives[i] = robot_n1_lives[i] - frame_period/1000.0
+        for group_id_temp in groups.keys():
+            if not groups[group_id_temp][2]:  # skip dominant group
+                groups[group_id_temp][1] = groups[group_id_temp][1] - frame_period/1000.0
+
+        # check exit condition of simulation 4
+        if not loop_formed:
+            if (len(groups.keys()) == 1) and (len(groups.values()[0][0]) == swarm_size):
+                loop_formed = True
+        if loop_formed:
+            if ending_period <= 0:
+                print("")  # move cursor to the new line
+                print("simulation 4 is finished")
+                raw_input("<Press Enter to continue>")
+                break
+            else:
+                ending_period = ending_period - frame_period/1000.0
+
+    ########### simulation 5: loop reshaping to chosen shape ###########
+
+    print("##### simulation 5: loop reshaping #####")
 
 
 
