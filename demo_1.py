@@ -156,7 +156,10 @@ for i in seed_list_temp[:seed_quantity]:
 # consensus configuration
 shape_quantity = 30  # also the number of decisions
 shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
+    # also the index in shape_catalog
 assignment_scheme = np.zeros(swarm_size)
+loop_folder = "loop-data2"  # folder to store the loop shapes
+shape_catalog = ["circle", "square", "triangle"]
 
 # visualization configuration
 color_white = (255,255,255)
@@ -1259,7 +1262,7 @@ while True:
     bend_const = 0.8
     disp_coef = 0.5
 
-    # the loop for simulation 1
+    # the loop for simulation 4
     sim_haulted = False
     time_last = pygame.time.get_ticks()
     time_now = time_last
@@ -1269,7 +1272,7 @@ while True:
     sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
     loop_formed = False
     ending_period = 3.0  # grace period
-    while True:
+    while False:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 4")
@@ -1687,15 +1690,162 @@ while True:
             else:
                 ending_period = ending_period - frame_period/1000.0
 
+    # # store the variable "robot_poses"
+    # with open('v_robot_poses2', 'w') as f:
+    #     pickle.dump([robot_poses, robot_key_neighbors], f)
+    # raw_input("<Press Enter to continue>")
+    # break
 
 # add text of numbers of role asignment in role assignment simulation
 # allow construction goes out of boundary in loop formation
 
-
     ########### simulation 5: loop reshaping to chosen shape ###########
+
+    # restore variable "robot_poses"
+    with open('v_robot_poses2') as f:
+        robot_poses, robot_key_neighbors = pickle.load(f)
 
     print("##### simulation 5: loop reshaping #####")
 
+    print("old shape decision: {}".format(shape_decision))
+    shape_decision = 1
+    print("forced shape decision: {} - ".format(shape_decision) +
+        shape_catalog[shape_decision])
 
+    # spring constants in SMA
+    linear_const = 1.0
+    bend_const = 0.8
+    disp_coef = 0.05
+
+    # shift the robots to the middle of the window
+    x_max, y_max = np.amax(robot_poses, axis=0)
+    x_min, y_min = np.amin(robot_poses, axis=0)
+    robot_middle = np.array([(x_max+x_min)/2.0, (y_max+y_min)/2.0])
+    world_middle = np.array([world_side_length/2.0, world_side_length/2.0])
+    for i in range(swarm_size):
+        robot_poses[i] = robot_poses[i] - robot_middle + world_middle
+
+    # read the loop shape from file
+    filename = str(swarm_size) + "-" + shape_catalog[shape_decision]
+    filepath = os.path.join(os.getcwd(), loop_folder, filename)
+    if os.path.isfile(filepath):
+        with open(filepath, 'r') as f:
+            target_poses = pickle.load(f)
+    else:
+        print("fail to locate shape file: {}".format(filepath))
+        sys.exit()
+    # calculate the interior angles for the robots(instead of target positions)
+    inter_target = np.zeros(swarm_size)
+    for i in range(swarm_size):  # i on the target loop
+        i_l = (i-1)%swarm_size
+        i_r = (i+1)%swarm_size
+        vect_l = target_poses[i_l] - target_poses[i]
+        vect_r = target_poses[i_r] - target_poses[i]
+        dist_l = np.linalg.norm(vect_l)
+        dist_r = np.linalg.norm(vect_r)
+        robot_temp = list(assignment_scheme).index(i)  # find the robot that chooses role i
+        inter_target[robot_temp] = math.acos(np.dot(vect_l, vect_r) / (dist_l * dist_r))
+        if np.cross(vect_r, vect_l) < 0:
+            inter_target[robot_temp] = 2*math.pi - inter_target[robot_temp]
+
+    # reusing robot_key_neighbors variable from S4
+    for i in range(swarm_size):
+        if len(robot_key_neighbors[i]) != 2:
+            print("state 1 robot not merged in yet")
+            sys.exit()
+        else:
+            i_left = robot_key_neighbors[i][0]
+            i_right = robot_key_neighbors[i][1]
+            role_i = assignment_scheme[i]
+            role_i_left = assignment_scheme[i_left]
+            role_i_right = assignment_scheme[i_right]
+            if (((role_i-role_i_left)%swarm_size != 1) or
+                ((role_i_right-role_i)%swarm_size != 1)):
+                print("loop formed with incorrect order")
+                sys.exit()
+
+    # the loop for simulation 5
+    sim_haulted = False
+    time_last = pygame.time.get_ticks()
+    time_now = time_last
+    frame_period = 100
+    sim_freq_control = True
+    iter_count = 0
+    print("reshaping to " + shape_catalog[shape_decision] + " with " + str(swarm_size) +
+        " robots...")
+    inter_err_thres = 0.05
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:  # close window button is clicked
+                print("program exit in simulation 5")
+                sys.exit()  # exit the entire program
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE:
+                    sim_haulted = not sim_haulted  # reverse the pause flag
+        if sim_haulted: continue
+
+        # simulation frequency control
+        if sim_freq_control:
+            time_now = pygame.time.get_ticks()
+            if (time_now - time_last) > frame_period:
+                time_last = time_now
+            else:
+                continue
+
+        # increase iteration count
+        iter_count = iter_count + 1
+
+        # update the physics
+        robot_poses_temp = np.copy(robot_poses)
+        inter_curr = np.zeros(swarm_size)  # current interior angles
+        for i in range(swarm_size):
+            i_l = robot_key_neighbors[i][0]
+            i_r = robot_key_neighbors[i][1]
+            # vectors
+            vect_l = robot_poses[i_l] - robot_poses[i]
+            vect_r = robot_poses[i_r] - robot_poses[i]
+            vect_lr = robot_poses[i_r] - robot_poses[i_l]
+            # distances
+            dist_l = np.linalg.norm(vect_l)
+            dist_r = np.linalg.norm(vect_r)
+            dist_lr = np.linalg.norm(vect_lr)
+            # unit vectors
+            u_vect_l = vect_l / dist_l
+            u_vect_r = vect_r / dist_r
+            u_vect_in = np.array([-vect_lr[1], vect_lr[0]]) / dist_lr
+            # calculate current interior angle
+            inter_curr[i] = math.acos(np.dot(vect_l, vect_r) / (dist_l * dist_r))
+            if np.cross(vect_r, vect_l) < 0:
+                inter_curr[i] = 2*math.pi - inter_curr[i]
+            # feedback vector for the SMA algorithm
+            fb_vect = np.zeros(2)
+            fb_vect = fb_vect + (dist_l - desired_space) * linear_const * u_vect_l
+            fb_vect = fb_vect + (dist_r - desired_space) * linear_const * u_vect_r
+            fb_vect = fb_vect + (inter_target[i] - inter_curr[i]) * bend_const * u_vect_in
+            # update one step of position
+            robot_poses_temp[i] = robot_poses[i] + disp_coef * fb_vect
+        robot_poses = np.copy(robot_poses_temp)
+
+        # update the graphics
+        disp_poses_update()
+        screen.fill(color_white)
+        for i in range(swarm_size):
+            pygame.draw.circle(screen, color_black, disp_poses[i], robot_size_formation, 0)
+            pygame.draw.line(screen, color_black, disp_poses[i],
+                disp_poses[robot_key_neighbors[i][1]], conn_width_formation)
+        pygame.display.update()
+
+        # calculate the maximum error of interior angle
+        inter_err_max = 0
+        for i in range(swarm_size):
+            err_curr = abs(inter_curr[i] - inter_target[i])
+            if err_curr > inter_err_max: inter_err_max = err_curr
+        # print("current maximum error of interior angle: {}".format(inter_err_max))
+
+        # check exit condition of simulation 5
+        if inter_err_max < inter_err_thres:
+            print("simulation 4 is finished")
+            raw_input("<Press Enter to continue>")
+            break
 
 
