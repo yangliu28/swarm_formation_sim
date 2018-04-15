@@ -157,7 +157,7 @@ def disp_poses_update():
     disp_poses = poses_temp.astype(int)  # convert to int and assign to disp_poses
 disp_poses_update()
 # deciding the seed robots, used in simulations with moving robots
-seed_percentage = 0.1  # the percentage of seed robots in the swarm
+seed_percentage = 0.5  # the percentage of seed robots in the swarm
 seed_quantity = min(max(int(swarm_size*seed_percentage), 1), swarm_size)
     # no smaller than 1, and no larger than swarm_size
 robot_seeds = [False for i in range(swarm_size)]  # whether a robot is a seed robot
@@ -1419,19 +1419,13 @@ while True:
                         next_key = robot_key_neighbors[current_key][-1]
                     except:
                         print("*** error in line 1419***")
-                        print("identity: current - i - next: {} - {} - {}".format(current_key,
-                            i, next_key))
-                        print("role: current - i - next: {} - {} - {}".format(assignment_scheme[current_key],
-                            assignment_scheme[i], assignment_scheme[next_key]))
-                        print("neighbors: current - i - next: {} - {} - {}".format(
-                            robot_key_neighbors[current_key], robot_key_neighbors[i],
-                            robot_key_neighbors[next_key]))
-                        gid_current = robot_group_ids[current_key]
-                        gid_i = robot_group_ids[i]
-                        print("group id: current - i: {} - {}".format(gid_current,
-                            gid_i))
-                        print("group member: current - i: {} - {}".format(groups[gid_current][0],
-                            groups[gid_i][0]))
+                        print("identity: current - i: {} - {}".format(current_key, i))
+                        print("groups: {}".format(groups))
+                        for i in range(swarm_size):
+                            print("id-gid-role-state-neigh: {} - {} - {} - {} - {}".format(
+                                i, robot_group_ids[i],
+                                assignment_scheme[i], robot_states[i],
+                                robot_key_neighbors[i]))
                         pygame.time.delay(1000000)
                         sys.exit()
                     if next_key in conn_lists[i]:  # next key neighbor is detected
@@ -1497,6 +1491,11 @@ while True:
             if groups[group_id_temp][1] < 0:  # life time of a group ends
                 if group_id_temp not in st_gton1:
                     st_gton1.append(group_id_temp)
+
+        # debug print
+        for i in range(swarm_size):
+            if (i in st_0to1.keys()) and (i in st_0to2.keys()):
+                print("double 0 entry: {}".format(i))
 
         # process the state transition tasks
         # 1.st_1to2, robot '1' locates its order on loop, becoming '2'
