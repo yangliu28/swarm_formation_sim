@@ -49,20 +49,6 @@
 # is an exception that the group itself has only two members.
 
 
-# when to terminate a process and continue next one
-# consensus decision making -> subgroup size reaches to total number
-# role assignment -> when there is no conflict
-# loop formation -> when local shape accuracy is within a threshold
-
-# the use of colors
-# consensus decision making: same color for same chosen decision, of collective shape
-    # guarantee all robots agreed on one choice
-# role assignment: same color for same chosen decision, of target position
-    # guarantee all robots agreed on all different choices
-# loop formation: no colors, empty circle for dormant, filled circle for active
-
-
-
 from __future__ import print_function
 import pygame
 import sys, os, getopt, math, random
@@ -121,8 +107,6 @@ desired_space = comm_range * desired_space_ratio
 perp_thres = math.pi/18  # threshold, range from the perpendicular line
 devia_angle = math.pi/9  # deviate these much angle from perpendicualr line
 
-comm_range = 0.8
-
 # robot properties
 robot_poses = np.random.rand(swarm_size, 2) * world_side_length  # initialize the robot poses
 dist_table = np.zeros((swarm_size, swarm_size))  # distances between robots
@@ -159,7 +143,7 @@ def disp_poses_update():
     disp_poses = poses_temp.astype(int)  # convert to int and assign to disp_poses
 disp_poses_update()
 # deciding the seed robots, used in simulations with moving robots
-seed_percentage = 0.5  # the percentage of seed robots in the swarm
+seed_percentage = 0.1  # the percentage of seed robots in the swarm
 seed_quantity = min(max(int(swarm_size*seed_percentage), 1), swarm_size)
     # no smaller than 1, and no larger than swarm_size
 robot_seeds = [False for i in range(swarm_size)]  # whether a robot is a seed robot
@@ -197,7 +181,7 @@ robot_ring_size = 12  # extra ring on robot in consensus simulations
 
 # set up the simulation window
 pygame.init()
-font = pygame.font.SysFont("Cabin", 14)
+font = pygame.font.SysFont("Cabin", 12)
 icon = pygame.image.load("icon_geometry_art.jpg")
 pygame.display.set_icon(icon)
 screen = pygame.display.set_mode(screen_size)
@@ -216,15 +200,14 @@ pygame.display.update()
 
 # function for simulation 1 and 4, group robots by their group ids, and find the largest group
 def S14_robot_grouping(robot_list, robot_group_ids, groups):
-    # "robot_list": the list of robot '1's, should not be empty
     # the input list 'robot_list' should not be empty
     groups_temp = {}  # key is group id, value is list of robots
     for i in robot_list:
         group_id_temp = robot_group_ids[i]
         if group_id_temp not in groups_temp.keys():
-            groups_temp[group_id_temp] = [j]
+            groups_temp[group_id_temp] = [i]
         else:
-            groups_temp[group_id_temp].append(j)
+            groups_temp[group_id_temp].append(i)
     group_id_max = -1  # the group with most members
         # regardless of only one group or multiple groups in groups_temp
     if len(groups_temp.keys()) > 1:  # there is more than one group
@@ -1276,13 +1259,6 @@ while True:
     bend_const = 0.8
     disp_coef = 0.5
 
-    # debugging variables
-    st_n1to0_copy = []
-    st_gton1_copy = []
-    st_0to1_copy = {}
-    st_0to2_copy = {}
-    st_1to2_copy = {}
-
     # the loop for simulation 1
     sim_haulted = False
     time_last = pygame.time.get_ticks()
@@ -1313,9 +1289,8 @@ while True:
 
         # increase iteration count
         iter_count = iter_count + 1
-        # sys.stdout.write("\riteration {}".format(iter_count))
-        # sys.stdout.flush()
-        print("iteration {}:".format(iter_count))
+        sys.stdout.write("\riteration {}".format(iter_count))
+        sys.stdout.flush()
 
         # state transition variables
         st_n1to0 = []  # robot '-1' gets back to '0' after life time ends
@@ -1348,7 +1323,6 @@ while True:
                         for group_id_temp in groups_local.keys():
                             if (group_id_temp != group_id_max) and (group_id_temp not in st_gton1):
                                 st_gton1.append(group_id_temp)  # schedule to disassemble this group
-                                print("{}: st_gton1: {}".format(i,group_id_temp))
                         # find the closest neighbor in groups_local[group_id_max]
                         robot_closest = S14_closest_robot(i, groups_local[group_id_max])
                         # change moving direction opposing the closest robot
@@ -1378,7 +1352,6 @@ while True:
                     for group_id_temp in groups_local.keys():
                         if (group_id_temp != group_id_max) and (group_id_temp not in st_gton1):
                             st_gton1.append(group_id_temp)  # schedule to disassemble this group
-                            print("{}: st_gton1: {}".format(i,group_id_temp))
                 # responses to the state '2', '1', and '0' robots
                 if state2_quantity != 0:
                     # join the group with state '2' robots
@@ -1386,8 +1359,6 @@ while True:
                         # join the group of the state '2' robot
                         st_0to1[i] = robot_group_ids[state2_list[0]]
                         robot_key_neighbors[i] = [state2_list[0]]  # add key neighbor
-                        print("{}: st_0to1: {}-{}-{}".format(i, state2_quantity,
-                            robot_group_ids[state2_list[0]], state2_list[0]))
                     else:  # multiple state '2' robots
                         # it's possible that the state '2' robots are in different groups
                         # find the closest one in the largest group, and join the group
@@ -1396,7 +1367,6 @@ while True:
                         robot_closest = S14_closest_robot(i, groups_local[group_id_max])
                         st_0to1[i] = group_id_max
                         robot_key_neighbors[i] = [robot_closest]  # add key neighbor
-                        print("{}: st_0to1: {}-{}-{}".format(i, state2_quantity, group_id_max, robot_closest))
                 elif state1_quantity != 0:
                     # get repelled away from state '1' robot
                     if state1_quantity == 1:  # only one state '1' robot
@@ -1411,7 +1381,6 @@ while True:
                 elif state0_quantity != 0:
                     # form new group with state '0' robots
                     st_0to2[i] = S14_closest_robot(i, state0_list)
-                    print("{}: st_0to2: {}-{}".format(i, state0_quantity, st_0to2[i]))
             elif (robot_states[i] == 1) or (robot_states[i] == 2):
                 # disassemble the minority groups
                 state12_list = []  # list of state '1' and '2' robots in the list
@@ -1431,25 +1400,7 @@ while True:
                 # check if state '1' robot's order on loop is good
                 if robot_states[i] == 1:
                     current_key = robot_key_neighbors[i][0]
-                    try:
-                        next_key = robot_key_neighbors[current_key][-1]
-                    except:
-                        print("*** error in line 1419***")
-                        print("identity: current - i: {} - {}".format(current_key, i))
-                        print("groups: {}".format(groups))
-                        for i in range(swarm_size):
-                            print("id-gid-role-state-neigh: {} - {} - {} - {} - {}".format(
-                                i, robot_group_ids[i],
-                                assignment_scheme[i], robot_states[i],
-                                robot_key_neighbors[i]))
-                        print("last actions:")
-                        print("st_n1to0_copy: {}".format(st_n1to0_copy))
-                        print("st_gton1_copy: {}".format(st_gton1_copy))
-                        print("st_0to1_copy: {}".format(st_0to1_copy))
-                        print("st_0to2_copy: {}".format(st_0to2_copy))
-                        print("st_1to2_copy: {}".format(st_1to2_copy))
-                        pygame.time.delay(1000000)
-                        sys.exit()
+                    next_key = robot_key_neighbors[current_key][-1]
                     if next_key in conn_lists[i]:  # next key neighbor is detected
                         role_i = assignment_scheme[i]
                         role_current_key = assignment_scheme[current_key]
@@ -1513,19 +1464,6 @@ while True:
             if groups[group_id_temp][1] < 0:  # life time of a group ends
                 if group_id_temp not in st_gton1:
                     st_gton1.append(group_id_temp)
-
-        # save a copy of state transitions
-        st_n1to0_copy = st_n1to0[:]
-        st_gton1_copy = st_gton1[:]
-        st_0to1_copy = {}
-        for key in st_0to1.keys():
-            st_0to1_copy[key] = st_0to1[key]
-        st_0to2_copy = {}
-        for key in st_0to2.keys():
-            st_0to2_copy[key] = st_0to2[key]
-        st_1to2_copy = {}
-        for key in st_1to2.keys():
-            st_1to2_copy[key] = st_1to2[key][:]
 
         # process the state transition tasks
         # 1.st_1to2, robot '1' locates its order on loop, becoming '2'
@@ -1705,8 +1643,8 @@ while True:
                 pygame.draw.circle(screen, color_grey, disp_poses[i],
                     robot_size_formation, 0)
             # draw text of the assigned roles for all robots
-            # text = font.render(str(int(assignment_scheme[i])), True, color_grey)
-            text = font.render(str(int(i)), True, color_grey)
+            text = font.render(str(int(assignment_scheme[i])), True, color_grey)
+            # text = font.render(str(int(i)), True, color_grey)
             screen.blit(text, (disp_poses[i,0]+6, disp_poses[i,1]-6))
         # draw the in-group robots by group
         for group_id_temp in groups.keys():
@@ -1750,7 +1688,8 @@ while True:
                 ending_period = ending_period - frame_period/1000.0
 
 
-# allow construction goes out of boundary
+# add text of numbers of role asignment in role assignment simulation
+# allow construction goes out of boundary in loop formation
 
 
     ########### simulation 5: loop reshaping to chosen shape ###########
