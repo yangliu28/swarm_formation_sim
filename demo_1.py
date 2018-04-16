@@ -597,7 +597,7 @@ while True:
                         # moving tangent along the circle of radius of "desired_space"
                         robot_oris[i] = math.atan2(robot_poses[i,1] - robot_poses[center,1],
                             robot_poses[i,0] - robot_poses[center,0])
-                        # interior angle between 
+                        # interior angle between dist_table[i,center] and step_moving_dist
                         int_angle_temp = math.acos((math.pow(dist_table[i,center],2) +
                             math.pow(step_moving_dist,2) - math.pow(desired_space,2)) /
                             (2.0*dist_table[i,center]*step_moving_dist))
@@ -1345,22 +1345,31 @@ while True:
                     st_n1to0.append(i)
                 else:
                     if len(conn_lists[i]) == 0: continue
-                    conn_temp = conn_lists[i][:]
+                    state2_list = []
+                    state1_list = []
                     for j in conn_lists[i]:
-                        if (robot_states[j] == -1) or (robot_states[j] == 0):
-                            conn_temp.remove(j)
-                    if len(conn_temp) != 0:
-                        groups_local, group_id_max = S14_robot_grouping(conn_temp,
-                            robot_group_ids, groups)
-                        # disassemble all groups except the largest one
-                        for group_id_temp in groups_local.keys():
-                            if (group_id_temp != group_id_max) and (group_id_temp not in st_gton1):
-                                st_gton1.append(group_id_temp)  # schedule to disassemble this group
-                        # find the closest neighbor in groups_local[group_id_max]
-                        robot_closest = S14_closest_robot(i, groups_local[group_id_max])
-                        # change moving direction opposing the closest robot
-                        vect_temp = robot_poses[i] - robot_poses[robot_closest]
-                        robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
+                        if robot_states[j] == 2:
+                            state2_list.append(j)
+                        elif robot_states[j] == 1:
+                            state1_list.append(j)
+                    if len(state2_list) + len(state1_list) != 0:
+                        groups_local, group_id_max = S14_robot_grouping(
+                            state2_list + state1_list, robot_group_ids, groups)
+                        if len(groups_local.keys()) > 1:
+                            # disassemble all groups except the largest one
+                            for group_id_temp in groups_local.keys():
+                                if ((group_id_temp != group_id_max) and
+                                    (group_id_temp not in st_gton1)):
+                                    # schedule to disassemble this group
+                                    st_gton1.append(group_id_temp)
+                        else:
+                            # state '-1' robot can only be repelled away by state '2' robot
+                            if len(state2_list) != 0:
+                                # find the closest neighbor in groups_local[group_id_max]
+                                robot_closest = S14_closest_robot(i, state2_list)
+                                # change moving direction opposing the closest robot
+                                vect_temp = robot_poses[i] - robot_poses[robot_closest]
+                                robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
             elif robot_states[i] == 0:  # for host robot with state '0'
                 if len(conn_lists[i]) == 0: continue
                 state2_list = []
@@ -1400,17 +1409,17 @@ while True:
                         robot_closest = S14_closest_robot(i, groups_local[group_id_max])
                         st_0to1[i] = group_id_max
                         robot_key_neighbors[i] = [robot_closest]  # add key neighbor
-                elif state1_quantity != 0:
-                    # get repelled away from state '1' robot
-                    if state1_quantity == 1:  # only one state '1' robot
-                        vect_temp = robot_poses[i] - robot_poses[state1_list[0]]
-                        robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
-                    else:
-                        groups_local, group_id_max = S14_robot_grouping(state1_list,
-                            robot_group_ids, groups)
-                        robot_closest = S14_closest_robot(i, groups_local[group_id_max])
-                        vect_temp = robot_poses[i] - robot_poses[robot_closest]
-                        robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
+                # elif state1_quantity != 0:
+                #     # get repelled away from state '1' robot
+                #     if state1_quantity == 1:  # only one state '1' robot
+                #         vect_temp = robot_poses[i] - robot_poses[state1_list[0]]
+                #         robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
+                #     else:
+                #         groups_local, group_id_max = S14_robot_grouping(state1_list,
+                #             robot_group_ids, groups)
+                #         robot_closest = S14_closest_robot(i, groups_local[group_id_max])
+                #         vect_temp = robot_poses[i] - robot_poses[robot_closest]
+                #         robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
                 elif state0_quantity != 0:
                     # form new group with state '0' robots
                     st_0to2[i] = S14_closest_robot(i, state0_list)
@@ -1771,7 +1780,8 @@ while True:
         dist_l = np.linalg.norm(vect_l)
         dist_r = np.linalg.norm(vect_r)
         robot_temp = list(assignment_scheme).index(i)  # find the robot that chooses role i
-        inter_target[robot_temp] = math.acos(np.dot(vect_l, vect_r) / (dist_l * dist_r))
+        inter_target[robot_temp] = math.acos(np.around(
+            np.dot(vect_l, vect_r) / (dist_l * dist_r) ,6))
         if np.cross(vect_r, vect_l) < 0:
             inter_target[robot_temp] = 2*math.pi - inter_target[robot_temp]
 
@@ -1841,7 +1851,8 @@ while True:
             u_vect_r = vect_r / dist_r
             u_vect_in = np.array([-vect_lr[1], vect_lr[0]]) / dist_lr
             # calculate current interior angle
-            inter_curr[i] = math.acos(np.dot(vect_l, vect_r) / (dist_l * dist_r))
+            inter_curr[i] = math.acos(np.around(
+                np.dot(vect_l, vect_r) / (dist_l * dist_r), 6))
             if np.cross(vect_r, vect_l) < 0:
                 inter_curr[i] = 2*math.pi - inter_curr[i]
             # feedback vector for the SMA algorithm

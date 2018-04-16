@@ -143,6 +143,77 @@ pygame.display.update()
 # pause to check the network before the simulations, or for screen recording
 raw_input("<Press Enter to continue>")
 
+########### simulation 1: aggregate together to form a random loop ###########
 
+print("##### simulation 1: loop formation #####")
 
+# robot perperties
+# all robots start with state '-1'
+robot_states = np.array([-1 for i in range(swarm_size)])
+    # '-1' for wandering around, ignoring all connections
+    # '0' for wandering around, available to connection
+    # '1' for in a group, transit state, only one key neighbor
+    # '2' for in a group, both key neighbors secured
+n1_life_lower = 2  # inclusive
+n1_life_upper = 6  # exclusive
+robot_n1_lives = np.random.uniform(n1_life_lower, n1_life_upper, swarm_size)
+robot_oris = np.random.rand(swarm_size) * 2 * math.pi - math.pi  # in range of [-pi, pi)
+robot_key_neighbors = [[] for i in range(swarm_size)]  # key neighbors for robot on loop
+    # for state '1' robot: the robot that it is climbing around
+    # for state '2' robot: the left and right neighbors in serial connection on the loop
+        # exception is the group has only two members, key neighbor will be only one robot
 
+# group properties
+groups = {}
+    # key is the group id, value is a list, in the list:
+    # [0]: a list of robots in the group, both state '1' and '2'
+    # [1]: remaining life time of the group
+    # [2]: whether or not being the dominant group
+life_incre = 5  # number of seconds added to the life of a group when new robot joins
+group_id_upper = swarm_size  # upper limit of group id
+robot_group_ids = np.array([-1 for i in range(swarm_size)])  # group id for the robots
+    # '-1' for not in a group
+
+# use step moving distance in each update, instead of calculating from robot velocity
+# so to make it independent of simulation frequency control
+step_moving_dist = 0.05  # should be smaller than destination distance error
+destination_error = 0.08
+mov_vec_ratio = 0.5  # ratio used when calculating mov vector
+# spring constants in SMA
+linear_const = 1.0
+bend_const = 0.8
+disp_coef = 0.5
+
+# the loop for simulation 4
+sim_haulted = False
+time_last = pygame.time.get_ticks()
+time_now = time_last
+frame_period = 50
+sim_freq_control = True
+iter_count = 0
+# sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
+print("swarm robots are forming an ordered loop ...")
+loop_formed = False
+ending_period = 3.0  # grace period
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:  # close window button is clicked
+            print("program exit in simulation 4")
+            sys.exit()  # exit the entire program
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE:
+                sim_haulted = not sim_haulted  # reverse the pause flag
+    if sim_haulted: continue
+
+    # simulation frequency control
+    if sim_freq_control:
+        time_now = pygame.time.get_ticks()
+        if (time_now - time_last) > frame_period:
+            time_last = time_now
+        else:
+            continue
+
+    # increase iteration count
+    iter_count = iter_count + 1
+    # sys.stdout.write("\riteration {}".format(iter_count))
+    # sys.stdout.flush()
