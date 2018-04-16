@@ -6,6 +6,13 @@ import math
 import pygame
 import numpy as np
 
+# general function to reset radian angle to [-pi, pi)
+def reset_radian(radian):
+    while radian >= math.pi:
+        radian = radian - 2*math.pi
+    while radian < -math.pi:
+        radian = radian + 2*math.pi
+    return radian
 
 # ##### script to generate 30-square #####
 # swarm_size = 30
@@ -141,6 +148,62 @@ import numpy as np
 # print("node_poses: {}".format(node_poses))
 # with open('100-triangle', 'w') as f:
 #     pickle.dump(node_poses, f)
+
+
+# ##### script to generate 30-star #####
+# swarm_size = 30
+# node_poses = np.zeros((swarm_size, 2))
+# outer_angle = 2*math.pi / 5.0
+# devia_right = outer_angle
+# devia_left = 2*outer_angle
+# # first node is at bottom left corner
+# heading_angle = outer_angle / 2.0  # current heading
+# heading_dir = 0  # current heading direction: 0 for left, 1 for right
+# seg_count = 0  # current segment count
+# for i in range(1,swarm_size):
+#     node_poses[i] = (node_poses[i-1] +
+#         np.array([math.cos(heading_angle), math.sin(heading_angle)]))
+#     seg_count = seg_count + 1
+#     if seg_count == 3:
+#         seg_count = 0
+#         if heading_dir == 0:
+#             heading_angle = reset_radian(heading_angle - devia_right)
+#             heading_dir = 1
+#         else:
+#             heading_angle = reset_radian(heading_angle + devia_left)
+#             heading_dir = 0
+# print(node_poses)
+# with open('30-star', 'w') as f:
+#     pickle.dump(node_poses, f)
+
+
+# ##### script to generate 100-star #####
+# swarm_size = 100
+# node_poses = np.zeros((swarm_size, 2))
+# outer_angle = 2*math.pi / 5.0
+# devia_right = outer_angle
+# devia_left = 2*outer_angle
+# # first node is at bottom left corner
+# heading_angle = outer_angle / 2.0  # current heading
+# heading_dir = 0  # current heading direction: 0 for left, 1 for right
+# seg_count = 0  # current segment count
+# for i in range(1,swarm_size):
+#     node_poses[i] = (node_poses[i-1] +
+#         np.array([math.cos(heading_angle), math.sin(heading_angle)]))
+#     seg_count = seg_count + 1
+#     if seg_count == 10:
+#         seg_count = 0
+#         if heading_dir == 0:
+#             heading_angle = reset_radian(heading_angle - devia_right)
+#             heading_dir = 1
+#         else:
+#             heading_angle = reset_radian(heading_angle + devia_left)
+#             heading_dir = 0
+# print(node_poses)
+# with open('100-star', 'w') as f:
+#     pickle.dump(node_poses, f)
+
+
 
 
 

@@ -102,7 +102,7 @@ screen_size = (screen_side_length, screen_side_length)  # square display world
 # print("world_side_length: {}".format(world_side_length))
 # print("screen_side_length: {}".format(screen_side_length))
 
-# simulation configuration
+# formation configuration
 comm_range = 0.65  # communication range in the world
 desired_space_ratio = 0.8  # ratio of the desired space to the communication range
     # should be larger than 1/1.414=0.71, to avoid connections crossing each other
@@ -110,6 +110,13 @@ desired_space = comm_range * desired_space_ratio
 # deviate robot heading, so as to avoid robot travlling perpendicular to the walls
 perp_thres = math.pi/18  # threshold, range from the perpendicular line
 devia_angle = math.pi/9  # deviate these much angle from perpendicualr line
+# consensus configuration
+shape_quantity = 30  # the number of decisions
+shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
+    # also the index in shape_catalog
+assignment_scheme = np.zeros(swarm_size)
+loop_folder = "loop-data2"  # folder to store the loop shapes
+shape_catalog = ["circle", "square", "triangle", "star"]
 
 # robot properties
 robot_poses = np.random.rand(swarm_size, 2) * world_side_length  # initialize the robot poses
@@ -156,14 +163,6 @@ seed_list_temp = np.arange(swarm_size)
 np.random.shuffle(seed_list_temp)
 for i in seed_list_temp[:seed_quantity]:
     robot_seeds[i] = True
-
-# consensus configuration
-shape_quantity = 30  # also the number of decisions
-shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
-    # also the index in shape_catalog
-assignment_scheme = np.zeros(swarm_size)
-loop_folder = "loop-data2"  # folder to store the loop shapes
-shape_catalog = ["circle", "square", "triangle"]
 
 # visualization configuration
 color_white = (255,255,255)
@@ -1736,7 +1735,7 @@ while True:
     print("##### simulation 5: loop reshaping #####")
 
     print("old shape decision: {}".format(shape_decision))
-    shape_decision = 1
+    shape_decision = 3
     print("forced shape decision: {} - ".format(shape_decision) +
         shape_catalog[shape_decision])
 
