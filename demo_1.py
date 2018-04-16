@@ -19,9 +19,11 @@
 # Simulation 4: loop formation with designated role assignment
 # Simulation 5: loop reshaping to chosen shape
 
-# Note that message transmission is simulated only in the role assignment, because communication
-# is specialy depended on and message convey is used as well. While in consensus decision making
-# and shape formation, the delay caused by communication are skipped.
+# message relay in the role assignment
+# Note that message transmission is simulated only in the role assignment. Because message
+# relay is implemented to make this simulation possible, therefore communication between robots
+# becomes important, and steps of message transmissions are simulated. However the delay caused
+# by communication is skipped in other simulations.
 
 # "seed" robot mechanism
 # In simulation 1, a new mechanism is added to accelerate the aggregation. Previous, each
