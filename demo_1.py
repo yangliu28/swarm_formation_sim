@@ -322,14 +322,6 @@ def robot_boundary_check(robot_pos, robot_ori):
 #             new_ori = reset_radian(0 + np.random.uniform(0,math.pi))
 #     return new_ori
 
-# flow control varialbes shared by all individual simulations
-sim_haulted = False
-time_last = 0.0
-time_now = 0.0
-frame_period = 100
-sim_freq_control = True
-iter_count = 0
-
 # main loop of the program that run the set of simulations infinitely
 # this loop does not exit unless error thrown out or manually terminated from terminal
 while True:
@@ -1301,7 +1293,7 @@ while True:
     # sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
     print("swarm robots are forming an ordered loop ...")
     loop_formed = False
-    ending_period = 3.0  # grace period
+    ending_period = 1.0  # grace period
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
@@ -1592,10 +1584,9 @@ while True:
             else:
                 groups[group_id_temp][2] = False
 
-        # temporary variable for robot positions
-        robot_poses_temp = np.copy(robot_poses)
-        no_state1_robot = True
         # update the physics
+        robot_poses_temp = np.copy(robot_poses)  # temporary variable for robot positions
+        no_state1_robot = True
         for i in range(swarm_size):
             # adjusting moving direction for state '1' and '2' robots
             if robot_states[i] == 1:
@@ -1665,8 +1656,8 @@ while True:
                     else:
                         robot_oris[i] = math.atan2(fb_vect[1], fb_vect[0])
             # check if out of boundaries
-            if (robot_states[i] != 1) and (robot_states[i] != 2):
-                # skip for state '1' and '2' robots
+            if (robot_states[i] == -1) or (robot_states[i] == 0):
+                # only applies for state '-1' and '0'
                 robot_oris[i] = robot_boundary_check(robot_poses[i], robot_oris[i])
             # update one step of move
             robot_poses_temp[i] = robot_poses[i] + (step_moving_dist *
