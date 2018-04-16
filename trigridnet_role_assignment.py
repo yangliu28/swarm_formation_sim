@@ -8,7 +8,7 @@
 # '-f': filename of the triangle grid network
 
 # Inter-node communication is used to let one node know the status of another node that
-# is not directly connected. Enabling message convey is what I consider the most convenient
+# is not directly connected. Enabling message relay is what I consider the most convenient
 # way to resolve conflict when two nodes decide on the same assigned role. Although in this
 # way, it is possible for each node to have the information of all the other nodes, and
 # thus it could become a distributed master control algorithm, we still consider the proposed

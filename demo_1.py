@@ -12,7 +12,7 @@
 # the robots on the loop. When the robots get their target positions, they dyanmically adjust
 # the local shape so the loop deforms to the target one. The above steps will be ran repeatedly.
 
-# the simulations that run alternatively in this program
+# the simulations that run consecutively
 # Simulation 1: aggregate together to form a random network
 # Simulation 2: consensus decision making of target loop shape
 # Simulation 3: consensus role assignment for the loop shape
@@ -34,15 +34,17 @@
 # The percentage of seed robots is a new parameter to study, small percentage results in less
 # robustness of the aggregation process, large percentage results in slow aggregation process.
 
-# When robot travels almost parallel to the boundaries, sometimes it takes a long time for a
-# robot to reach the group. To avoid that, every time a robot is bounced away by the wall, if
-# the leaving direction is too perpendicular, a deviation angle is added to deviation the robot.
+# When a robot travels almost parallel to the boundaries, sometimes it takes unnecessarily long
+# time for it to reach a group. To avoid that, every time a robot is bounced away by the wall,
+# if the leaving direction is too perpendicular, a deviation angle is added to deviation the
+# robot.
 
 # 04/11/2018
-# In simulation of aggregating to random network, the robots are not required to have a lower
-# limit number of connections when in the group. The result is that, the final network topology
-# is tree branch like, in which most robots are connected in serial. The unintended advantage
-# is the robots are more easily being caught in the tree topology.
+# In simulation of aggregating to random network, the robots used to need only one connection
+# to stay stable in the group. The result is that the final network topology is always tree
+# branch like. Most robots are only serial connected. This topology is often rated as low
+# connectivity, and takes longer time for the consensus processes. Although the unintended
+# advantage is that the robots are more easily caught in the tree network.
 # Advised by Dr. Lee, it is better that the final network look like the triangle grid network.
 # In this way the swarm robots will have more evenly distributed coverage over the space.
 # To implement this: when in a group, if a robot has two or more connections, it moves to the
@@ -55,7 +57,7 @@ from __future__ import print_function
 import pygame
 import sys, os, getopt, math, random
 import numpy as np
-import pickle  # for debugging multiple simulations, and file read/write
+import pickle  # for storing variables
 
 swarm_size = 30  # default size of the swarm
 
