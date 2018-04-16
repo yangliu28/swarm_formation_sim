@@ -174,13 +174,16 @@ distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,
     (0,128,128), (230,190,255), (170,110,40), (128,0,0),
     (170,255,195), (128,128,0), (0,0,128))
 color_quantity = 17
+# sizes for formation simulations
 robot_size_formation = 5  # robot size in formation simulations
 robot_width_empty = 2
 conn_width_formation = 2  # connection line width in formation simulations
-robot_size_consensus = 8  # robot size in consensus simulatiosn
+# sizes for consensus simulations
+robot_size_consensus = 5  # robot size in consensus simulatiosn
 conn_width_thin_consensus = 2  # thin connection line in consensus simulations
-conn_width_thick_consensus = 5  # thick connection line in consensus simulations
-robot_ring_size = 12  # extra ring on robot in consensus simulations
+conn_width_thick_consensus = 2  # thick connection line in consensus simulations
+robot_ring_size = 8  # extra ring on robot in consensus simulations
+# the sizes for formation and consensus simulations are set to same for visual consistency
 
 # set up the simulation window
 pygame.init()
@@ -370,13 +373,23 @@ while True:
     sim_haulted = False
     time_last = pygame.time.get_ticks()
     time_now = time_last
-    frame_period = 100
+    frame_period = 50
     sim_freq_control = True
     iter_count = 0
-    sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
+    # sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
+    print("swarm robots are aggregating to one network ...")
     swarm_aggregated = False
     ending_period = 3.0  # leave this much time to let robots settle after aggregation is dine
-    while False:
+    # # progress bar
+    # prog_bar_len = 30
+    # prog_pos = 0
+    # prog_step = 1
+    # prog_period = 1000
+    # prog_update_freq = int(prog_period/frame_period)
+    # prog_counter = 0
+    # sys.stdout.write("[" + prog_pos*"-" + "#" + (prog_bar_len-(prog_pos+1))*"-" + "]\r")
+    # sys.stdout.flush()
+    while True:
         # close window button to exit the entire program;
         # space key to pause this simulation
         for event in pygame.event.get():
@@ -398,8 +411,19 @@ while True:
 
         # increase iteration count
         iter_count = iter_count + 1
-        sys.stdout.write("\riteration {}".format(iter_count))
-        sys.stdout.flush()
+        # sys.stdout.write("\riteration {}".format(iter_count))
+        # sys.stdout.flush()
+
+        # # progress bar
+        # prog_counter = prog_counter + 1
+        # if prog_counter > prog_update_freq:
+        #     prog_counter == 0
+        #     if prog_pos == 0: prog_step = 1  # goes forward
+        #     elif prog_pos == (prog_bar_len-1): prog_step = -1  # goes backward
+        #     prog_pos = prog_pos + prog_step
+        #     sys.stdout.write("[" + prog_pos*"-" + "#" +
+        #         (prog_bar_len-(prog_pos+1))*"-" + "]\r")
+        #     sys.stdout.flush()
 
         # state transition variables
         st_n1to0 = []  # robot '-1' gets back to '0' after life time ends
@@ -590,6 +614,7 @@ while True:
             # update one step of move
             robot_poses_temp[i] = robot_poses[i] + (step_moving_dist *
                 np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])]))
+        robot_poses = np.copy(robot_poses_temp)
 
         # update the graphics
         disp_poses_update()
@@ -635,9 +660,9 @@ while True:
                 swarm_aggregated = True  # once aggregated, there is no turning back
         if swarm_aggregated:
             if ending_period <= 0:
-                print("")  # move cursor to the new line
                 print("simulation 1 is finished")
                 raw_input("<Press Enter to continue>")
+                print("")  # empty line
                 break
             else:
                 ending_period = ending_period - frame_period/1000.0
@@ -650,9 +675,9 @@ while True:
 
     ########### simulation 2: consensus decision making of target loop shape ###########
 
-    # restore variable "robot_poses"
-    with open('v_robot_poses') as f:
-        robot_poses = pickle.load(f)
+    # # restore variable "robot_poses"
+    # with open('v_robot_poses') as f:
+    #     robot_poses = pickle.load(f)
 
     print("##### simulation 2: decision making #####")
     # "dist" in the variable may also refer to distribution
@@ -693,11 +718,11 @@ while True:
     sim_haulted = False
     time_last = pygame.time.get_ticks()
     time_now = time_last
-    frame_period = 300
+    frame_period = 1000
     sim_freq_control = True
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))
-    while False:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 2")
@@ -928,6 +953,7 @@ while True:
             print("converged to decision {}".format(shape_decision))
             print("simulation 2 is finished")
             raw_input("<Press Enter to continue>")
+            print("")  # empty line
             break
 
     ########### simulation 3: consensus role assignment for the loop shape ###########
@@ -1051,7 +1077,7 @@ while True:
     sim_freq_control = True
     flash_delay = 200
     sys.stdout.write("iteration {}".format(iter_count))
-    while False:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 3")
@@ -1206,9 +1232,9 @@ while True:
             for i in range(swarm_size):
                 assignment_scheme[i] = local_role_assignment[0][i][0]
             print("")  # move cursor to the new line
-            print("converged role assignment scheme: {}".format(assignment_scheme))
             print("simulation 3 is finished")
             raw_input("<Press Enter to continue>")
+            print("")  # empty line
             break
 
     # # store the variable "assignment_scheme"
@@ -1219,9 +1245,9 @@ while True:
 
     ########### simulation 4: loop formation with designated role assignment ###########
 
-    # restore variable "assignment_scheme"
-    with open('v_assignment_scheme') as f:
-        assignment_scheme = pickle.load(f)
+    # # restore variable "assignment_scheme"
+    # with open('v_assignment_scheme') as f:
+    #     assignment_scheme = pickle.load(f)
 
     print("##### simulation 4: loop formation #####")
 
@@ -1266,13 +1292,14 @@ while True:
     sim_haulted = False
     time_last = pygame.time.get_ticks()
     time_now = time_last
-    frame_period = 100
+    frame_period = 50
     sim_freq_control = True
     iter_count = 0
-    sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
+    # sys.stdout.write("iteration {}".format(iter_count))  # did nothing in iteration 0
+    print("swarm robots are forming an ordered loop ...")
     loop_formed = False
     ending_period = 3.0  # grace period
-    while False:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 4")
@@ -1292,8 +1319,8 @@ while True:
 
         # increase iteration count
         iter_count = iter_count + 1
-        sys.stdout.write("\riteration {}".format(iter_count))
-        sys.stdout.flush()
+        # sys.stdout.write("\riteration {}".format(iter_count))
+        # sys.stdout.flush()
 
         # state transition variables
         st_n1to0 = []  # robot '-1' gets back to '0' after life time ends
@@ -1683,9 +1710,9 @@ while True:
                 loop_formed = True
         if loop_formed:
             if ending_period <= 0:
-                print("")  # move cursor to the new line
                 print("simulation 4 is finished")
                 raw_input("<Press Enter to continue>")
+                print("")  # empty line
                 break
             else:
                 ending_period = ending_period - frame_period/1000.0
@@ -1696,14 +1723,11 @@ while True:
     # raw_input("<Press Enter to continue>")
     # break
 
-# add text of numbers of role asignment in role assignment simulation
-# allow construction goes out of boundary in loop formation
-
     ########### simulation 5: loop reshaping to chosen shape ###########
 
-    # restore variable "robot_poses"
-    with open('v_robot_poses2') as f:
-        robot_poses, robot_key_neighbors = pickle.load(f)
+    # # restore variable "robot_poses"
+    # with open('v_robot_poses2') as f:
+    #     robot_poses, robot_key_neighbors = pickle.load(f)
 
     print("##### simulation 5: loop reshaping #####")
 
@@ -1771,8 +1795,8 @@ while True:
     frame_period = 100
     sim_freq_control = True
     iter_count = 0
-    print("reshaping to " + shape_catalog[shape_decision] + " with " + str(swarm_size) +
-        " robots...")
+    print("loop is reshaping to " + shape_catalog[shape_decision] + " with "
+        + str(swarm_size) + " robots ...")
     inter_err_thres = 0.05
     while True:
         for event in pygame.event.get():
@@ -1846,6 +1870,7 @@ while True:
         if inter_err_max < inter_err_thres:
             print("simulation 4 is finished")
             raw_input("<Press Enter to continue>")
+            print("")  # empty line
             break
 
 
