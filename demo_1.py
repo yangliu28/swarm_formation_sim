@@ -202,7 +202,7 @@ for i in range(swarm_size):
 pygame.display.update()
 
 # pause to check the network before the simulations, or for screen recording
-# raw_input("<Press Enter to continue>")
+raw_input("<Press Enter to continue>")
 
 # function for simulation 1 and 4, group robots by their group ids, and find the largest group
 def S14_robot_grouping(robot_list, robot_group_ids, groups):

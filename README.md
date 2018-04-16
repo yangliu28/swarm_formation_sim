@@ -20,7 +20,13 @@ All the formation control algorithms simulated here agree on a few conditions of
 
 *loop_reshape_test_power.py* is for testing how power function can increase the unipolarity of a random distribution. Linear multiplier was later found to be more mild and thus a better choice. *loop_reshape_test_motion* is for testing the physical motion controlalgorithm of the loop reshape process, the SMA algorithm was first tested here. *curve_shape_test_filter.py* is for smoothing open curves or closed curves to the effect of human drawing like curves.
 
-*trigridnet_probabilistic_consensus.py* is the test program for probabilistic consensus algorithm, running on 2D equilateral triangle grid netwroks. *trigridnet_generator.py* is the corresponding 2D triangle grid network generator.
+*trigridnet_probabilistic_consensus.py* is the test program for probabilistic consensus decision making algorithm, running on 2D equilateral triangle grid netwroks. *trigridnet_generator.py* is the corresponding 2D triangle grid network generator. *trigridnet_role_assignment.py* is the one-to-one role assignment simulation on the triangle grid, message convey is used for the consensus of assignment scheme.
+
+*demo_1.py* is the first integrated demo that combines previous simulations together. The robots first aggregate together to form a random network. They run consensus decision making to choose the target loop shape, then the role assignment using message convey for target assignment. The robots disperse and aggregate again to form a loop with robots on their designated order. The loop then reshapes to the chosen shape.
+
+*demo_2.py* is the second integrated demo.
+
+*demo_3.py* is the third integrated demo.
 
 ## Run the simulations
 Install corresponding version of Pygame for your Python, optional dependencies include numpy, matplotlib, etc. See the header of the desired '.py' to find the necessary dependencies. Some simulation examples are listed below.
@@ -44,6 +50,22 @@ Loop reshape simulation:
 Probabilistic consensus algorithm simulation:
 
 `python trigridnet_probabilistic_consensus.py -f 50-3 -d 30 --nobargraph`
+
+Role assignment using message convey:
+
+`python trigridnet_role_assignment.py -f 100-1`
+
+Demo 1 (aggregation + decision making + role assignment + loop formation + reshaping):
+
+`python demo_1.py -n 30`
+
+Demo 2:
+
+`python demo_2.py -n 30`
+
+Demo 3:
+
+`python demo_3.py -n 30`
 
 ## License
 See the [LICENSE](LICENSE.md) file for license rights and limitations (MIT).
