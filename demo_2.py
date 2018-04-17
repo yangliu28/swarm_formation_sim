@@ -602,6 +602,24 @@ while True:
         else:
             ending_period = ending_period - frame_period/1000.0
 
+# store the variable "robot_poses"
+with open('d2_robot_poses', 'w') as f:
+    pickle.dump([robot_poses, robot_key_neighbors], f)
+raw_input("<Press Enter to continue>")
+sys.exit()
+
+# simulation 2 and 3 will run repeatedly after here
+while True:
+    ########### simulation 2: consensus decision making of target loop shape ###########
+
+    print("##### simulation 2: consensus decision making #####")
+
+
+
+
+
+
+
 
 
 

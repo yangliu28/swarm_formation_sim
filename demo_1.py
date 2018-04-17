@@ -1720,7 +1720,7 @@ while True:
             else:
                 ending_period = ending_period - frame_period/1000.0
 
-    # # store the variable "robot_poses"
+    # # store the variable "robot_poses", "robot_key_neighbors"
     # with open('d1_robot_poses2', 'w') as f:
     #     pickle.dump([robot_poses, robot_key_neighbors], f)
     # raw_input("<Press Enter to continue>")
