@@ -663,7 +663,7 @@ while True:
                 ending_period = ending_period - frame_period/1000.0
 
     # # store the variable "robot_poses"
-    # with open('v_robot_poses', 'w') as f:
+    # with open('d1_robot_poses', 'w') as f:
     #     pickle.dump(robot_poses, f)
     # raw_input("<Press Enter to continue>")
     # break
@@ -671,7 +671,7 @@ while True:
     ########### simulation 2: consensus decision making of target loop shape ###########
 
     # # restore variable "robot_poses"
-    # with open('v_robot_poses') as f:
+    # with open('d1_robot_poses') as f:
     #     robot_poses = pickle.load(f)
 
     print("##### simulation 2: decision making #####")
@@ -1233,7 +1233,7 @@ while True:
             break
 
     # # store the variable "assignment_scheme"
-    # with open('v_assignment_scheme', 'w') as f:
+    # with open('d1_assignment_scheme', 'w') as f:
     #     pickle.dump(assignment_scheme, f)
     # raw_input("<Press Enter to continue>")
     # break
@@ -1241,7 +1241,7 @@ while True:
     ########### simulation 4: loop formation with designated role assignment ###########
 
     # # restore variable "assignment_scheme"
-    # with open('v_assignment_scheme') as f:
+    # with open('d1_assignment_scheme') as f:
     #     assignment_scheme = pickle.load(f)
 
     print("##### simulation 4: loop formation #####")
@@ -1721,7 +1721,7 @@ while True:
                 ending_period = ending_period - frame_period/1000.0
 
     # # store the variable "robot_poses"
-    # with open('v_robot_poses2', 'w') as f:
+    # with open('d1_robot_poses2', 'w') as f:
     #     pickle.dump([robot_poses, robot_key_neighbors], f)
     # raw_input("<Press Enter to continue>")
     # break
@@ -1729,7 +1729,7 @@ while True:
     ########### simulation 5: loop reshaping to chosen shape ###########
 
     # # restore variable "robot_poses"
-    # with open('v_robot_poses2') as f:
+    # with open('d1_robot_poses2') as f:
     #     robot_poses, robot_key_neighbors = pickle.load(f)
 
     print("##### simulation 5: loop reshaping #####")

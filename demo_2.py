@@ -465,32 +465,38 @@ while True:
         # adjusting moving direction for state '1' and '2' robots
         if robot_states[i] == 1:
             no_state1_robot = False
-            # rotating around its only key neighbor, in a direction to get closer to the
-            # closest other key neighbor
-            rotate_dir = 0  # 1 for ccw, -1 for cw
-
-
-
-            # rotating around its only key neighbor
+            # rotating around its key neighbor, get closer to the other key neighbor
             center = robot_key_neighbors[i][0]  # the center robot
-            # use the triangle of (desired_space, dist_table[i,center], step_moving_dist)
             if dist_table[i,center] > (desired_space + step_moving_dist):
                 # moving toward the center robot
-                robot_oris[i] = math.atan2(robot_poses[center,1] - robot_poses[i,1],
-                    robot_poses[center,0] - robot_poses[i,0])
+                vect_temp = robot_poses[center] - robot_poses[i]
+                robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
             elif (dist_table[i,center] + step_moving_dist) < desired_space:
                 # moving away from the center robot
-                robot_oris[i] = math.atan2(robot_poses[i,1] - robot_poses[center,1],
-                    robot_poses[i,0] - robot_poses[center,0])
+                vect_temp = robot_poses[i] - robot_poses[center]
+                robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
             else:
                 # moving tangent along the circle of radius of "desired_space"
-                robot_oris[i] = math.atan2(robot_poses[i,1] - robot_poses[center,1],
-                    robot_poses[i,0] - robot_poses[center,0])
-                # interior angle between 
+                # find the rotating direction to the closer potential neighbor
+                rotate_dir = 0  # 1 for ccw, -1 for cw
+                key_next = -1  # rotating toward to key_next
+                if len(robot_key_neighbors[center]) == 1:
+                    key_next = robot_key_neighbors[center][0]
+                else:
+                    key_next = S1_closest_robot[i, robot_key_neighbors[center]]
+                vect_i = robot_poses[i] - robot_poses[center]
+                vect_next = robot_poses[key_next] - robot_poses[center]
+                if np.cross(vect_i, vect_next) > 0:
+                    rotate_dir = 1  # should rotate ccw
+                else:
+                    rotate_dir = -1  # should rotate cw
+                # calculate the new moving direction
+                robot_oris[i] = math.atan2(vect_i[1], vect_i[0])
                 int_angle_temp = math.acos((math.pow(dist_table[i,center],2) +
                     math.pow(step_moving_dist,2) - math.pow(desired_space,2)) /
                     (2.0*dist_table[i,center]*step_moving_dist))
-                robot_oris[i] = reset_radian(robot_oris[i] + (math.pi - int_angle_temp))
+                robot_oris[i] = reset_radian(robot_oris[i] +
+                    rotate_dir*(math.pi - int_angle_temp))
         elif robot_states[i] == 2:
             # adjusting position to maintain the loop
             if len(robot_key_neighbors[i]) == 1:
@@ -543,6 +549,61 @@ while True:
         robot_poses_temp[i] = robot_poses[i] + (step_moving_dist *
             np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])]))
     robot_poses = np.copy(robot_poses_temp)
+
+    # update the graphics
+    disp_poses_update()
+    screen.fill(color_white)
+    # draw the robots of states '-1' and '0'
+    for i in range(swarm_size):
+        if robot_states[i] == -1:  # empty circle for state '-1' robot
+            pygame.draw.circle(screen, color_grey, disp_poses[i],
+                robot_size, robot_empty_width)
+        elif robot_states[i] == 0:  # full circle for state '0' robot
+            pygame.draw.circle(screen, color_grey, disp_poses[i],
+                robot_size, 0)
+    # draw the in-group robots by group
+    for group_id_temp in groups.keys():
+        if groups[group_id_temp][2]:
+            # highlight the dominant group with black color
+            color_group = color_black
+        else:
+            color_group = color_grey
+        conn_draw_sets = []  # avoid draw same connection two times
+        # draw the robots and connections in the group
+        for i in groups[group_id_temp][0]:
+            pygame.draw.circle(screen, color_group, disp_poses[i],
+                robot_size, 0)
+            for j in robot_key_neighbors[i]:
+                if set([i,j]) not in conn_draw_sets:
+                    pygame.draw.line(screen, color_group, disp_poses[i],
+                        disp_poses[j], conn_width)
+                    conn_draw_sets.append(set([i,j]))
+    pygame.display.update()
+
+    # reduce life time of robot '-1' and groups
+    for i in range(swarm_size):
+        if robot_states[i] == -1:
+            robot_n1_lives[i] = robot_n1_lives[i] - frame_period/1000.0
+    for group_id_temp in groups.keys():
+        if not groups[group_id_temp][2]:  # skip dominant group
+            groups[group_id_temp][1] = groups[group_id_temp][1] - frame_period/1000.0
+
+    # check exit condition of simulation 1
+    if not loop_formed:
+        if ((len(groups.keys()) == 1) and (len(groups.values()[0][0]) == swarm_size)
+            and no_state1_robot):
+            loop_formed = True
+    if loop_formed:
+        if ending_period <= 0:
+            print("simulation 1 is finished")
+            raw_input("<Press Enter to continue>")
+            print("")  # empty line
+            break
+        else:
+            ending_period = ending_period - frame_period/1000.0
+
+
+
 
 
 
