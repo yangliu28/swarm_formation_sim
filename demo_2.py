@@ -19,7 +19,7 @@
 from __future__ import print_function
 import pygame
 import sys, os, getopt, math
-import numpy as numpy
+import numpy as np
 import pickle
 
 swarm_size = 30  # default swarm size
@@ -157,6 +157,82 @@ def S1_closest_robot(robot_host, robot_neighbors):
             dist_closest = dist_temp
     return robot_closest
 
+# function for simulation 1, group robots by their group ids, and find the largest group
+def S14_robot_grouping(robot_list, robot_group_ids, groups):
+    # the input list 'robot_list' should not be empty
+    groups_temp = {}  # key is group id, value is list of robots
+    for i in robot_list:
+        group_id_temp = robot_group_ids[i]
+        if group_id_temp not in groups_temp.keys():
+            groups_temp[group_id_temp] = [i]
+        else:
+            groups_temp[group_id_temp].append(i)
+    group_id_max = -1  # the group with most members
+        # regardless of only one group or multiple groups in groups_temp
+    if len(groups_temp.keys()) > 1:  # there is more than one group
+        # find the largest group and disassemble the rest
+        group_id_max = groups_temp.keys()[0]
+        size_max = len(groups[group_id_max][0])
+        for group_id_temp in groups_temp.keys()[1:]:
+            size_temp = len(groups[group_id_temp][0])
+            if size_temp > size_max:
+                group_id_max = group_id_temp
+                size_max = size_temp
+    else:  # only one group, automatically the largest one
+        group_id_max = groups_temp.keys()[0]
+    return groups_temp, group_id_max
+
+# general function to reset radian angle to [-pi, pi)
+def reset_radian(radian):
+    while radian >= math.pi:
+        radian = radian - 2*math.pi
+    while radian < -math.pi:
+        radian = radian + 2*math.pi
+    return radian
+
+# general function to steer robot away from wall if out of boundary (following physics)
+# use global variable "world_side_length"
+def robot_boundary_check(robot_pos, robot_ori):
+    new_ori = robot_ori
+    if robot_pos[0] >= world_side_length:  # outside of right boundary
+        if math.cos(new_ori) > 0:
+            new_ori = reset_radian(2*(math.pi/2) - new_ori)
+            # further check if new angle is too much perpendicular
+            if new_ori > 0:
+                if (math.pi - new_ori) < perp_thres:
+                    new_ori = new_ori - devia_angle
+            else:
+                if (new_ori + math.pi) < perp_thres:
+                    new_ori = new_ori + devia_angle
+    elif robot_pos[0] <= 0:  # outside of left boundary
+        if math.cos(new_ori) < 0:
+            new_ori = reset_radian(2*(math.pi/2) - new_ori)
+            if new_ori > 0:
+                if new_ori < perp_thres:
+                    new_ori = new_ori + devia_angle
+            else:
+                if (-new_ori) < perp_thres:
+                    new_ori = new_ori - devia_angle
+    if robot_pos[1] >= world_side_length:  # outside of top boundary
+        if math.sin(new_ori) > 0:
+            new_ori = reset_radian(2*(0) - new_ori)
+            if new_ori > -math.pi/2:
+                if (new_ori + math.pi/2) < perp_thres:
+                    new_ori = new_ori + devia_angle
+            else:
+                if (-math.pi/2 - new_ori) < perp_thres:
+                    new_ori = new_ori - devia_angle
+    elif robot_pos[1] <= 0:  # outside of bottom boundary
+        if math.sin(new_ori) < 0:
+            new_ori = reset_radian(2*(0) - new_ori)
+            if new_ori > math.pi/2:
+                if (new_ori - math.pi/2) < perp_thres:
+                    new_ori = new_ori + devia_angle
+            else:
+                if (math.pi/2 - new_ori) < perp_thres:
+                    new_ori = new_ori - devia_angle
+    return new_ori
+
 ########### simulation 1: aggregate together to form a random loop ###########
 
 print("##### simulation 1: loop formation #####")
@@ -271,7 +347,7 @@ while True:
                         # state '-1' robot can only be repelled away by state '2' robot
                         if len(state2_list) != 0:
                             # find the closest neighbor in groups_local[group_id_max]
-                            robot_closest = S14_closest_robot(i, state2_list)
+                            robot_closest = S1_closest_robot(i, state2_list)
                             # change moving direction opposing the closest robot
                             vect_temp = robot_poses[i] - robot_poses[robot_closest]
                             robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
@@ -311,12 +387,12 @@ while True:
                     # find the closest one in the largest group, and join the group
                     groups_local, group_id_max = S14_robot_grouping(state2_list,
                         robot_group_ids, groups)
-                    robot_closest = S14_closest_robot(i, groups_local[group_id_max])
+                    robot_closest = S1_closest_robot(i, groups_local[group_id_max])
                     st_0to1[i] = group_id_max
                     robot_key_neighbors[i] = [robot_closest]  # add key neighbor
             elif state0_quantity != 0:
                 # form new group with state '0' robots
-                st_0to2[i] = S14_closest_robot(i, state0_list)
+                st_0to2[i] = S1_closest_robot(i, state0_list)
         elif (robot_states[i] == 1) or (robot_states[i] == 2):
             # disassemble the minority groups
             state12_list = []  # list of state '1' and '2' robots in the list
@@ -384,19 +460,19 @@ while True:
     for slot_left in st_1to2.keys():
         slot_right = robot_key_neighbors[slot_left][-1]
         joiner = -1  # the accepted joiner in this position
-        if len(st_1to2[left_key]) == 1:
+        if len(st_1to2[slot_left]) == 1:
             joiner = st_1to2[slot_left][0]
         else:
             # find the joiner which is farthest from slot_left
             dist_max = 0
-            for joiner_temp in st_1to2[left_key]:
+            for joiner_temp in st_1to2[slot_left]:
                 dist_temp = dist_table[slot_left,joiner_temp]
                 if dist_temp > dist_max:
                     dist_max = dist_temp
                     joiner = joiner_temp
         # plug in the new state '2' member
         # update the robot properties
-        group_id_temp = robot_group_ids[left_key]
+        group_id_temp = robot_group_ids[slot_left]
         robot_states[joiner] = 2
         robot_group_ids[joiner] = group_id_temp
         robot_key_neighbors[joiner] = [slot_left, slot_right]
@@ -483,7 +559,7 @@ while True:
                 if len(robot_key_neighbors[center]) == 1:
                     key_next = robot_key_neighbors[center][0]
                 else:
-                    key_next = S1_closest_robot[i, robot_key_neighbors[center]]
+                    key_next = S1_closest_robot(i, robot_key_neighbors[center])
                 vect_i = robot_poses[i] - robot_poses[center]
                 vect_next = robot_poses[key_next] - robot_poses[center]
                 if np.cross(vect_i, vect_next) > 0:
@@ -610,11 +686,22 @@ sys.exit()
 
 # simulation 2 and 3 will run repeatedly after here
 while True:
+
     ########### simulation 2: consensus decision making of target loop shape ###########
 
     print("##### simulation 2: consensus decision making #####")
 
+    # restore variable "robot_poses", "robot_key_neighbors"
+    with open('d2_robot_poses') as f:
+        robot_poses, robot_key_neighbors = pickle.load(f)
 
+
+
+
+
+    ########### simulation 3: role assignment and loop reshape ###########
+
+    print("##### simulation 3: role assignment & loop reshape #####")
 
 
 
