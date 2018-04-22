@@ -283,7 +283,7 @@ iter_count = 0
 loop_formed = False
 ending_period = 1.0  # grace period
 print("swarm robots are forming a random loop ...")
-while True:
+while False:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:  # close window button is clicked
             print("program exit in simulation 1")
@@ -678,11 +678,25 @@ while True:
         else:
             ending_period = ending_period - frame_period/1000.0
 
-# store the variable "robot_poses"
-with open('d2_robot_poses', 'w') as f:
-    pickle.dump([robot_poses, robot_key_neighbors], f)
-raw_input("<Press Enter to continue>")
-sys.exit()
+# # check if the loop is complete with all robots
+# # (not necessary but just to be safe)
+# loop_set = set()  # set of robots on the loop
+# robot_starter = 0
+# robot_curr = 0
+# loop_set.add(robot_curr)
+# while (robot_key_neighbors[robot_curr][1] != robot_starter):
+#     robot_next = robot_key_neighbors[robot_curr][1]
+#     loop_set.add(robot_next)
+#     robot_curr = robot_next
+# if (len(loop_set) != swarm_size):
+#     print("loop is incomplete after loop formation")
+#     sys.exit()
+
+# # store the variable "robot_poses"
+# with open('d2_robot_poses', 'w') as f:
+#     pickle.dump([robot_poses, robot_key_neighbors], f)
+# raw_input("<Press Enter to continue>")
+# sys.exit()
 
 # simulation 2 and 3 will run repeatedly after here
 while True:
@@ -695,6 +709,80 @@ while True:
     with open('d2_robot_poses') as f:
         robot_poses, robot_key_neighbors = pickle.load(f)
 
+    # shift the robots to the middle of the window
+    x_max, y_max = np.amax(robot_poses, axis=0)
+    x_min, y_min = np.amin(robot_poses, axis=0)
+    robot_middle = np.array([(x_max+x_min)/2.0, (y_max+y_min)/2.0])
+    world_middle = np.array([world_side_length/2.0, world_side_length/2.0])
+    for i in range(swarm_size):
+        robot_poses[i] = robot_poses[i] - robot_middle + world_middle
+
+    # draw the network for the first time
+    disp_poses_update()
+    screen.fill(color_white)
+    for i in range(swarm_size):
+        pygame.draw.circle(screen, color_black, disp_poses[i], robot_size, 0)
+        pygame.draw.line(screen, color_black, disp_poses[i],
+            disp_poses[robot_key_neighbors[i][1]], conn_width)
+    pygame.display.update()
+
+    # initialize the decision making variables
+    shape_decision = -1
+    deci_dist = np.random.rand(swarm_size, shape_quantity)
+    sum_temp = np.sum(deci_dist, axis=1)
+    for i in range(swarm_size):
+        deci_dist[i] = deci_dist[i] / sum_temp[i]
+    deci_domi = np.argmax(deci_dist, axis=1)
+    groups = []  # group robots by local consensus
+    robot_group_sizes = [0 for i in range(swarm_size)]
+    # color assignment
+    color_initialized = False
+    deci_colors = [-1 for i in range(shape_quantity)]
+    color_assigns = [0 for i in range(color_quantity)]
+    group_colors = []
+    robot_colors = [0 for i in range(swarm_size)]
+    # decision making control variables
+    dist_diff_thres = 0.3
+    dist_diff_ratio = [0.0 for i in range(swarm_size)]
+    dist_diff_power = 0.3
+
+    # the loop for simulation 2
+    sim_haulted = False
+    time_last = pygame.time.get_ticks()
+    time_now = time_last
+    frame_period = 1000
+    sim_freq_control = True
+    iter_count = 0
+    sys.stdout.write("iteration {}".format(iter_count))
+    sys.stdout.flush()
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:  # close window button is clicked
+                print("program exit in simulation 1")
+                sys.exit()  # exit the entire program
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE:
+                    sim_haulted = not sim_haulted  # reverse the pause flag
+        if sim_haulted: continue
+
+        # simulation frequency control
+        if sim_freq_control:
+            time_now = pygame.time.get_ticks()
+            if (time_now - time_last) > frame_period:
+                time_last = time_now
+            else:
+                continue
+
+        # increase iteration count
+        iter_count = iter_count + 1
+        sys.stdout.write("\riteration {}".format(iter_count))
+        sys.stdout.flush()
+
+        # update the dominant decision for all robot
+        deci_domi = np.argmax(deci_dist, axis=1)
+        # update the groups
+        groups = []  # empty the group container
+        
 
 
 
