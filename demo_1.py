@@ -1873,7 +1873,7 @@ while True:
 
         # check exit condition of simulation 5
         if inter_err_max < inter_err_thres:
-            print("simulation 4 is finished")
+            print("simulation 5 is finished")
             raw_input("<Press Enter to continue>")
             print("")  # empty line
             break
