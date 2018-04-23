@@ -1865,10 +1865,7 @@ while True:
         pygame.display.update()
 
         # calculate the maximum error of interior angle
-        inter_err_max = 0
-        for i in range(swarm_size):
-            err_curr = abs(inter_curr[i] - inter_target[i])
-            if err_curr > inter_err_max: inter_err_max = err_curr
+        inter_err_max = max(np.absolute(inter_curr - inter_target))
         # print("current maximum error of interior angle: {}".format(inter_err_max))
 
         # check exit condition of simulation 5

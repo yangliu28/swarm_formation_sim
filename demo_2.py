@@ -677,15 +677,18 @@ while False:
         else:
             ending_period = ending_period - frame_period/1000.0
 
-# # check if the loop is complete with all robots
-# # (not necessary but just to be safe)
+# # check if the loop is complete; calculate robots' order on loop
 # loop_set = set()  # set of robots on the loop
 # robot_starter = 0
 # robot_curr = 0
 # loop_set.add(robot_curr)
+# robot_loop_orders = np.zeros(swarm_size)  # robot's order on loop
+# order_count = 0
 # while (robot_key_neighbors[robot_curr][1] != robot_starter):
 #     robot_next = robot_key_neighbors[robot_curr][1]
 #     loop_set.add(robot_next)
+#     order_count = order_count + 1
+#     robot_loop_orders[robot_next] = order_count
 #     robot_curr = robot_next
 # if (len(loop_set) != swarm_size):
 #     print("loop is incomplete after loop formation")
@@ -693,7 +696,7 @@ while False:
 
 # # store the variable "robot_poses"
 # with open('d2_robot_poses', 'w') as f:
-#     pickle.dump([robot_poses, robot_key_neighbors], f)
+#     pickle.dump([robot_poses, robot_key_neighbors, robot_loop_orders], f)
 # raw_input("<Press Enter to continue>")
 # sys.exit()
 
@@ -706,7 +709,8 @@ while True:
 
     # restore variable "robot_poses", "robot_key_neighbors"
     with open('d2_robot_poses') as f:
-        robot_poses, robot_key_neighbors = pickle.load(f)
+        robot_poses, robot_key_neighbors, robot_loop_orders = pickle.load(f)
+        robot_loop_orders = robot_loop_orders.astype(int)
 
     # shift the robots to the middle of the window
     x_max, y_max = np.amax(robot_poses, axis=0)
@@ -824,7 +828,7 @@ while True:
                 color_temp = deci_colors[deci_temp]  # corresponding color for deci_temp
                 if (color_temp != -1 and deci_temp not in deci_set):
                     color_assigns[color_temp] = color_assigns[color_temp] - 1
-                    deci_colors[i] = -1
+                    deci_colors[deci_temp] = -1
             # assign color for a new decision
             color_set = []
             for i in range(len(groups)):
@@ -1014,7 +1018,7 @@ while True:
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))
     sys.stdout.flush()
-    inter_err_thres = 0.05
+    inter_err_thres = 0.2
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
@@ -1060,8 +1064,8 @@ while True:
                 groups[0].insert(0,i)
             groups.pop(-1)
         # the decisions for the groups
-        group_deci = [(deci_domi[groups[i][0]] -
-            groups[i][0])%swarm_size for i in range(len(groups))]
+        group_deci = [(deci_domi[group_temp[0]] -
+            robot_loop_orders[group_temp[0]]) % swarm_size for group_temp in groups]
         # update group sizes for robots
         for group_temp in groups:
             group_temp_size = len(group_temp)
@@ -1087,7 +1091,7 @@ while True:
                 color_temp = deci_colors[deci_temp]  # corresponding color for deci_temp
                 if (color_temp != -1 and deci_temp not in deci_set):
                     color_assigns[color_temp] = color_assigns[color_temp] - 1
-                    deci_colors[i] = -1
+                    deci_colors[deci_temp] = -1
             # assign color for a new decision
             color_set = []
             for i in range(len(groups)):
@@ -1233,7 +1237,10 @@ while True:
         pygame.display.update()
 
         # calculate the maximum error of interior angle
-        inter_err_max = max(np.absolute(inter_curr - inter_target))
+        inter_err_max = 0
+        for i in range(swarm_size):
+            err_curr = abs(inter_curr[i] - inter_target[deci_domi[i]])
+            if err_curr > inter_err_max: inter_err_max = err_curr
 
         # check exit condition of simulation 3
         if converged_all and inter_err_max < inter_err_thres:
@@ -1241,7 +1248,5 @@ while True:
             raw_input("<Press Enter to continue>")
             print("")  # empty line
             break
-    sys.exit()
-
 
 
