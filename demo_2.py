@@ -12,7 +12,7 @@
 
 # the simulations that run consecutively
 # Simulation 1: aggregate together to form a random loop
-    # Simulation 2: consensus decision making of target loop shape
+    # Simulation 2: consensus decision making for target loop shape
     # Simulation 3: role assignment and loop reshape
 
 
@@ -157,7 +157,7 @@ def S1_closest_robot(robot_host, robot_neighbors):
     return robot_closest
 
 # function for simulation 1, group robots by their group ids, and find the largest group
-def S14_robot_grouping(robot_list, robot_group_ids, groups):
+def S1_robot_grouping(robot_list, robot_group_ids, groups):
     # the input list 'robot_list' should not be empty
     groups_temp = {}  # key is group id, value is list of robots
     for i in robot_list:
@@ -333,7 +333,7 @@ while False:
                         state1_list.append(j)
                 # either disassemble minority groups, or get repelled by robot '2'
                 if len(state2_list) + len(state1_list) != 0:
-                    groups_local, group_id_max = S14_robot_grouping(
+                    groups_local, group_id_max = S1_robot_grouping(
                         state2_list + state1_list, robot_group_ids, groups)
                     if len(groups_local.keys()) > 1:
                         # disassemble all groups except the largest one
@@ -368,7 +368,7 @@ while False:
             # disassemble minority groups if there are multiple groups
             if state2_quantity + state1_quantity > 1:
                 # there is in-group robot in the neighbors
-                groups_local, group_id_max = S14_robot_grouping(state2_list+state1_list,
+                groups_local, group_id_max = S1_robot_grouping(state2_list+state1_list,
                     robot_group_ids, groups)
                 # disassmeble all groups except the largest one
                 for group_id_temp in groups_local.keys():
@@ -384,7 +384,7 @@ while False:
                 else:  # multiple state '2' robots
                     # it's possible that the state '2' robots are in different groups
                     # find the closest one in the largest group, and join the group
-                    groups_local, group_id_max = S14_robot_grouping(state2_list,
+                    groups_local, group_id_max = S1_robot_grouping(state2_list,
                         robot_group_ids, groups)
                     robot_closest = S1_closest_robot(i, groups_local[group_id_max])
                     st_0to1[i] = group_id_max
@@ -403,7 +403,7 @@ while False:
                     if robot_group_ids[j] != host_group_id:
                         has_other_group = True
             if has_other_group:
-                groups_local, group_id_max = S14_robot_grouping(state12_list,
+                groups_local, group_id_max = S1_robot_grouping(state12_list,
                     robot_group_ids, groups)
                 for group_id_temp in groups_local.keys():
                     if (group_id_temp != group_id_max) and (group_id_temp not in st_gton1):
@@ -703,7 +703,7 @@ while False:
 # simulation 2 and 3 will run repeatedly since here
 while True:
 
-    ########### simulation 2: consensus decision making of target loop shape ###########
+    ########### simulation 2: consensus decision making for target loop shape ###########
 
     print("##### simulation 2: consensus decision making #####")
 
