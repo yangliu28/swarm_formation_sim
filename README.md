@@ -67,6 +67,10 @@ Demo 3 (line formation + (decision making + line reshape)):
 
 `python demo_3.py -n 30`
 
+## Publications
+
+To be added.
+
 ## License
 See the [LICENSE](LICENSE.md) file for license rights and limitations (MIT).
 

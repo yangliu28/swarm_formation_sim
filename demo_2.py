@@ -534,7 +534,7 @@ while False:
             groups[group_id_temp][2] = False
 
     # update the physics
-    robot_poses_temp = np.copy(robot_poses)  # temporary variable for robot positions
+    robot_poses_t = np.copy(robot_poses)  # as old poses
     no_state1_robot = True
     for i in range(swarm_size):
         # adjusting moving direction for state '1' and '2' robots
@@ -544,11 +544,11 @@ while False:
             center = robot_key_neighbors[i][0]  # the center robot
             if dist_table[i,center] > (desired_space + step_moving_dist):
                 # moving toward the center robot
-                vect_temp = robot_poses[center] - robot_poses[i]
+                vect_temp = robot_poses_t[center] - robot_poses_t[i]
                 robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
             elif (dist_table[i,center] + step_moving_dist) < desired_space:
                 # moving away from the center robot
-                vect_temp = robot_poses[i] - robot_poses[center]
+                vect_temp = robot_poses_t[i] - robot_poses_t[center]
                 robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
             else:
                 # moving tangent along the circle of radius of "desired_space"
@@ -559,8 +559,8 @@ while False:
                     key_next = robot_key_neighbors[center][0]
                 else:
                     key_next = S1_closest_robot(i, robot_key_neighbors[center])
-                vect_i = robot_poses[i] - robot_poses[center]
-                vect_next = robot_poses[key_next] - robot_poses[center]
+                vect_i = robot_poses_t[i] - robot_poses_t[center]
+                vect_next = robot_poses_t[key_next] - robot_poses_t[center]
                 if np.cross(vect_i, vect_next) > 0:
                     rotate_dir = 1  # should rotate ccw
                 else:
@@ -581,11 +581,11 @@ while False:
                     continue  # stay in position if within destination error
                 else:
                     if dist_table[i,j] > desired_space:
-                        robot_oris[i] = math.atan2(robot_poses[j,1] - robot_poses[i,1],
-                            robot_poses[j,0] - robot_poses[i,0])
+                        robot_oris[i] = math.atan2(robot_poses_t[j,1] - robot_poses_t[i,1],
+                            robot_poses_t[j,0] - robot_poses_t[i,0])
                     else:
-                        robot_oris[i] = math.atan2(robot_poses[i,1] - robot_poses[j,1],
-                            robot_poses[i,0] - robot_poses[j,0])
+                        robot_oris[i] = math.atan2(robot_poses_t[i,1] - robot_poses_t[j,1],
+                            robot_poses_t[i,0] - robot_poses_t[j,0])
             else:
                 # normal situation with at least three members in the group
                 group_id_temp = robot_group_ids[i]
@@ -597,9 +597,9 @@ while False:
                 # use the SMA algorithm to achieve the desired interior angle
                 left_key = robot_key_neighbors[i][0]
                 right_key = robot_key_neighbors[i][1]
-                vect_l = (robot_poses[left_key] - robot_poses[i]) / dist_table[i,left_key]
-                vect_r = (robot_poses[right_key] - robot_poses[i]) / dist_table[i,right_key]
-                vect_lr = robot_poses[right_key] - robot_poses[left_key]
+                vect_l = (robot_poses_t[left_key] - robot_poses_t[i]) / dist_table[i,left_key]
+                vect_r = (robot_poses_t[right_key] - robot_poses_t[i]) / dist_table[i,right_key]
+                vect_lr = robot_poses_t[right_key] - robot_poses_t[left_key]
                 vect_lr_dist = np.linalg.norm(vect_lr)
                 vect_in = np.array([-vect_lr[1], vect_lr[0]]) / vect_lr_dist
                 inter_curr = math.acos(np.dot(vect_l, vect_r))  # interior angle
@@ -619,11 +619,10 @@ while False:
         # check if out of boundaries
         if (robot_states[i] == -1) or (robot_states[i] == 0):
             # only applies for state '-1' and '0'
-            robot_oris[i] = robot_boundary_check(robot_poses[i], robot_oris[i])
+            robot_oris[i] = robot_boundary_check(robot_poses_t[i], robot_oris[i])
         # update one step of move
-        robot_poses_temp[i] = robot_poses[i] + (step_moving_dist *
+        robot_poses[i] = robot_poses_t[i] + (step_moving_dist *
             np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])]))
-    robot_poses = np.copy(robot_poses_temp)
 
     # update the graphics
     disp_poses_update()

@@ -164,6 +164,20 @@ def S1_robot_grouping(robot_list, robot_group_ids, groups):
         group_id_max = groups_temp.keys()[0]
     return groups_temp, group_id_max
 
+# function for simulation 1, find the closest robot to a host robot
+# use global variable "dist_table"
+def S1_closest_robot(robot_host, robot_neighbors):
+    # "robot_host": the robot to measure distance from
+    # "robot_neighbors": a list of robots to be compared with
+    robot_closest = robot_neighbors[0]
+    dist_closest = dist_table[robot_host,robot_closest]
+    for i in robot_neighbors[1:]:
+        dist_temp = dist_table[robot_host,i]
+        if dist_temp < dist_closest:
+            robot_closest = i
+            dist_closest = dist_temp
+    return robot_closest
+
 # general function to steer robot away from wall if out of boundary (following physics)
 # use global variable "world_side_length"
 def robot_boundary_check(robot_pos, robot_ori):
@@ -207,6 +221,14 @@ def robot_boundary_check(robot_pos, robot_ori):
                     new_ori = new_ori - devia_angle
     return new_ori
 
+# general function to reset radian angle to [-pi, pi)
+def reset_radian(radian):
+    while radian >= math.pi:
+        radian = radian - 2*math.pi
+    while radian < -math.pi:
+        radian = radian + 2*math.pi
+    return radian
+
 ########### simulation 1: aggregate together to form a straight line ###########
 
 print("##### simulation 1: line formation #####")
@@ -242,10 +264,6 @@ robot_group_ids = np.array([-1 for i in range(swarm_size)])  # group id for the 
 step_moving_dist = 0.05  # should be smaller than destination distance error
 destination_error = 0.08
 mov_vec_ratio = 0.5  # ratio used when calculating mov vector
-# spring constants in SMA
-linear_const = 1.0
-bend_const = 0.8
-disp_coef = 0.5
 
 # the loop for simulation 1
 sim_haulted = False
@@ -255,9 +273,9 @@ frame_period = 50
 sim_freq_control = True
 iter_count = 0
 line_formed = False
-ending_period = 1.0  # grace period
+ending_period = 5.0  # grace period
 print("swarm robots are forming a straight line ...")
-while False:
+while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:  # close window button is clicked
             print("program exit in simulation 1")
@@ -288,7 +306,7 @@ while False:
     st_0to2 = {}  # robot '0' detects another robot '0', forming a new group
         # key is the robot '0', value is the other neighbor robot '0'
     st_1to2 = {}  # robot '1' finds another key neighbor, becoming '2'
-        # key is the key neighbor, value is a list comprising side and id of robot '1'
+        # key is the robot '1', value is its key neighbor and merging side
         # sides: 0 for left side, 1 for right side
 
     # check state transitions, and schedule the tasks
@@ -378,69 +396,290 @@ while False:
                 if (robot_key_neighbors[key][0] == -1 or robot_key_neighbors[key][1] == -1):
                     # the key neighbor is on one end of the line
                     if (robot_key_neighbors[key][0] == -1 and
-                        robot_key_neighbors[key][1] != -1):  # key at left end
+                        robot_key_neighbors[key][1] != -1):  # key is at left end
                         key_next = robot_key_neighbors[key][1]
-                        if key_next in conn_lists[i]:
-                            vect_next = robot_poses[key_next] - robot_poses[key]
-                            vect_i = robot_poses[i] - robot_poses[key]
-                            # deciding merging side
-                            side = -1
-                            if np.dot(vect_next,vect_i) > 0: side = 1  # merge on right side
-                            else: side = 0  # merge on left side
-                            # schedule the merging task
-                            if key in st_1to2.keys():
-                                st_1to2[key].append(set([side,i]))
-                            else:
-                                st_1to2[key] = [set([side,i])]
+                        vect_next = robot_poses[key_next] - robot_poses[key]
+                        vect_i = robot_poses[i] - robot_poses[key]
+                        # whether to merge depends on the side
+                        if np.dot(vect_next,vect_i) > 0:
+                            if key_next in conn_lists[i]:
+                               st_1to2[i] = [key, 1]
+                        else:
+                            st_1to2[i] = [key, 0]
                     elif (robot_key_neighbors[key][0] != -1 and
-                        robot_key_neighbors[key][1] == -1):  # key at right end
+                        robot_key_neighbors[key][1] == -1):  # key is at right end
                         key_next = robot_key_neighbors[key][0]
-                        if key_next in conn_lists[i]:
-                            vect_next = robot_poses[key_next] - robot_poses[key]
-                            vect_i = robot_poses[i] - robot_poses[key]
-                            side = -1
-                            if np.dot(vect_next,vect_i) > 0: side = 0  # merge on left side
-                            else: side = 1  # merge on right side
-                            if key in st_1to2.keys():
-                                st_1to2[key].append(set([side,i]))
-                            else:
-                                st_1to2[key] = [set([side,i])]
+                        vect_next = robot_poses[key_next] - robot_poses[key]
+                        vect_i = robot_poses[i] - robot_poses[key]
+                        if np.dot(vect_next,vect_i) > 0:
+                            if key_next in conn_lists[i]:
+                               st_1to2[i] = [key, 0]
+                        else:
+                            st_1to2[i] = [key, 1]
                     else:
-                        print("key neighbor error")
+                        print("key neighbor error(st check)")
                         sys.exit()
                 else:  # the key neighbor is in the middle of the line
                     key_left = robot_key_neighbors[key][0]
                     key_right = robot_key_neighbors[key][1]
                     if (key_left in conn_lists[i] and key_right in conn_lists[i]):
                         side = -1
-                        # check which one is closer
-                        if dist_table[i,key_left] < dist_table[i,key_right]:
-                            side = 0  # left side
-                        else:
-                            side = 1
-                        # schedule the merging task
-                        if key in st_1to2.keys():
-                            st_1to2[key].append(set([side,i]))
-                        else:
-                            st_1to2[key] = [set([side,i])]
+                        if dist_table[i,key_left] < dist_table[i,key_right]: side = 0
+                        else: side = 1
+                        st_1to2[i] = [key, side]
                     elif (key_left in conn_lists[i] and key_right not in conn_lists[i]):
-                        # schedule the merging task
-                        if key in st_1to2.keys():
-                            st_1to2[key].append(set([0,i]))
-                        else:
-                            st_1to2[key] = [set([0,i])]
+                        st_1to2[i] = [key, 0]
                     elif (key_left not in conn_lists[i] and key_right in conn_lists[i]):
-                        # schedule the merging task
-                        if key in st_1to2.keys():
-                            st_1to2[key].append(set([1,i]))
-                        else:
-                            st_1to2[key] = [set([1,i])]
+                        st_1to2[i] = [key, 1]
 
     # check the life time of the groups; schedule disassembling if expired
     for group_id_temp in groups.keys():
         if groups[group_id_temp][1] < 0:  # life time of a group ends
             if group_id_temp not in st_gton1:
                 st_gton1.append(group_id_temp)
+
+    # process the state transitions
+    # 1.st_1to2, state '1' becomes state '2'
+    while len(st_1to2.keys()) != 0:
+        joiner = st_1to2.keys()[0]
+        key = st_1to2[joiner][0]
+        side = st_1to2[joiner][1]
+        side_other = 1 - side
+        st_1to2.pop(joiner)
+        if robot_key_neighbors[key][side] == -1:  # join at one end
+            # check if other robots are join the same slot
+            key_rest = st_1to2.keys()[:]
+            for joiner_temp in key_rest:
+                if (st_1to2[joiner_temp][0] == key and st_1to2[joiner_temp][1] == side):
+                    # "joiner_temp" is joining same slot as "joiner"
+                    st_1to2.pop(joiner_temp)
+                    if dist_table[key,joiner] > dist_table[key,joiner_temp]:
+                        joiner = joiner_temp
+            # merge the robot at the end
+            robot_states[joiner] = 2
+            if side == 0: robot_key_neighbors[joiner] = [-1,key]
+            else: robot_key_neighbors[joiner] = [key,-1]
+            robot_key_neighbors[key][side] = joiner
+        else:  # join in between
+            key_other = robot_key_neighbors[key][side]
+            side_other = 1 - side
+            des_pos = (robot_poses[key] + robot_poses[key_other]) / 2.0
+            # check if other robots are join the same slot
+            key_rest = st_1to2.keys()[:]
+            for joiner_temp in key_rest:
+                if ((st_1to2[joiner_temp][0] == key and st_1to2[joiner_temp][1] == side) or
+                    (st_1to2[joiner_temp][0] == key_next and st_1to2[joiner_temp][1] == side_other)):
+                    # "joiner_temp" is joining same slot as "joiner"
+                    st_1to2.pop(joiner_temp)
+                    if dist_table[key,joiner] > dist_table[key,joiner_temp]:
+                        joiner = joiner_temp
+            # merge the robot in between
+            robot_states[joiner] = 2
+            if side == 0:
+                robot_key_neighbors[joiner] = [key_other,key]
+            else:
+                robot_key_neighbors[joiner] = [key,key_other]
+            robot_key_neighbors[key][side] = joiner
+            robot_key_neighbors[key_other][side_other] = joiner
+    # 2.st_0to1, robot '0' joins a group, becoming '1'
+    for joiner in st_0to1.keys():
+        group_id_temp = st_0to1[joiner]
+        # update the robot properties
+        robot_states[joiner] = 1
+        robot_group_ids[joiner] = group_id_temp
+        # update the group properties
+        groups[group_id_temp][0].append(joiner)
+        groups[group_id_temp][1] = groups[group_id_temp][1] + life_incre
+    # 3.st_0to2, robot '0' forms new group with '0', both becoming '2'
+    while len(st_0to2.keys()) != 0:
+        pair0 = st_0to2.keys()[0]
+        pair1 = st_0to2[pair0]
+        st_0to2.pop(pair0)
+        if (pair1 in st_0to2.keys()) and (st_0to2[pair1] == pair0):
+            st_0to2.pop(pair1)
+            # only forming a group if there is at least one seed robot in the pair
+            if robot_seeds[pair0] or robot_seeds[pair1]:
+                # forming new group for robot pair0 and pair1
+                group_id_temp = np.random.randint(0, group_id_upper)
+                while group_id_temp in groups.keys():
+                    group_id_temp = np.random.randint(0, group_id_upper)
+                # update properties of the robots
+                robot_states[pair0] = 2
+                robot_states[pair1] = 2
+                robot_group_ids[pair0] = group_id_temp
+                robot_group_ids[pair1] = group_id_temp
+                robot_key_neighbors[pair0] = [-1,pair1]  # pair0 automatically becomes left end
+                robot_key_neighbors[pair1] = [pair0,-1]  # pair1 becomes right end
+                # update properties of the group
+                groups[group_id_temp] = [[pair0, pair1], life_incre*2, False]
+    # 4.st_gton1, groups get disassembled, life time ends or triggered by others
+    for group_id_temp in st_gton1:
+        for robot_temp in groups[group_id_temp][0]:
+            robot_states[robot_temp] = -1
+            robot_n1_lives[robot_temp] = np.random.uniform(n1_life_lower, n1_life_upper)
+            robot_group_ids[robot_temp] = -1
+            robot_oris[robot_temp] = np.random.rand() * 2 * math.pi - math.pi
+            robot_key_neighbors[robot_temp] = []
+        groups.pop(group_id_temp)
+    # 5.st_n1to0, life time of robot '-1' ends, get back to '0'
+    for robot_temp in st_n1to0:
+        robot_states[robot_temp] = 0
+
+    # check if a group becomes dominant
+    for group_id_temp in groups.keys():
+        if len(groups[group_id_temp][0]) > swarm_size/2.0:
+            groups[group_id_temp][2] = True
+        else:
+            groups[group_id_temp][2] = False
+
+    # update the physics
+    robot_poses_t = np.copy(robot_poses)  # as old poses
+    no_state1_robot = True
+    for i in range(swarm_size):
+        # adjusting moving direction for state '1' and '2' robots
+        if robot_states[i] == 1:
+            no_state1_robot = False
+            # rotating around its key neighbor, get closer to the other key neighbor
+            center = robot_key_neighbors[i][0]  # the center robot
+            if dist_table[i,center] > (desired_space + step_moving_dist):
+                # moving toward the center robot
+                vect_temp = robot_poses_t[center] - robot_poses_t[i]
+                robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
+            elif (dist_table[i,center] + step_moving_dist) < desired_space:
+                # moving away from the center robot
+                vect_temp = robot_poses_t[i] - robot_poses_t[center]
+                robot_oris[i] = math.atan2(vect_temp[1], vect_temp[0])
+            else:
+                # moving tangent along the circle of radius of "desired_space"
+                # find the rotating direction to the closer potential neighbor
+                rotate_dir = 0  # 1 for ccw, -1 for cw
+                if (robot_key_neighbors[center][0] == -1 or
+                    robot_key_neighbors[center][1] == -1):
+                    key_next = -1  # rotating toward to key_next
+                    if (robot_key_neighbors[center][0] == -1 and
+                        robot_key_neighbors[center][1] != -1):
+                        key_next = robot_key_neighbors[center][1]
+                    elif (robot_key_neighbors[center][0] != -1 and
+                        robot_key_neighbors[center][1] == -1):
+                        key_next = robot_key_neighbors[center][0]
+                    else:
+                        print("key neighbor error(physics update1)")
+                        sys.exit()
+                    vect_next = robot_poses[key_next] - robot_poses[center]
+                    vect_i = robot_poses[i] - robot_poses[center]
+                    if np.dot(vect_next, vect_i) > 0:
+                        if np.cross(vect_i, vect_next) > 0: rotate_dir = 1
+                        else: rotate_dir = -1
+                    else: continue  # stay in position if out at one end
+                else:
+                    key_left = robot_key_neighbors[center][0]
+                    key_right = robot_key_neighbors[center][1]
+                    key_next = -1
+                    if dist_table[i,key_left] < dist_table[i,key_right]: key_next = key_left
+                    else: key_next = key_right
+                    vect_next = robot_poses[key_next] - robot_poses[center]
+                    vect_i = robot_poses[i] - robot_poses[center]
+                    if np.cross(vect_i, vect_next) > 0: rotate_dir = 1
+                    else: rotate_dir = -1
+                # calculate the new moving direction
+                vect_i = robot_poses[i] - robot_poses[center]
+                robot_oris[i] = math.atan2(vect_i[1], vect_i[0])
+                int_angle_temp = math.acos((math.pow(dist_table[i,center],2) +
+                    math.pow(step_moving_dist,2) - math.pow(desired_space,2)) /
+                    (2.0*dist_table[i,center]*step_moving_dist))
+                robot_oris[i] = reset_radian(robot_oris[i] +
+                    rotate_dir*(math.pi - int_angle_temp))
+        elif robot_states[i] == 2:
+            # adjusting position to maintain the loop
+            if (robot_key_neighbors[i][0] == -1 or robot_key_neighbors[i][1] == -1):
+                key = -1
+                key_other = -1
+                if (robot_key_neighbors[i][0] == -1 and robot_key_neighbors[i][1] != -1):
+                    key = robot_key_neighbors[i][1]
+                    key_other = robot_key_neighbors[key][1]
+                elif (robot_key_neighbors[i][0] != -1 and robot_key_neighbors[i][1] == -1):
+                    key = robot_key_neighbors[i][0]
+                    key_other = robot_key_neighbors[key][0]
+                else:
+                    print("key neighbor error(physics update2)")
+                    sys.exit()
+                vect_line = robot_poses[key] - robot_poses[key_other]
+                vect_line = vect_line / np.linalg.norm(vect_line)
+                des_pos = robot_poses[key] + vect_line*desired_space
+                vect_des = des_pos - robot_poses[i]
+                if np.linalg.norm(vect_des) < destination_error:
+                    continue
+                else:
+                    robot_oris[i] = math.atan2(vect_des[1], vect_des[0])
+            else:
+                key_left = robot_key_neighbors[i][0]
+                key_right = robot_key_neighbors[i][1]
+                des_pos = (robot_poses[key_left] + robot_poses[key_right]) / 2.0
+                vect_des = des_pos - robot_poses[i]
+                if np.linalg.norm(vect_des) < destination_error:
+                    continue
+                else:
+                    robot_oris[i] = math.atan2(vect_des[1], vect_des[0])
+        # check if out of boundaries
+        if (robot_states[i] == -1) or (robot_states[i] == 0):
+            # only applies for state '-1' and '0'
+            robot_oris[i] = robot_boundary_check(robot_poses_t[i], robot_oris[i])
+        # update one step of move
+        robot_poses[i] = robot_poses_t[i] + (step_moving_dist *
+            np.array([math.cos(robot_oris[i]), math.sin(robot_oris[i])]))
+
+    # update the graphics
+    disp_poses_update()
+    screen.fill(color_white)
+    # draw the robots of states '-1' and '0'
+    for i in range(swarm_size):
+        if robot_states[i] == -1:  # empty circle for state '-1' robot
+            pygame.draw.circle(screen, color_grey, disp_poses[i],
+                robot_size, robot_empty_width)
+        elif robot_states[i] == 0:  # full circle for state '0' robot
+            pygame.draw.circle(screen, color_grey, disp_poses[i],
+                robot_size, 0)
+    # draw the in-group robots by group
+    for group_id_temp in groups.keys():
+        if groups[group_id_temp][2]:
+            # highlight the dominant group with black color
+            color_group = color_black
+        else:
+            color_group = color_grey
+        conn_draw_sets = []  # avoid draw same connection two times
+        # draw the robots and connections in the group
+        for i in groups[group_id_temp][0]:
+            pygame.draw.circle(screen, color_group, disp_poses[i],
+                robot_size, 0)
+            for j in robot_key_neighbors[i]:
+                if j == -1: continue
+                if set([i,j]) not in conn_draw_sets:
+                    pygame.draw.line(screen, color_group, disp_poses[i],
+                        disp_poses[j], conn_width)
+                    conn_draw_sets.append(set([i,j]))
+    pygame.display.update()
+
+    # reduce life time of robot '-1' and groups
+    for i in range(swarm_size):
+        if robot_states[i] == -1:
+            robot_n1_lives[i] = robot_n1_lives[i] - frame_period/1000.0
+    for group_id_temp in groups.keys():
+        if not groups[group_id_temp][2]:  # skip dominant group
+            groups[group_id_temp][1] = groups[group_id_temp][1] - frame_period/1000.0
+
+    # check exit condition of simulation 1
+    if not line_formed:
+        if ((len(groups.keys()) == 1) and (len(groups.values()[0][0]) == swarm_size)
+            and no_state1_robot):
+            line_formed = True
+    if line_formed:
+        if ending_period <= 0:
+            print("simulation 1 is finished")
+            raw_input("<Press Enter to continue>")
+            print("")  # empty line
+            break
+        else:
+            ending_period = ending_period - frame_period/1000.0
 
 
 
