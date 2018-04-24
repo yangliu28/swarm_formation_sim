@@ -261,14 +261,20 @@ robot_group_ids = np.array([-1 for i in range(swarm_size)])  # group id for the 
     # '-1' for not in a group
 
 # movement configuration
-step_moving_dist = 0.05  # should be smaller than destination distance error
+step_moving_dist = 0.02  # line formation needs smaller moving step
+destination_error = 0.025
+step_moving_dist = 0.05
 destination_error = 0.08
-mov_vec_ratio = 0.5  # ratio used when calculating mov vector
+# spring constants in SMA
+linear_const = 1.0
+bend_const = 0.8
+disp_coef = 0.5
 
 # the loop for simulation 1
 sim_haulted = False
 time_last = pygame.time.get_ticks()
 time_now = time_last
+frame_period = 20  # bacause of small moving step
 frame_period = 50
 sim_freq_control = True
 iter_count = 0
@@ -593,18 +599,28 @@ while True:
             # adjusting position to maintain the loop
             if (robot_key_neighbors[i][0] == -1 or robot_key_neighbors[i][1] == -1):
                 key = -1
-                key_other = -1
+                vect_line = np.zeros(2)
                 if (robot_key_neighbors[i][0] == -1 and robot_key_neighbors[i][1] != -1):
                     key = robot_key_neighbors[i][1]
-                    key_other = robot_key_neighbors[key][1]
+                    if robot_key_neighbors[key][1] == -1:
+                        vect_line = robot_poses[i] - robot_poses[key]
+                        vect_line = vect_line / np.linalg.norm(vect_line)
+                    else:
+                        key_other = robot_key_neighbors[key][1]
+                        vect_line = robot_poses[key] - robot_poses[key_other]
+                        vect_line = vect_line / np.linalg.norm(vect_line)
                 elif (robot_key_neighbors[i][0] != -1 and robot_key_neighbors[i][1] == -1):
                     key = robot_key_neighbors[i][0]
-                    key_other = robot_key_neighbors[key][0]
+                    if robot_key_neighbors[key][0] == -1:
+                        vect_line = robot_poses[i] - robot_poses[key]
+                        vect_line = vect_line / np.linalg.norm(vect_line)
+                    else:
+                        key_other = robot_key_neighbors[key][0]
+                        vect_line = robot_poses[key] - robot_poses[key_other]
+                        vect_line = vect_line / np.linalg.norm(vect_line)
                 else:
                     print("key neighbor error(physics update2)")
                     sys.exit()
-                vect_line = robot_poses[key] - robot_poses[key_other]
-                vect_line = vect_line / np.linalg.norm(vect_line)
                 des_pos = robot_poses[key] + vect_line*desired_space
                 vect_des = des_pos - robot_poses[i]
                 if np.linalg.norm(vect_des) < destination_error:
@@ -614,12 +630,37 @@ while True:
             else:
                 key_left = robot_key_neighbors[i][0]
                 key_right = robot_key_neighbors[i][1]
-                des_pos = (robot_poses[key_left] + robot_poses[key_right]) / 2.0
-                vect_des = des_pos - robot_poses[i]
-                if np.linalg.norm(vect_des) < destination_error:
-                    continue
+
+
+
+                vect_l = (robot_poses_t[key_left] - robot_poses_t[i]) / dist_table[i,key_left]
+                vect_r = (robot_poses_t[key_right] - robot_poses_t[i]) / dist_table[i,key_right]
+                vect_lr = robot_poses_t[key_right] - robot_poses_t[key_left]
+                vect_lr_dist = np.linalg.norm(vect_lr)
+                vect_in = np.array([-vect_lr[1], vect_lr[0]]) / vect_lr_dist
+                inter_curr = math.acos(np.dot(vect_l, vect_r))  # interior angle
+                if np.cross(vect_r, vect_l) < 0:
+                    inter_curr = 2*math.pi - inter_curr
+                fb_vect = np.zeros(2)  # feedback vector to accumulate spring effects
+                fb_vect = fb_vect + ((dist_table[i,key_left] - desired_space) *
+                    linear_const * vect_l)
+                fb_vect = fb_vect + ((dist_table[i,key_right] - desired_space) *
+                    linear_const * vect_r)
+                fb_vect = fb_vect + ((math.pi - inter_curr) * bend_const * vect_in)
+                if np.linalg.norm(fb_vect)*disp_coef < destination_error:
+                    continue  # stay in position if within destination error
                 else:
-                    robot_oris[i] = math.atan2(vect_des[1], vect_des[0])
+                    robot_oris[i] = math.atan2(fb_vect[1], fb_vect[0])
+
+
+
+
+                # des_pos = (robot_poses[key_left] + robot_poses[key_right]) / 2.0
+                # vect_des = des_pos - robot_poses[i]
+                # if np.linalg.norm(vect_des) < destination_error:
+                #     continue
+                # else:
+                #     robot_oris[i] = math.atan2(vect_des[1], vect_des[0])
         # check if out of boundaries
         if (robot_states[i] == -1) or (robot_states[i] == 0):
             # only applies for state '-1' and '0'
