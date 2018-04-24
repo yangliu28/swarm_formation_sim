@@ -225,7 +225,7 @@ robot_oris = np.random.rand(swarm_size) * 2 * math.pi - math.pi  # in range of [
 robot_key_neighbors = [[] for i in range(swarm_size)]  # key neighbors for robot on the line
     # for state '1' robot: one key neighbor
     # for state '2' robot: two key neighbor on its left and right sides
-        # except for robots on the two ends
+        # robots on the two ends will have one key neighbor being '-1'
 
 # group properties
 groups = {}
@@ -288,8 +288,8 @@ while False:
     st_0to2 = {}  # robot '0' detects another robot '0', forming a new group
         # key is the robot '0', value is the other neighbor robot '0'
     st_1to2 = {}  # robot '1' finds another key neighbor, becoming '2'
-        # key is the left side of the slot, value is a list of robots intend to join
-        # the left side of the slot may or may not be the current key neighbor of robot '1'
+        # key is the key neighbor, value is a list comprising side and id of robot '1'
+        # sides: 0 for left side, 1 for right side
 
     # check state transitions, and schedule the tasks
     dist_conn_update()
@@ -375,7 +375,73 @@ while False:
             # check if state '1' robot is qualified for becoming state '2'
             if robot_states[i] == 1:
                 key = robot_key_neighbors[i][0]
-                if len(robot_key_neighbors[key]) == 1:
+                if (robot_key_neighbors[key][0] == -1 or robot_key_neighbors[key][1] == -1):
+                    # the key neighbor is on one end of the line
+                    if (robot_key_neighbors[key][0] == -1 and
+                        robot_key_neighbors[key][1] != -1):  # key at left end
+                        key_next = robot_key_neighbors[key][1]
+                        if key_next in conn_lists[i]:
+                            vect_next = robot_poses[key_next] - robot_poses[key]
+                            vect_i = robot_poses[i] - robot_poses[key]
+                            # deciding merging side
+                            side = -1
+                            if np.dot(vect_next,vect_i) > 0: side = 1  # merge on right side
+                            else: side = 0  # merge on left side
+                            # schedule the merging task
+                            if key in st_1to2.keys():
+                                st_1to2[key].append(set([side,i]))
+                            else:
+                                st_1to2[key] = [set([side,i])]
+                    elif (robot_key_neighbors[key][0] != -1 and
+                        robot_key_neighbors[key][1] == -1):  # key at right end
+                        key_next = robot_key_neighbors[key][0]
+                        if key_next in conn_lists[i]:
+                            vect_next = robot_poses[key_next] - robot_poses[key]
+                            vect_i = robot_poses[i] - robot_poses[key]
+                            side = -1
+                            if np.dot(vect_next,vect_i) > 0: side = 0  # merge on left side
+                            else: side = 1  # merge on right side
+                            if key in st_1to2.keys():
+                                st_1to2[key].append(set([side,i]))
+                            else:
+                                st_1to2[key] = [set([side,i])]
+                    else:
+                        print("key neighbor error")
+                        sys.exit()
+                else:  # the key neighbor is in the middle of the line
+                    key_left = robot_key_neighbors[key][0]
+                    key_right = robot_key_neighbors[key][1]
+                    if (key_left in conn_lists[i] and key_right in conn_lists[i]):
+                        side = -1
+                        # check which one is closer
+                        if dist_table[i,key_left] < dist_table[i,key_right]:
+                            side = 0  # left side
+                        else:
+                            side = 1
+                        # schedule the merging task
+                        if key in st_1to2.keys():
+                            st_1to2[key].append(set([side,i]))
+                        else:
+                            st_1to2[key] = [set([side,i])]
+                    elif (key_left in conn_lists[i] and key_right not in conn_lists[i]):
+                        # schedule the merging task
+                        if key in st_1to2.keys():
+                            st_1to2[key].append(set([0,i]))
+                        else:
+                            st_1to2[key] = [set([0,i])]
+                    elif (key_left not in conn_lists[i] and key_right in conn_lists[i]):
+                        # schedule the merging task
+                        if key in st_1to2.keys():
+                            st_1to2[key].append(set([1,i]))
+                        else:
+                            st_1to2[key] = [set([1,i])]
+
+    # check the life time of the groups; schedule disassembling if expired
+    for group_id_temp in groups.keys():
+        if groups[group_id_temp][1] < 0:  # life time of a group ends
+            if group_id_temp not in st_gton1:
+                st_gton1.append(group_id_temp)
+
 
 
 
