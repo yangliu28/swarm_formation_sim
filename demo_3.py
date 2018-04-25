@@ -715,31 +715,31 @@ while True:
         else:
             ending_period = ending_period - frame_period/1000.0
 
-# check if the line is complete; list robots' order on the line
-robot_starter = -1
-for i in range(swarm_size):
-    if robot_key_neighbors[i][0] == -1:
-        robot_starter = i
-        break
-line_set = set([robot_starter])  # set of robots on the line
-robot_curr = robot_starter
-order_count = 0
-robot_line_orders = np.zeros(swarm_size)
-while (robot_key_neighbors[robot_curr][1] != -1):
-    robot_next = robot_key_neighbors[robot_curr][1]
-    line_set.add(robot_next)
-    order_count = order_count + 1
-    robot_line_orders[robot_next] = order_count
-    robot_curr = robot_next
-if (len(line_set) != swarm_size):
-    print("line is incomplete after line formation")
-    sys.exit()
+# # check if the line is complete; list robots' order on the line
+# robot_starter = -1
+# for i in range(swarm_size):
+#     if robot_key_neighbors[i][0] == -1:
+#         robot_starter = i
+#         break
+# line_set = set([robot_starter])  # set of robots on the line
+# robot_curr = robot_starter
+# order_count = 0
+# robot_line_orders = np.zeros(swarm_size)
+# while (robot_key_neighbors[robot_curr][1] != -1):
+#     robot_next = robot_key_neighbors[robot_curr][1]
+#     line_set.add(robot_next)
+#     order_count = order_count + 1
+#     robot_line_orders[robot_next] = order_count
+#     robot_curr = robot_next
+# if (len(line_set) != swarm_size):
+#     print("line is incomplete after line formation")
+#     sys.exit()
 
-# store the variable "robot_poses", "robot_key_neighbors", and "robot_line_orders"
-with open('d3_robot_poses', 'w') as f:
-    pickle.dump([robot_poses, robot_key_neighbors, robot_line_orders], f)
-raw_input("<Press Enter to continue>")
-sys.exit()
+# # store the variable "robot_poses", "robot_key_neighbors", and "robot_line_orders"
+# with open('d3_robot_poses', 'w') as f:
+#     pickle.dump([robot_poses, robot_key_neighbors, robot_line_orders], f)
+# raw_input("<Press Enter to continue>")
+# sys.exit()
 
 
 

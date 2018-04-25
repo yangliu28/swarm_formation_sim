@@ -282,7 +282,7 @@ iter_count = 0
 loop_formed = False
 ending_period = 1.0  # grace period
 print("swarm robots are forming a random loop ...")
-while False:
+while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:  # close window button is clicked
             print("program exit in simulation 1")
@@ -676,22 +676,23 @@ while False:
         else:
             ending_period = ending_period - frame_period/1000.0
 
-# # check if the loop is complete; calculate robots' order on loop
-# loop_set = set()  # set of robots on the loop
-# robot_starter = 0
-# robot_curr = 0
-# loop_set.add(robot_curr)
-# robot_loop_orders = np.zeros(swarm_size)  # robot's order on loop
-# order_count = 0
-# while (robot_key_neighbors[robot_curr][1] != robot_starter):
-#     robot_next = robot_key_neighbors[robot_curr][1]
-#     loop_set.add(robot_next)
-#     order_count = order_count + 1
-#     robot_loop_orders[robot_next] = order_count
-#     robot_curr = robot_next
-# if (len(loop_set) != swarm_size):
-#     print("loop is incomplete after loop formation")
-#     sys.exit()
+# check if the loop is complete; calculate robots' order on loop
+loop_set = set()  # set of robots on the loop
+robot_starter = 0
+robot_curr = 0
+loop_set.add(robot_curr)
+robot_loop_orders = np.zeros(swarm_size)  # robot's order on loop
+order_count = 0
+while (robot_key_neighbors[robot_curr][1] != robot_starter):
+    robot_next = robot_key_neighbors[robot_curr][1]
+    loop_set.add(robot_next)
+    order_count = order_count + 1
+    robot_loop_orders[robot_next] = order_count
+    robot_curr = robot_next
+robot_loop_orders = robot_loop_orders.astype(int)  # somehow needs this line
+if (len(loop_set) != swarm_size):
+    print("loop is incomplete after loop formation")
+    sys.exit()
 
 # # store the variable "robot_poses", "robot_key_neighbors", and "robot_loop_orders"
 # with open('d2_robot_poses', 'w') as f:
@@ -706,10 +707,9 @@ while True:
 
     print("##### simulation 2: consensus decision making #####")
 
-    # restore variable "robot_poses", "robot_key_neighbors"
-    with open('d2_robot_poses') as f:
-        robot_poses, robot_key_neighbors, robot_loop_orders = pickle.load(f)
-        robot_loop_orders = robot_loop_orders.astype(int)
+    # # restore variable "robot_poses", "robot_key_neighbors"
+    # with open('d2_robot_poses') as f:
+    #     robot_poses, robot_key_neighbors, robot_loop_orders = pickle.load(f)
 
     # shift the robots to the middle of the window
     x_max, y_max = np.amax(robot_poses, axis=0)
@@ -757,7 +757,7 @@ while True:
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))
     sys.stdout.flush()
-    while False:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 2")
@@ -1010,7 +1010,7 @@ while True:
     sim_haulted = False
     time_last = pygame.time.get_ticks()
     time_now = time_last
-    frame_period = 500
+    frame_period = 200
     sim_freq_control = True
     print("loop is reshaping to " + shape_catalog[shape_decision] + " with "
         + str(swarm_size) + " robots ...")
