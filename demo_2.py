@@ -693,7 +693,7 @@ while False:
 #     print("loop is incomplete after loop formation")
 #     sys.exit()
 
-# # store the variable "robot_poses"
+# # store the variable "robot_poses", "robot_key_neighbors", and "robot_loop_orders"
 # with open('d2_robot_poses', 'w') as f:
 #     pickle.dump([robot_poses, robot_key_neighbors, robot_loop_orders], f)
 # raw_input("<Press Enter to continue>")

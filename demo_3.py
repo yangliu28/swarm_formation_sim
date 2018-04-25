@@ -261,20 +261,15 @@ robot_group_ids = np.array([-1 for i in range(swarm_size)])  # group id for the 
     # '-1' for not in a group
 
 # movement configuration
-step_moving_dist = 0.02  # line formation needs smaller moving step
-destination_error = 0.025
 step_moving_dist = 0.05
 destination_error = 0.08
-# spring constants in SMA
-linear_const = 1.0
-bend_const = 0.8
-disp_coef = 0.5
+# for adjusting line space
+space_good_thres = desired_space * 0.9
 
 # the loop for simulation 1
 sim_haulted = False
 time_last = pygame.time.get_ticks()
 time_now = time_last
-frame_period = 20  # bacause of small moving step
 frame_period = 50
 sim_freq_control = True
 iter_count = 0
@@ -541,6 +536,20 @@ while True:
     # update the physics
     robot_poses_t = np.copy(robot_poses)  # as old poses
     no_state1_robot = True
+    # space on the line is good(not too crowded)
+    line_space_good = np.array([-1 for i in range(swarm_size)])
+    for i in range(swarm_size):
+        if robot_states[i] == 2:
+            if robot_key_neighbors[i][0] == -1 or robot_key_neighbors[i][1] == -1:
+                line_space_good[i] = 1  # always good for robots on two ends
+            else:
+                key_left = robot_key_neighbors[i][0]
+                key_right = robot_key_neighbors[i][1]
+                if (dist_table[i,key_left] > space_good_thres and
+                    dist_table[i,key_right] > space_good_thres):
+                    line_space_good[i] = 1
+                else:
+                    line_space_good[i] = 0
     for i in range(swarm_size):
         # adjusting moving direction for state '1' and '2' robots
         if robot_states[i] == 1:
@@ -596,7 +605,7 @@ while True:
                 robot_oris[i] = reset_radian(robot_oris[i] +
                     rotate_dir*(math.pi - int_angle_temp))
         elif robot_states[i] == 2:
-            # adjusting position to maintain the loop
+            # adjusting position to maintain the line
             if (robot_key_neighbors[i][0] == -1 or robot_key_neighbors[i][1] == -1):
                 key = -1
                 vect_line = np.zeros(2)
@@ -630,37 +639,21 @@ while True:
             else:
                 key_left = robot_key_neighbors[i][0]
                 key_right = robot_key_neighbors[i][1]
-
-
-
-                vect_l = (robot_poses_t[key_left] - robot_poses_t[i]) / dist_table[i,key_left]
-                vect_r = (robot_poses_t[key_right] - robot_poses_t[i]) / dist_table[i,key_right]
-                vect_lr = robot_poses_t[key_right] - robot_poses_t[key_left]
-                vect_lr_dist = np.linalg.norm(vect_lr)
-                vect_in = np.array([-vect_lr[1], vect_lr[0]]) / vect_lr_dist
-                inter_curr = math.acos(np.dot(vect_l, vect_r))  # interior angle
-                if np.cross(vect_r, vect_l) < 0:
-                    inter_curr = 2*math.pi - inter_curr
-                fb_vect = np.zeros(2)  # feedback vector to accumulate spring effects
-                fb_vect = fb_vect + ((dist_table[i,key_left] - desired_space) *
-                    linear_const * vect_l)
-                fb_vect = fb_vect + ((dist_table[i,key_right] - desired_space) *
-                    linear_const * vect_r)
-                fb_vect = fb_vect + ((math.pi - inter_curr) * bend_const * vect_in)
-                if np.linalg.norm(fb_vect)*disp_coef < destination_error:
-                    continue  # stay in position if within destination error
+                if (line_space_good[i] == 0 and
+                    line_space_good[key_left] != line_space_good[key_right]):
+                    if line_space_good[key_left] == 1:
+                        vect_left = robot_poses[key_left] - robot_poses[i]
+                        robot_oris[i] = math.atan2(vect_left[1], vect_left[0])
+                    else:
+                        vect_right = robot_poses[key_right] - robot_poses[i]
+                        robot_oris[i] = math.atan2(vect_right[1], vect_right[0])
                 else:
-                    robot_oris[i] = math.atan2(fb_vect[1], fb_vect[0])
-
-
-
-
-                # des_pos = (robot_poses[key_left] + robot_poses[key_right]) / 2.0
-                # vect_des = des_pos - robot_poses[i]
-                # if np.linalg.norm(vect_des) < destination_error:
-                #     continue
-                # else:
-                #     robot_oris[i] = math.atan2(vect_des[1], vect_des[0])
+                    des_pos = (robot_poses[key_left] + robot_poses[key_right])/2.0
+                    des_vect = des_pos - robot_poses[i]
+                    if np.linalg.norm(des_vect) < destination_error:
+                        continue  # stay in position if within destination error
+                    else:
+                        robot_oris[i] = math.atan2(des_vect[1], des_vect[0])
         # check if out of boundaries
         if (robot_states[i] == -1) or (robot_states[i] == 0):
             # only applies for state '-1' and '0'
@@ -722,6 +715,31 @@ while True:
         else:
             ending_period = ending_period - frame_period/1000.0
 
+# check if the line is complete; list robots' order on the line
+robot_starter = -1
+for i in range(swarm_size):
+    if robot_key_neighbors[i][0] == -1:
+        robot_starter = i
+        break
+line_set = set([robot_starter])  # set of robots on the line
+robot_curr = robot_starter
+order_count = 0
+robot_line_orders = np.zeros(swarm_size)
+while (robot_key_neighbors[robot_curr][1] != -1):
+    robot_next = robot_key_neighbors[robot_curr][1]
+    line_set.add(robot_next)
+    order_count = order_count + 1
+    robot_line_orders[robot_next] = order_count
+    robot_curr = robot_next
+if (len(line_set) != swarm_size):
+    print("line is incomplete after line formation")
+    sys.exit()
+
+# store the variable "robot_poses", "robot_key_neighbors", and "robot_line_orders"
+with open('d3_robot_poses', 'w') as f:
+    pickle.dump([robot_poses, robot_key_neighbors, robot_line_orders], f)
+raw_input("<Press Enter to continue>")
+sys.exit()
 
 
 
