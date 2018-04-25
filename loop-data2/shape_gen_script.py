@@ -14,6 +14,16 @@ def reset_radian(radian):
         radian = radian + 2*math.pi
     return radian
 
+# general function to calculate next position node along a heading direction
+def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
+    for _ in range(rep_times):
+        index_next = index_curr + 1
+        x = node_poses[index_curr][0] + 1.0*math.cos(heading_angle)
+        y = node_poses[index_curr][1] + 1.0*math.sin(heading_angle)
+        node_poses[index_next] = np.array([x,y])
+        index_curr = index_next
+    return index_next
+
 # ##### script to generate 30-square #####
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
@@ -204,6 +214,64 @@ def reset_radian(radian):
 #     pickle.dump(node_poses, f)
 
 
+# ##### script to generate 30-airplane #####
+# swarm_size = 30
+# node_poses = np.zeros((swarm_size, 2))
+# # first node is at bottom center
+# heading_angle = - (14.0*math.pi)/180.0
+# node_index = 0  # current sitting node
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle + (130.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle - (42.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = reset_radian(heading_angle - (94.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
+# heading_angle = reset_radian(heading_angle + (106.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle + (55.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
+# heading_angle = reset_radian(heading_angle - (35.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
+# # half the airplane constructed, mirror the next half
+# axis_vect = node_poses[node_index] - node_poses[0]
+# axis_vect = axis_vect / np.linalg.norm(axis_vect)
+# for i in range(1,15):
+#     old_vect = node_poses[i] - node_poses[0]
+#     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
+# print(node_poses)
+# with open('30-airplane', 'w') as f:
+#     pickle.dump(node_poses, f)
+
+
+##### script to generate 100-airplane #####
+swarm_size = 100
+node_poses = np.zeros((swarm_size, 2))
+# first node is at bottom center
+heading_angle = - (18.0*math.pi)/180.0
+node_index = 0  # current sitting node
+node_index = cal_next_node(node_poses, node_index, heading_angle, 6)
+heading_angle = reset_radian(heading_angle + (135.0*math.pi)/180.0)
+node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
+heading_angle = reset_radian(heading_angle - (42.0*math.pi)/180.0)
+node_index = cal_next_node(node_poses, node_index, heading_angle, 5)
+heading_angle = reset_radian(heading_angle - (94.0*math.pi)/180.0)
+node_index = cal_next_node(node_poses, node_index, heading_angle, 9)
+heading_angle = reset_radian(heading_angle + (106.0*math.pi)/180.0)
+node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
+heading_angle = reset_radian(heading_angle + (55.0*math.pi)/180.0)
+node_index = cal_next_node(node_poses, node_index, heading_angle, 12)
+heading_angle = reset_radian(heading_angle - (40.0*math.pi)/180.0)
+node_index = cal_next_node(node_poses, node_index, heading_angle, 10)
+# half the airplane constructed, mirror the next half
+axis_vect = node_poses[node_index] - node_poses[0]
+axis_vect = axis_vect / np.linalg.norm(axis_vect)
+for i in range(1,50):
+    old_vect = node_poses[i] - node_poses[0]
+    node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
+print(node_poses)
+with open('100-airplane', 'w') as f:
+    pickle.dump(node_poses, f)
 
 
 
