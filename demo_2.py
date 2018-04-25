@@ -707,7 +707,7 @@ while True:
 
     print("##### simulation 2: consensus decision making #####")
 
-    # # restore variable "robot_poses", "robot_key_neighbors"
+    # # restore variable "robot_poses", "robot_key_neighbors", and "robot_loop_orders"
     # with open('d2_robot_poses') as f:
     #     robot_poses, robot_key_neighbors, robot_loop_orders = pickle.load(f)
 

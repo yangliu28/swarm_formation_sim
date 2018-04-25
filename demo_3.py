@@ -14,6 +14,8 @@
     # Simulation 3: curve reshape
 
 
+# problem: larger world size? line does not fit
+
 from __future__ import print_function
 import pygame
 import sys, os, getopt, math
@@ -38,7 +40,7 @@ power_exponent = 1.95  # between 1.0 and 2.0
 pixels_per_length = 50  # fixed
 # calculate world_side_coef from a desired screen size for 30 robots
 def cal_world_side_coef():
-    desired_screen_size = 400  # desired screen size for 30 robots
+    desired_screen_size = 600  # desired screen size for 30 robots
     desired_world_size = float(desired_screen_size) / pixels_per_length
     return desired_world_size / pow(30, 1/power_exponent)
 world_side_coef = cal_world_side_coef()
@@ -276,7 +278,7 @@ iter_count = 0
 line_formed = False
 ending_period = 5.0  # grace period
 print("swarm robots are forming a straight line ...")
-while True:
+while False:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:  # close window button is clicked
             print("program exit in simulation 1")
@@ -540,8 +542,18 @@ while True:
     line_space_good = np.array([-1 for i in range(swarm_size)])
     for i in range(swarm_size):
         if robot_states[i] == 2:
-            if robot_key_neighbors[i][0] == -1 or robot_key_neighbors[i][1] == -1:
-                line_space_good[i] = 1  # always good for robots on two ends
+            if robot_key_neighbors[i][0] == -1:
+                key_next = robot_key_neighbors[i][1]
+                if (dist_table[i,key_next] > space_good_thres):
+                    line_space_good[i] = 1
+                else:
+                    line_space_good[i] = 0
+            elif robot_key_neighbors[i][1] == -1:
+                key_next = robot_key_neighbors[i][0]
+                if (dist_table[i,key_next] > space_good_thres):
+                    line_space_good[i] = 1
+                else:
+                    line_space_good[i] = 0
             else:
                 key_left = robot_key_neighbors[i][0]
                 key_right = robot_key_neighbors[i][1]
@@ -721,25 +733,133 @@ while True:
 #     if robot_key_neighbors[i][0] == -1:
 #         robot_starter = i
 #         break
-# line_set = set([robot_starter])  # set of robots on the line
+# line_robots = [robot_starter]  # robots on the line, in order
 # robot_curr = robot_starter
-# order_count = 0
-# robot_line_orders = np.zeros(swarm_size)
 # while (robot_key_neighbors[robot_curr][1] != -1):
 #     robot_next = robot_key_neighbors[robot_curr][1]
-#     line_set.add(robot_next)
-#     order_count = order_count + 1
-#     robot_line_orders[robot_next] = order_count
+#     line_robots.append(robot_next)
 #     robot_curr = robot_next
-# if (len(line_set) != swarm_size):
+# if (len(set(line_robots)) != swarm_size):
 #     print("line is incomplete after line formation")
 #     sys.exit()
 
-# # store the variable "robot_poses", "robot_key_neighbors", and "robot_line_orders"
+# # store the variable "robot_poses", "robot_key_neighbors"
 # with open('d3_robot_poses', 'w') as f:
-#     pickle.dump([robot_poses, robot_key_neighbors, robot_line_orders], f)
+#     pickle.dump([robot_poses, robot_key_neighbors, line_robots], f)
 # raw_input("<Press Enter to continue>")
 # sys.exit()
+
+# simulation 2 and 3 will run repeatedly since here
+while True:
+
+    ########### simulation 2: consensus decision making for target curve shape ###########
+
+    print("##### simulation 2: consensus decision making #####")
+
+    # restore variable "robot_poses", "robot_key_neighbors"
+    with open('d3_robot_poses') as f:
+        robot_poses, robot_key_neighbors, line_robots = pickle.load(f)
+
+    # shift the robots to the middle of the window
+    x_max, y_max = np.amax(robot_poses, axis=0)
+    x_min, y_min = np.amin(robot_poses, axis=0)
+    robot_middle = np.array([(x_max+x_min)/2.0, (y_max+y_min)/2.0])
+    world_middle = np.array([world_side_length/2.0, world_side_length/2.0])
+    for i in range(swarm_size):
+        robot_poses[i] = robot_poses[i] - robot_middle + world_middle
+
+    # draw the network for the first time
+    disp_poses_update()
+    screen.fill(color_white)
+    for i in range(swarm_size):
+        pygame.draw.circle(screen, color_black, disp_poses[i], robot_size, 0)
+        if robot_key_neighbors[i][1] == -1: continue
+        pygame.draw.line(screen, color_black, disp_poses[i],
+            disp_poses[robot_key_neighbors[i][1]], conn_width)
+    pygame.display.update()
+
+    # initialize the decision making variables
+    shape_decision = -1
+    deci_dist = np.random.rand(swarm_size, shape_quantity)
+    sum_temp = np.sum(deci_dist, axis=1)
+    for i in range(swarm_size):
+        deci_dist[i] = deci_dist[i] / sum_temp[i]
+    deci_domi = np.argmax(deci_dist, axis=1)
+    groups = []  # group robots by local consensus
+    robot_group_sizes = [0 for i in range(swarm_size)]
+    # color assignment
+    color_initialized = False
+    deci_colors = [-1 for i in range(shape_quantity)]
+    color_assigns = [0 for i in range(color_quantity)]
+    group_colors = []
+    robot_colors = [0 for i in range(swarm_size)]
+    # decision making control variables
+    dist_diff_thres = 0.3
+    dist_diff_ratio = [0.0 for i in range(swarm_size)]
+    dist_diff_power = 0.3
+
+    # the loop for simulation 2
+    sim_haulted = False
+    time_last = pygame.time.get_ticks()
+    time_now = time_last
+    frame_period = 500
+    sim_freq_control = True
+    iter_count = 0
+    sys.stdout.write("iteration {}".format(iter_count))
+    sys.stdout.flush()
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:  # close window button is clicked
+                print("program exit in simulation 2")
+                sys.exit()  # exit the entire program
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE:
+                    sim_haulted = not sim_haulted  # reverse the pause flag
+        if sim_haulted: continue
+
+        # simulation frequency control
+        if sim_freq_control:
+            time_now = pygame.time.get_ticks()
+            if (time_now - time_last) > frame_period:
+                time_last = time_now
+            else:
+                continue
+
+        # increase iteration count
+        iter_count = iter_count + 1
+        sys.stdout.write("\riteration {}".format(iter_count))
+        sys.stdout.flush()
+
+        # update the dominant decision for all robot
+        deci_domi = np.argmax(deci_dist, axis=1)
+        # update the groups
+        robot_starter = 0
+        robot_curr = 0
+        groups = [[robot_curr]]  # empty the group container
+        # slice the loop at the connection before id '0' robot
+        while (robot_key_neighbors[robot_curr][1] != robot_starter):
+            robot_next = robot_key_neighbors[robot_curr][1]
+            if (deci_domi[robot_curr] == deci_domi[robot_next]):
+                groups[-1].append(robot_next)
+            else:
+                groups.append([robot_next])
+            robot_curr = robot_next
+        # check if the two groups on the slicing point are in same group
+        if (len(groups) > 1 and deci_domi[0] == deci_domi[robot_key_neighbors[0][0]]):
+            # combine the last group to the first group
+            for i in reversed(groups[-1]):
+                groups[0].insert(0,i)
+            groups.pop(-1)
+        # the decisions for the groups
+        group_deci = [deci_domi[groups[i][0]] for i in range(len(groups))]
+        # update group sizes for robots
+        for group_temp in groups:
+            group_temp_size = len(group_temp)
+            for i in group_temp:
+                robot_group_sizes[i] = group_temp_size
+
+
+
 
 
 
