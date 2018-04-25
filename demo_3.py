@@ -14,8 +14,6 @@
     # Simulation 3: curve reshape
 
 
-# problem: larger world size? line does not fit
-
 from __future__ import print_function
 import pygame
 import sys, os, getopt, math
@@ -833,23 +831,16 @@ while True:
         # update the dominant decision for all robot
         deci_domi = np.argmax(deci_dist, axis=1)
         # update the groups
-        robot_starter = 0
-        robot_curr = 0
+        robot_curr = line_robots[0]
         groups = [[robot_curr]]  # empty the group container
         # slice the loop at the connection before id '0' robot
-        while (robot_key_neighbors[robot_curr][1] != robot_starter):
+        while (robot_key_neighbors[robot_curr][1] != -1):
             robot_next = robot_key_neighbors[robot_curr][1]
             if (deci_domi[robot_curr] == deci_domi[robot_next]):
                 groups[-1].append(robot_next)
             else:
                 groups.append([robot_next])
             robot_curr = robot_next
-        # check if the two groups on the slicing point are in same group
-        if (len(groups) > 1 and deci_domi[0] == deci_domi[robot_key_neighbors[0][0]]):
-            # combine the last group to the first group
-            for i in reversed(groups[-1]):
-                groups[0].insert(0,i)
-            groups.pop(-1)
         # the decisions for the groups
         group_deci = [deci_domi[groups[i][0]] for i in range(len(groups))]
         # update group sizes for robots
@@ -858,6 +849,189 @@ while True:
             for i in group_temp:
                 robot_group_sizes[i] = group_temp_size
 
+        # update colors for the decisions
+        if not color_initialized:
+            color_initialized = True
+            color_set = range(color_quantity)
+            deci_set = set(group_deci)
+            for deci in deci_set:
+                if len(color_set) == 0:
+                    color_set = range(color_quantity)
+                chosen_color = np.random.choice(color_set)
+                color_set.remove(chosen_color)
+                deci_colors[deci] = chosen_color
+                color_assigns[chosen_color] = color_assigns[chosen_color] + 1
+        else:
+            # remove the color for a decision, if it's no longer the decision of any group
+            deci_set = set(group_deci)
+            for deci_temp in range(shape_quantity):
+                color_temp = deci_colors[deci_temp]  # corresponding color for deci_temp
+                if (color_temp != -1 and deci_temp not in deci_set):
+                    color_assigns[color_temp] = color_assigns[color_temp] - 1
+                    deci_colors[deci_temp] = -1
+            # assign color for a new decision
+            color_set = []
+            for i in range(len(groups)):
+                if deci_colors[group_deci[i]] == -1:
+                    if len(color_set) == 0:
+                        # construct a new color set
+                        color_assigns_min = min(color_assigns)
+                        for color_temp in range(color_quantity):
+                            if color_assigns[color_temp] == color_assigns_min:
+                                color_set.append(color_temp)
+                    # if here, the color set is good to go
+                    chosen_color = np.random.choice(color_set)
+                    color_set.remove(chosen_color)
+                    deci_colors[group_deci[i]] = chosen_color
+                    color_assigns[chosen_color] = color_assigns[chosen_color] + 1
+        # update the colors for the groups and robots
+        group_colors = []
+        for i in range(len(groups)):
+            color_temp = deci_colors[group_deci[i]]
+            group_colors.append(color_temp)
+            for j in groups[i]:
+                robot_colors[j] = color_temp
+
+        # decision distribution evolution
+        converged_all = True
+        deci_dist_t = np.copy(deci_dist)  # deep copy the 'deci_dist'
+        for i in range(swarm_size):
+            if robot_key_neighbors[i][0] == -1 or robot_key_neighbors[i][1] == -1:
+                # for robots on the two ends
+                i_next = -1
+                if robot_key_neighbors[i][0] == -1:
+                    i_next = robot_key_neighbors[i][1]
+                elif robot_key_neighbors[i][1] == -1:
+                    i_next = robot_key_neighbors[i][0]
+                if deci_domi[i] == deci_domi[i_next]:  # locally converged
+                    # step 1: take equal weight average
+                    deci_dist[i] = deci_dist_t[i] + deci_dist_t[i_next]
+                    dist_sum = np.sum(deci_dist[i])
+                    deci_dist[i] = deci_dist[i] / dist_sum
+                    # step 2: increase the unipolarity by applying the linear multiplier
+                    dist_diff = np.linalg.norm(deci_dist_t[i]-deci_dist_t[i_next], 1)
+                    if dist_diff < dist_diff_thres:
+                        dist_diff_ratio[i] = dist_diff/dist_diff_thres  # for debugging
+                        small_end = 1.0/shape_quantity * np.power(dist_diff/dist_diff_thres,
+                            dist_diff_power)
+                        large_end = 2.0/shape_quantity - small_end
+                        # sort the magnitude of processed distribution
+                        dist_t = np.copy(deci_dist[i])  # temporary distribution
+                        sort_index = range(shape_quantity)
+                        for j in range(shape_quantity-1):  # bubble sort, ascending order
+                            for k in range(shape_quantity-1-j):
+                                if dist_t[k] > dist_t[k+1]:
+                                    # exchange values in 'dist_t'
+                                    temp = dist_t[k]
+                                    dist_t[k] = dist_t[k+1]
+                                    dist_t[k+1] = temp
+                                    # exchange values in 'sort_index'
+                                    temp = sort_index[k]
+                                    sort_index[k] = sort_index[k+1]
+                                    sort_index[k+1] = temp
+                        # applying the linear multiplier
+                        dist_sum = 0
+                        for j in range(shape_quantity):
+                            multiplier = (small_end +
+                                float(j)/(shape_quantity-1) * (large_end-small_end))
+                            deci_dist[i,sort_index[j]] = deci_dist[i,sort_index[j]] * multiplier
+                        dist_sum = np.sum(deci_dist[i])
+                        deci_dist[i] = deci_dist[i] / dist_sum
+                    else:
+                        dist_diff_ratio[i] = 1.0  # for debugging, ratio overflowed
+                else:  # not converged on the ends
+                    if converged_all: converged_all = False
+                    dist_diff_ratio[i] = -1.0  # indicating linear multiplier was not used
+                    # take unequal weight in the averaging process based on group property
+                    deci_dist[i] = (deci_dist_t[i] +
+                                    robot_group_sizes[i_next] * deci_dist_t[i_next])
+                    dist_sum = np.sum(deci_dist[i])
+                    deci_dist[i] = deci_dist[i] / dist_sum
+            else:
+                i_l = robot_key_neighbors[i][0]  # index of neighbor on the left
+                i_r = robot_key_neighbors[i][1]  # index of neighbor on the right
+                # deciding if two neighbors have converged ideas with host robot
+                converged_l = False
+                if (deci_domi[i_l] == deci_domi[i]): converged_l = True
+                converged_r = False
+                if (deci_domi[i_r] == deci_domi[i]): converged_r = True
+                # weighted averaging depending on group property
+                if converged_l and converged_r:  # all three robots are locally converged
+                    # step 1: take equal weight average on all three distributions
+                    deci_dist[i] = deci_dist_t[i_l] + deci_dist_t[i] + deci_dist_t[i_r]
+                    dist_sum = np.sum(deci_dist[i])
+                    deci_dist[i] = deci_dist[i] / dist_sum
+                    # step 2: increase the unipolarity by applying the linear multiplier
+                    dist_diff = [np.linalg.norm(deci_dist_t[i_l]-deci_dist_t[i], 1),
+                                 np.linalg.norm(deci_dist_t[i_r]-deci_dist_t[i], 1),
+                                 np.linalg.norm(deci_dist_t[i_l]-deci_dist_t[i_r], 1)]
+                    dist_diff_max = max(dist_diff)  # maximum distribution difference
+                    if dist_diff_max < dist_diff_thres:
+                        dist_diff_ratio[i] = dist_diff_max/dist_diff_thres  # for debugging
+                        small_end = 1.0/shape_quantity * np.power(dist_diff_max/dist_diff_thres,
+                            dist_diff_power)
+                        large_end = 2.0/shape_quantity - small_end
+                        # sort the magnitude of processed distribution
+                        dist_t = np.copy(deci_dist[i])  # temporary distribution
+                        sort_index = range(shape_quantity)
+                        for j in range(shape_quantity-1):  # bubble sort, ascending order
+                            for k in range(shape_quantity-1-j):
+                                if dist_t[k] > dist_t[k+1]:
+                                    # exchange values in 'dist_t'
+                                    temp = dist_t[k]
+                                    dist_t[k] = dist_t[k+1]
+                                    dist_t[k+1] = temp
+                                    # exchange values in 'sort_index'
+                                    temp = sort_index[k]
+                                    sort_index[k] = sort_index[k+1]
+                                    sort_index[k+1] = temp
+                        # applying the linear multiplier
+                        dist_sum = 0
+                        for j in range(shape_quantity):
+                            multiplier = (small_end +
+                                float(j)/(shape_quantity-1) * (large_end-small_end))
+                            deci_dist[i,sort_index[j]] = deci_dist[i,sort_index[j]] * multiplier
+                        dist_sum = np.sum(deci_dist[i])
+                        deci_dist[i] = deci_dist[i] / dist_sum
+                    else:
+                        dist_diff_ratio[i] = 1.0  # for debugging, ratio overflowed
+                else:  # at least one side has not converged yet
+                    if converged_all: converged_all = False
+                    dist_diff_ratio[i] = -1.0  # indicating linear multiplier was not used
+                    # take unequal weight in the averaging process based on group property
+                    deci_dist[i] = (robot_group_sizes[i_l] * deci_dist_t[i_l] +
+                                    deci_dist_t[i] +
+                                    robot_group_sizes[i_r] * deci_dist_t[i_r])
+                    dist_sum = np.sum(deci_dist[i])
+                    deci_dist[i] = deci_dist[i] / dist_sum
+
+        # update the graphics
+        screen.fill(color_white)
+        # draw the connections first
+        for i in range(swarm_size):
+            i_next = robot_key_neighbors[i][1]
+            if i_next == -1: continue
+            if (deci_domi[i] == deci_domi[i_next]):
+                pygame.draw.line(screen, distinct_color_set[robot_colors[i]],
+                    disp_poses[i], disp_poses[i_next], conn_width)
+            else:
+                pygame.draw.line(screen, color_black, disp_poses[i], disp_poses[i_next],
+                    conn_width)
+        # draw the robots
+        for i in range(swarm_size):
+            pygame.draw.circle(screen, distinct_color_set[robot_colors[i]], disp_poses[i],
+                robot_size, 0)
+        pygame.display.update()
+
+        # check exit condition for simulations 2
+        if converged_all:
+            shape_decision = deci_domi[0]
+            print("")  # move cursor to the new line
+            print("converged to decision {}".format(shape_decision))
+            print("simulation 2 is finished")
+            raw_input("<Press Enter to continue>")
+            print("")  # empty line
+            break
 
 
 
