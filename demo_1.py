@@ -2,6 +2,10 @@
 # shape in a distributed manner, without central control. Two consensus processes, decision
 # making and role assignment, are performed consecutively with a fixed but arbitrary network.
 
+# input arguments:
+# '-n': number of robots
+# '--manual': manual mode, press ENTER to proceed between simulations
+
 # Description:
 # Starting dispersed in random positions, the swarm aggregates together arbitrarily to form
 # a connected network. Consensus decision making is performed with this network fixed, making
@@ -60,16 +64,19 @@ import numpy as np
 import pickle  # for storing variables
 
 swarm_size = 30  # default size of the swarm
+manual_mode = False  # manually press enter key to proceed between simulations
 
 # read command line options
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'n:')
+    opts, args = getopt.getopt(sys.argv[1:], 'n:', ['manual'])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit()
 for opt,arg in opts:
     if opt == '-n':
         swarm_size = int(arg)
+    elif opt == '--manual':
+        manual_mode = True
 
 # conversion between physical and display world sizes
 # To best display any robot swarm in its appropriate window size, and have enough physical
@@ -99,9 +106,6 @@ world_size = (world_side_length, world_side_length)  # square physical world
 screen_side_length = int(pixels_per_length * world_side_length)
 screen_size = (screen_side_length, screen_side_length)  # square display world
 
-# print("world_side_length: {}".format(world_side_length))
-# print("screen_side_length: {}".format(screen_side_length))
-
 # formation configuration
 comm_range = 0.65  # communication range in the world
 desired_space_ratio = 0.8  # ratio of the desired space to the communication range
@@ -118,6 +122,8 @@ shape_quantity = len(shape_catalog)  # the number of decisions
 shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
     # also the index in shape_catalog
 assignment_scheme = np.zeros(swarm_size)
+# variable to force shape to different choices, for video recording
+force_shape_set = range(shape_quantity)
 
 # robot properties
 robot_poses = np.random.rand(swarm_size, 2) * world_side_length  # initialize the robot poses
@@ -183,10 +189,10 @@ robot_size_formation = 5  # robot size in formation simulations
 robot_width_empty = 2
 conn_width_formation = 2  # connection line width in formation simulations
 # sizes for consensus simulations
-robot_size_consensus = 5  # robot size in consensus simulatiosn
+robot_size_consensus = 7  # robot size in consensus simulatiosn
 conn_width_thin_consensus = 2  # thin connection line in consensus simulations
-conn_width_thick_consensus = 2  # thick connection line in consensus simulations
-robot_ring_size = 8  # extra ring on robot in consensus simulations
+conn_width_thick_consensus = 4  # thick connection line in consensus simulations
+robot_ring_size = 9  # extra ring on robot in consensus simulations
 # the sizes for formation and consensus simulations are set to same for visual consistency
 
 # set up the simulation window
@@ -385,7 +391,7 @@ while True:
     # prog_counter = 0
     # sys.stdout.write("[" + prog_pos*"-" + "#" + (prog_bar_len-(prog_pos+1))*"-" + "]\r")
     # sys.stdout.flush()
-    while False:
+    while True:
         # close window button to exit the entire program;
         # space key to pause this simulation
         for event in pygame.event.get():
@@ -655,7 +661,7 @@ while True:
         if swarm_aggregated:
             if ending_period <= 0:
                 print("simulation 1 is finished")
-                raw_input("<Press Enter to continue>")
+                if manual_mode: raw_input("<Press Enter to continue>")
                 print("")  # empty line
                 break
             else:
@@ -716,7 +722,7 @@ while True:
     sim_freq_control = True
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))
-    while False:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 2")
@@ -944,9 +950,10 @@ while True:
         if converged_all:
             shape_decision = deci_domi[0]
             print("")  # move cursor to the new line
-            print("converged to decision {}".format(shape_decision))
+            print("converged to decision {}: {}".format(shape_decision,
+                shape_catalog[shape_decision]))
             print("simulation 2 is finished")
-            raw_input("<Press Enter to continue>")
+            if manual_mode: raw_input("<Press Enter to continue>")
             print("")  # empty line
             break
 
@@ -1071,7 +1078,7 @@ while True:
     sim_freq_control = True
     flash_delay = 200
     sys.stdout.write("iteration {}".format(iter_count))
-    while False:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 3")
@@ -1200,7 +1207,7 @@ while True:
         for i in range(swarm_size):
             if scheme_converged[i]:
                 pygame.draw.circle(screen, color_black, disp_poses[i],
-                    robot_ring_size, robot_width_empty)
+                    robot_ring_size, 1)
         pygame.display.update()
         # flash the yielding robots with color of old role
         for _ in range(3):
@@ -1227,7 +1234,7 @@ while True:
                 assignment_scheme[i] = local_role_assignment[0][i][0]
             print("")  # move cursor to the new line
             print("simulation 3 is finished")
-            raw_input("<Press Enter to continue>")
+            if manual_mode: raw_input("<Press Enter to continue>")
             print("")  # empty line
             break
 
@@ -1239,9 +1246,9 @@ while True:
 
     ########### simulation 4: loop formation with designated role assignment ###########
 
-    # restore variable "assignment_scheme"
-    with open('d1_assignment_scheme') as f:
-        assignment_scheme = pickle.load(f)
+    # # restore variable "assignment_scheme"
+    # with open('d1_assignment_scheme') as f:
+    #     assignment_scheme = pickle.load(f)
 
     print("##### simulation 4: loop formation #####")
 
@@ -1293,7 +1300,7 @@ while True:
     print("swarm robots are forming an ordered loop ...")
     loop_formed = False
     ending_period = 1.0  # grace period
-    while False:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 4")
@@ -1712,7 +1719,7 @@ while True:
         if loop_formed:
             if ending_period <= 0:
                 print("simulation 4 is finished")
-                raw_input("<Press Enter to continue>")
+                if manual_mode: raw_input("<Press Enter to continue>")
                 print("")  # empty line
                 break
             else:
@@ -1726,17 +1733,20 @@ while True:
 
     ########### simulation 5: loop reshaping to chosen shape ###########
 
-    # restore variable "robot_poses"
-    with open('d1_robot_poses2') as f:
-        robot_poses, robot_key_neighbors = pickle.load(f)
+    # # restore variable "robot_poses"
+    # with open('d1_robot_poses2') as f:
+    #     robot_poses, robot_key_neighbors = pickle.load(f)
 
     print("##### simulation 5: loop reshaping #####")
 
-    print("old shape decision: {}".format(shape_decision))
-    shape_decision = 10
-    print("forced shape decision: {} - ".format(shape_decision) +
-        shape_catalog[shape_decision])
     print("chosen shape {}: {}".format(shape_decision, shape_catalog[shape_decision]))
+
+    # force the choice of shape, for video recording
+    if len(force_shape_set) == 0: force_shape_set = range(shape_quantity)
+    force_choice = np.random.choice(force_shape_set)
+    force_shape_set.remove(force_choice)
+    shape_decision = force_choice
+    print("forced shape to {}: {}".format(shape_decision, shape_catalog[shape_decision]))
 
     # spring constants in SMA
     linear_const = 1.0
@@ -1869,7 +1879,7 @@ while True:
         # check exit condition of simulation 5
         if inter_err_max < inter_err_thres:
             print("simulation 5 is finished")
-            raw_input("<Press Enter to continue>")
+            if manual_mode: raw_input("<Press Enter to continue>")
             print("")  # empty line
             break
 

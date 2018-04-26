@@ -2,6 +2,10 @@
 # the shape in a distributed way. This simulation shares the same strategy with second demo in
 # organizing the robots, but it needs no role assignment on the open curve.
 
+# input arguments:
+# '-n': number of robots
+# '--manual': manual mode, press ENTER to proceed between simulations
+
 # Description:
 # Starting dispersed in random positions, the swarm aggregates together to form a straight line
 # with the merging method. From here, the following steps run repeatedly. The robots first make
@@ -24,13 +28,15 @@ swarm_size = 30  # default swarm size
 
 # read command line options
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'n:')
+    opts, args = getopt.getopt(sys.argv[1:], 'n:', , ['manual'])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit()
 for opt,arg in opts:
     if opt == '-n':
         swarm_size = int(arg)
+    elif opt == '--manual':
+        manual_mode = True
 
 # calculate world size and screen size
 power_exponent = 1.95  # between 1.0 and 2.0
@@ -120,7 +126,10 @@ color_quantity = 17
 robot_size = 5
 robot_empty_width = 2
 conn_width = 2
-robot_ring_size = 8
+# sizes for consensus simulation
+robot_size_consensus = 7
+conn_width_thin_consensus = 2
+conn_width_thick_consensus = 4
 
 # set up the simulation window
 pygame.init()
@@ -719,7 +728,7 @@ while False:
     if line_formed:
         if ending_period <= 0:
             print("simulation 1 is finished")
-            raw_input("<Press Enter to continue>")
+            if manual_mode: raw_input("<Press Enter to continue>")
             print("")  # empty line
             break
         else:
@@ -1013,14 +1022,14 @@ while True:
             if i_next == -1: continue
             if (deci_domi[i] == deci_domi[i_next]):
                 pygame.draw.line(screen, distinct_color_set[robot_colors[i]],
-                    disp_poses[i], disp_poses[i_next], conn_width)
+                    disp_poses[i], disp_poses[i_next], conn_width_thick_consensus)
             else:
                 pygame.draw.line(screen, color_black, disp_poses[i], disp_poses[i_next],
-                    conn_width)
+                    conn_width_thin_consensus)
         # draw the robots
         for i in range(swarm_size):
             pygame.draw.circle(screen, distinct_color_set[robot_colors[i]], disp_poses[i],
-                robot_size, 0)
+                robot_size_consensus, 0)
         pygame.display.update()
 
         # check exit condition for simulations 2
@@ -1029,7 +1038,7 @@ while True:
             print("")  # move cursor to the new line
             print("converged to decision {}".format(shape_decision))
             print("simulation 2 is finished")
-            raw_input("<Press Enter to continue>")
+            if manual_mode: raw_input("<Press Enter to continue>")
             print("")  # empty line
             break
 
