@@ -461,6 +461,151 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     pickle.dump(node_poses, f)
 
 
+# ##### script to generate 30-wrench #####
+# swarm_size = 30
+# node_poses = np.zeros((swarm_size, 2))
+# node_index = 0
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle - (50.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle + (90.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle + (90.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = reset_radian(heading_angle + (50.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle - (50.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
+# heading_angle = reset_radian(heading_angle - (50.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle + (50.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = reset_radian(heading_angle + (90.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle + (90.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle - (50.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# # half the wrench is finished, mirror the next half
+# axis_vect = node_poses[node_index] - node_poses[0]
+# axis_vect = axis_vect / np.linalg.norm(axis_vect)
+# for i in range(1,15):
+#     old_vect = node_poses[i] - node_poses[0]
+#     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
+# print(node_index)
+# print(node_poses)
+# with open('30-wrench', 'w') as f:
+#     pickle.dump(node_poses, f)
+
+
+# ##### script to generate 100-wrench #####
+# swarm_size = 100
+# node_poses = np.zeros((swarm_size, 2))
+# node_index = 0
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
+# heading_angle = reset_radian(heading_angle - (50.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
+# heading_angle = reset_radian(heading_angle + (90.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = reset_radian(heading_angle + (90.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
+# heading_angle = reset_radian(heading_angle + (50.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
+# heading_angle = reset_radian(heading_angle - (50.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 20)
+# heading_angle = reset_radian(heading_angle - (50.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
+# heading_angle = reset_radian(heading_angle + (50.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
+# heading_angle = reset_radian(heading_angle + (90.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = reset_radian(heading_angle + (90.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
+# heading_angle = reset_radian(heading_angle - (50.0*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
+# # half the wrench is finished, mirror the next half
+# axis_vect = node_poses[node_index] - node_poses[0]
+# axis_vect = axis_vect / np.linalg.norm(axis_vect)
+# for i in range(1,50):
+#     old_vect = node_poses[i] - node_poses[0]
+#     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
+# print(node_index)
+# print(node_poses)
+# with open('100-wrench', 'w') as f:
+#     pickle.dump(node_poses, f)
+
+
+# ##### script to generate 30-goblet #####
+# swarm_size = 30
+# node_poses = np.zeros((swarm_size, 2))
+# node_index = 0
+# arc_angle = 10.8  # default 11.25 deg
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = reset_radian(heading_angle + (135*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle + (30*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
+# heading_angle = (arc_angle*math.pi)/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle + (2*arc_angle*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle + (2*arc_angle*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = reset_radian(heading_angle + (2*arc_angle*math.pi)/180.0)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
+# # half the wrench is finished, mirror the next half
+# axis_vect = node_poses[node_index] - node_poses[0]
+# axis_vect = axis_vect / np.linalg.norm(axis_vect)
+# for i in range(1,15):
+#     old_vect = node_poses[i] - node_poses[0]
+#     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
+# print(node_index)
+# print(node_poses)
+# with open('30-goblet', 'w') as f:
+#     pickle.dump(node_poses, f)
+
+
+# ##### script to generate 100-goblet #####
+# swarm_size = 100
+# node_poses = np.zeros((swarm_size, 2))
+# node_index = 0
+# arc_angle = 4.1
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 7)
+# heading_angle = (120*math.pi)/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = -math.pi
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 5)
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 10)
+# heading_angle = -(arc_angle*math.pi)/180.0
+# for _ in range(10):
+#     heading_angle = reset_radian(heading_angle + (2*arc_angle*math.pi)/180.0)
+#     node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 8)
+# heading_angle = -math.pi
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 8)
+# # half the wrench is finished, mirror the next half
+# axis_vect = node_poses[node_index] - node_poses[0]
+# axis_vect = axis_vect / np.linalg.norm(axis_vect)
+# for i in range(1,50):
+#     old_vect = node_poses[i] - node_poses[0]
+#     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
+# print(node_index)
+# print(node_poses)
+# with open('100-goblet', 'w') as f:
+#     pickle.dump(node_poses, f)
+
 
 
 pygame.init()
