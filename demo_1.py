@@ -111,12 +111,13 @@ desired_space = comm_range * desired_space_ratio
 perp_thres = math.pi/18  # threshold, range from the perpendicular line
 devia_angle = math.pi/9  # deviate these much angle from perpendicualr line
 # consensus configuration
-shape_quantity = 30  # the number of decisions
+loop_folder = "loop-data2"  # folder to store the loop shapes
+shape_catalog = ["airplane", "circle", "cross", "goblet", "hand", "K", "lamp", "square",
+    "star", "triangle", "wrench"]
+shape_quantity = len(shape_catalog)  # the number of decisions
 shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
     # also the index in shape_catalog
 assignment_scheme = np.zeros(swarm_size)
-loop_folder = "loop-data2"  # folder to store the loop shapes
-shape_catalog = ["circle", "square", "triangle", "star"]
 
 # robot properties
 robot_poses = np.random.rand(swarm_size, 2) * world_side_length  # initialize the robot poses
@@ -384,7 +385,7 @@ while True:
     # prog_counter = 0
     # sys.stdout.write("[" + prog_pos*"-" + "#" + (prog_bar_len-(prog_pos+1))*"-" + "]\r")
     # sys.stdout.flush()
-    while True:
+    while False:
         # close window button to exit the entire program;
         # space key to pause this simulation
         for event in pygame.event.get():
@@ -715,7 +716,7 @@ while True:
     sim_freq_control = True
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))
-    while True:
+    while False:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 2")
@@ -1070,7 +1071,7 @@ while True:
     sim_freq_control = True
     flash_delay = 200
     sys.stdout.write("iteration {}".format(iter_count))
-    while True:
+    while False:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 3")
@@ -1238,9 +1239,9 @@ while True:
 
     ########### simulation 4: loop formation with designated role assignment ###########
 
-    # # restore variable "assignment_scheme"
-    # with open('d1_assignment_scheme') as f:
-    #     assignment_scheme = pickle.load(f)
+    # restore variable "assignment_scheme"
+    with open('d1_assignment_scheme') as f:
+        assignment_scheme = pickle.load(f)
 
     print("##### simulation 4: loop formation #####")
 
@@ -1292,7 +1293,7 @@ while True:
     print("swarm robots are forming an ordered loop ...")
     loop_formed = False
     ending_period = 1.0  # grace period
-    while True:
+    while False:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 4")
@@ -1725,16 +1726,17 @@ while True:
 
     ########### simulation 5: loop reshaping to chosen shape ###########
 
-    # # restore variable "robot_poses"
-    # with open('d1_robot_poses2') as f:
-    #     robot_poses, robot_key_neighbors = pickle.load(f)
+    # restore variable "robot_poses"
+    with open('d1_robot_poses2') as f:
+        robot_poses, robot_key_neighbors = pickle.load(f)
 
     print("##### simulation 5: loop reshaping #####")
 
     print("old shape decision: {}".format(shape_decision))
-    shape_decision = 3
+    shape_decision = 10
     print("forced shape decision: {} - ".format(shape_decision) +
         shape_catalog[shape_decision])
+    print("chosen shape {}: {}".format(shape_decision, shape_catalog[shape_decision]))
 
     # spring constants in SMA
     linear_const = 1.0
