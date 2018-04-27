@@ -2,6 +2,7 @@
 # each block of code generates one loop shape
 
 import pickle
+import os
 import math
 import pygame
 import numpy as np
@@ -25,6 +26,7 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
     return index_next
 
 # ##### script to generate 30-square #####
+# filename = '30-square'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # x = 0.0
@@ -54,11 +56,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     y = y - 1.0
 #     node_poses[i] = np.array([x,y])
 # print("node_poses: {}".format(node_poses))
-# with open('30-square', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-square #####
+# filename = '100-square'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # x = 0.0
@@ -81,11 +84,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     y = y - 1.0
 #     node_poses[i] = np.array([x,y])
 # print("node_poses: {}".format(node_poses))
-# with open('100-square', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-circle #####
+# filename = '30-circle'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # center = np.zeros(2)
@@ -95,11 +99,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     ori = -math.pi + 2*math.pi/swarm_size * i
 #     node_poses[i] = center + np.array([radius*math.cos(ori), radius*math.sin(ori)])
 # print("node_poses: {}".format(node_poses))
-# with open('30-circle', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-circle #####
+# filename = '100-circle'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # center = np.zeros(2)
@@ -109,11 +114,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     ori = -math.pi + 2*math.pi/swarm_size * i
 #     node_poses[i] = center + np.array([radius*math.cos(ori), radius*math.sin(ori)])
 # print("node_poses: {}".format(node_poses))
-# with open('100-circle', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-triangle #####
+# filename = '30-triangle'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # # first node is at bottom left corner
@@ -132,11 +138,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     y = y + 1.0 * math.sin(-math.pi*2/3)
 #     node_poses[i] = np.array([x,y])
 # print("node_poses: {}".format(node_poses))
-# with open('30-triangle', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-triangle #####
+# filename = '100-triangle'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # side_angle = math.acos(17.0/33.0)
@@ -156,11 +163,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     y = y + 1.0 * math.sin(-math.pi+side_angle)
 #     node_poses[i] = np.array([x,y])
 # print("node_poses: {}".format(node_poses))
-# with open('100-triangle', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-star #####
+# filename = '30-star'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # outer_angle = 2*math.pi / 5.0
@@ -183,11 +191,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #             heading_angle = reset_radian(heading_angle + devia_left)
 #             heading_dir = 0
 # print(node_poses)
-# with open('30-star', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-star #####
+# filename = '100-star'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # outer_angle = 2*math.pi / 5.0
@@ -210,11 +219,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #             heading_angle = reset_radian(heading_angle + devia_left)
 #             heading_dir = 0
 # print(node_poses)
-# with open('100-star', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-airplane #####
+# filename = '30-airplane'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # # first node is at bottom center
@@ -240,11 +250,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     old_vect = node_poses[i] - node_poses[0]
 #     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
 # print(node_poses)
-# with open('30-airplane', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-airplane #####
+# filename = '100-airplane'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # # first node is at bottom center
@@ -270,11 +281,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     old_vect = node_poses[i] - node_poses[0]
 #     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
 # print(node_poses)
-# with open('100-airplane', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-cross #####
+# filename = '30-cross'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -304,11 +316,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
 # print(node_index)
 # print(node_poses)
-# with open('30-cross', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-cross #####
+# filename = '100-cross'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -338,11 +351,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 16)
 # print(node_index)
 # print(node_poses)
-# with open('100-cross', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-hand #####
+# filename = '30-hand'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -384,11 +398,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
 # print(node_index)
 # print(node_poses)
-# with open('30-hand', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-hand #####
+# filename = '100-hand'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -457,11 +472,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
 # print(node_index)
 # print(node_poses)
-# with open('100-hand', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-wrench #####
+# filename = '30-wrench'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -495,11 +511,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
 # print(node_index)
 # print(node_poses)
-# with open('30-wrench', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-wrench #####
+# filename = '100-wrench'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -533,11 +550,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
 # print(node_index)
 # print(node_poses)
-# with open('100-wrench', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-goblet #####
+# filename = '30-goblet'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -570,11 +588,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
 # print(node_index)
 # print(node_poses)
-# with open('30-goblet', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-goblet #####
+# filename = '100-goblet'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -603,11 +622,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
 # print(node_index)
 # print(node_poses)
-# with open('100-goblet', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-lamp #####
+# filename = '30-lamp'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -633,11 +653,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
 # print(node_index)
 # print(node_poses)
-# with open('30-lamp', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-lamp #####
+# filename = '100-lamp'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -667,11 +688,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     node_poses[-i] = 2*np.dot(axis_vect, old_vect)*axis_vect - old_vect
 # print(node_index)
 # print(node_poses)
-# with open('100-lamp', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-K #####
+# filename = '30-K'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -701,11 +723,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 6)
 # print(node_index)
 # print(node_poses)
-# with open('30-K', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-K #####
+# filename = '100-K'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -737,7 +760,7 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 19)
 # print(node_index)
 # print(node_poses)
-# with open('100-K', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
@@ -776,6 +799,11 @@ for i in range(swarm_size-1):
     pygame.draw.line(screen, color_black, disp_poses[i], disp_poses[i+1], 2)
 pygame.draw.line(screen, color_black, disp_poses[0], disp_poses[swarm_size-1], 2)
 pygame.display.update()
+
+# # save the screen as image
+# filepath = os.path.join('images',filename+'.png')
+# pygame.image.save(screen, filepath)
+
 raw_input("<Press ENTER to exit>")
 
 

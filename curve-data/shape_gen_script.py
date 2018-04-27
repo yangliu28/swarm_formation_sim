@@ -5,6 +5,7 @@
 # http://fenotype.1001fonts.com/neon-fonts.html
 
 import pickle
+import os
 import math
 import pygame
 import numpy as np
@@ -28,6 +29,7 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
     return index_next
 
 # ##### script to generate 30-squarehelix #####
+# filename = '30-squarehelix'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -53,11 +55,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
 # print(node_index)
 # print(node_poses)
-# with open('30-squarehelix', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-squarehelix #####
+# filename = '100-squarehelix'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -101,11 +104,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 9)
 # print(node_index)
 # print(node_poses)
-# with open('100-squarehelix', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-ARM #####
+# filename = '30-ARM'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -145,11 +149,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
 # print(node_index)
 # print(node_poses)
-# with open('30-ARM', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-ARM #####
+# filename = '100-ARM'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -192,11 +197,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 10)
 # print(node_index)
 # print(node_poses)
-# with open('100-ARM', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-KID #####
+# filename = '30-KID'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -235,11 +241,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
 # print(node_index)
 # print(node_poses)
-# with open('30-KID', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-KID #####
+# filename = '100-KID'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -291,11 +298,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
 # print(node_index)
 # print(node_poses)
-# with open('100-KID', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-MAD #####
+# filename = '30-MAD'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -332,11 +340,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
 # print(node_index)
 # print(node_poses)
-# with open('30-MAD', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-MAD #####
+# filename = '100-MAD'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -376,11 +385,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
 # print(node_index)
 # print(node_poses)
-# with open('100-MAD', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
-# ##### script to generate 30-DIRL #####
+##### script to generate 30-DIRL #####
+# filename = '30-DIRL'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -428,11 +438,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
 # print(node_index)
 # print(node_poses)
-# with open('30-DIRL', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-DIRL #####
+# filename = '100-DIRL'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -495,11 +506,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
 # print(node_index)
 # print(node_poses)
-# with open('100-DIRL', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 30-CWRU #####
+# filename = '30-CWRU'
 # swarm_size = 30
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -557,11 +569,12 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
 # print(node_index)
 # print(node_poses)
-# with open('30-CWRU', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
 # ##### script to generate 100-CWRU #####
+# filename = '100-CWRU'
 # swarm_size = 100
 # node_poses = np.zeros((swarm_size, 2))
 # node_index = 0
@@ -639,7 +652,7 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 # node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
 # print(node_index)
 # print(node_poses)
-# with open('100-CWRU', 'w') as f:
+# with open(filename, 'w') as f:
 #     pickle.dump(node_poses, f)
 
 
@@ -677,6 +690,11 @@ for i in range(swarm_size):
 for i in range(swarm_size-1):
     pygame.draw.line(screen, color_black, disp_poses[i], disp_poses[i+1], 2)
 pygame.display.update()
+
+# # save the screen as image
+# filepath = os.path.join('images',filename+'.png')
+# pygame.image.save(screen, filepath)
+
 raw_input("<Press ENTER to exit>")
 
 
