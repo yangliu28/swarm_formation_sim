@@ -380,9 +380,267 @@ def cal_next_node(node_poses, index_curr, heading_angle, rep_times):
 #     pickle.dump(node_poses, f)
 
 
+# ##### script to generate 30-DIRL #####
+# swarm_size = 30
+# node_poses = np.zeros((swarm_size, 2))
+# node_index = 0
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -30*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi/2.
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -(180-30)*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -15*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -45*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# print(node_index)
+# print(node_poses)
+# with open('30-DIRL', 'w') as f:
+#     pickle.dump(node_poses, f)
 
 
+# ##### script to generate 100-DIRL #####
+# swarm_size = 100
+# node_poses = np.zeros((swarm_size, 2))
+# node_index = 0
+# arc1_segments = 13
+# arc1_angle = math.pi/float(arc1_segments)/2.0
+# arc2_segments = 7
+# arc2_angle = math.pi/float(arc2_segments)/2.0
+# # letter 'D'
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 8)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = arc1_angle
+# for _ in range(arc1_segments):
+#     heading_angle = reset_radian(heading_angle - 2*arc1_angle)
+#     node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 6)
+# # letter 'I'
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 7)
+# heading_angle = (90-45)*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = (90+15)*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = (-90-15)*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = (-90+45)*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 7)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# # letter 'R'
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 8)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 3)
+# heading_angle = arc2_angle
+# for _ in range(arc2_segments):
+#     heading_angle = reset_radian(heading_angle - 2*arc2_angle)
+#     node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = -45*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 5)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# # letter 'L'
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 8)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 8)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# print(node_index)
+# print(node_poses)
+# with open('100-DIRL', 'w') as f:
+#     pickle.dump(node_poses, f)
 
+
+# ##### script to generate 30-CWRU #####
+# swarm_size = 30
+# node_poses = np.zeros((swarm_size, 2))
+# node_index = 0
+# # letter 'C'
+# heading_angle = 165*math.pi/180
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -150*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -90*math.pi/180
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -30*math.pi/180
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = 15*math.pi/180
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -15*math.pi/180
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# # letter 'W'
+# heading_angle = (90+10)*math.pi/180
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = -50*math.pi/180
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = 50*math.pi/180
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -50*math.pi/180
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = 50*math.pi/180
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = (-90-10)*math.pi/180
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# # letter 'R'
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -42*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = (-90-42)*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -42*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# # letter 'U'
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# heading_angle = (-90+20)*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# print(node_index)
+# print(node_poses)
+# with open('30-CWRU', 'w') as f:
+#     pickle.dump(node_poses, f)
+
+
+# ##### script to generate 100-CWRU #####
+# swarm_size = 100
+# node_poses = np.zeros((swarm_size, 2))
+# node_index = 0
+# # letter 'C'
+# arc1_segments = 15
+# arc1_angle = math.pi*1.5/float(arc1_segments)/2.0
+# heading_angle = 130*math.pi/180.0 - arc1_angle
+# for _ in range(arc1_segments):
+#     heading_angle = reset_radian(heading_angle + 2*arc1_angle)
+#     node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -45*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# # letter 'W'
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 6)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 5)
+# heading_angle = -30*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = 30*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
+# heading_angle = -30*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = 30*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 5)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 6)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# # letter 'R'
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 6)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# arc2_segments = 6
+# arc2_angle = math.pi/float(arc2_segments)/2.0
+# heading_angle = arc2_angle
+# for _ in range(arc2_segments):
+#     heading_angle = reset_radian(heading_angle - 2*arc2_angle)
+#     node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -40*math.pi/180.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 2)
+# # letter 'U'
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 6)
+# heading_angle = 0.0
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = -math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
+# arc3_segments = 7
+# arc3_angle = math.pi/float(arc3_segments)/2.0
+# heading_angle = -math.pi/2 - arc3_angle
+# for _ in range(arc3_segments):
+#     heading_angle = reset_radian(heading_angle + 2*arc3_angle)
+#     node_index = cal_next_node(node_poses, node_index, heading_angle, 1)
+# heading_angle = math.pi/2
+# node_index = cal_next_node(node_poses, node_index, heading_angle, 4)
+# print(node_index)
+# print(node_poses)
+# with open('100-CWRU', 'w') as f:
+#     pickle.dump(node_poses, f)
 
 
 
