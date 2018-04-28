@@ -19,6 +19,10 @@
     # Simulation 2: consensus decision making for target loop shape
     # Simulation 3: role assignment and loop reshape
 
+# 04/28/2018
+# Added a stretching process in simulation 3, before the loop reshapes to the target. Because
+# the loop may get tangled if reshaping directly from previous loop formation.
+
 
 from __future__ import print_function
 import pygame
@@ -713,7 +717,9 @@ if (len(loop_set) != swarm_size):
     sys.exit()
 
 # # store the variable "robot_poses", "robot_key_neighbors", and "robot_loop_orders"
-# with open('demo2_30_robot_poses', 'w') as f:
+# tmp_filepath = os.path.join('tmp', 'demo2_30_robot_poses')
+# # tmp_filepath = os.path.join('tmp', 'demo2_100_robot_poses')
+# with open(tmp_filepath, 'w') as f:
 #     pickle.dump([robot_poses, robot_key_neighbors, robot_loop_orders], f)
 # raw_input("<Press Enter to continue>")
 # sys.exit()
@@ -726,7 +732,9 @@ while True:
     print("##### simulation 2: consensus decision making #####")
 
     # # restore variable "robot_poses", "robot_key_neighbors", and "robot_loop_orders"
-    # with open('demo2_30_robot_poses') as f:
+    # tmp_filepath = os.path.join('tmp', 'demo2_30_robot_poses')
+    # # tmp_filepath = os.path.join('tmp', 'demo2_100_robot_poses')
+    # with open(tmp_filepath) as f:
     #     robot_poses, robot_key_neighbors, robot_loop_orders = pickle.load(f)
 
     # shift the robots to the middle of the window
@@ -954,7 +962,8 @@ while True:
         if converged_all:
             shape_decision = deci_domi[0]
             print("")  # move cursor to the new line
-            print("converged to decision {}".format(shape_decision))
+            print("converged to decision {}: {}".format(shape_decision,
+                shape_catalog[shape_decision]))
             print("simulation 2 is finished")
             if manual_mode: raw_input("<Press Enter to continue>")
             print("")  # empty line
@@ -971,7 +980,8 @@ while True:
     force_choice = np.random.choice(force_shape_set)
     force_shape_set.remove(force_choice)
     shape_decision = force_choice
-    print("forced shape to {}: {}".format(shape_decision, shape_catalog[shape_decision]))
+    print("force shape to {}: {} (for video recording)".format(shape_decision,
+        shape_catalog[shape_decision]))
 
     # read the loop shape from file
     filename = str(swarm_size) + "-" + shape_catalog[shape_decision]
@@ -1023,6 +1033,12 @@ while True:
     dist_diff_ratio = [0.0 for i in range(swarm_size)]
     dist_diff_power = 0.3
 
+    # formation control variables
+    inter_err_thres = 0.1
+    inter_target_circle = math.pi - 2*math.pi/swarm_size  # interior angle for circle
+    formation_stretched = False  # whether the stretching process is done
+    formation_stretched_err = inter_target_circle*0.2
+
     # spring constants in SMA
     linear_const = 1.0
     bend_const = 0.8
@@ -1034,12 +1050,10 @@ while True:
     time_now = time_last
     frame_period = 200
     sim_freq_control = True
-    print("loop is reshaping to " + shape_catalog[shape_decision] + " with "
-        + str(swarm_size) + " robots ...")
+    print("loop is stretching ...")
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))
     sys.stdout.flush()
-    inter_err_thres = 0.2
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
@@ -1235,9 +1249,25 @@ while True:
             fb_vect = np.zeros(2)
             fb_vect = fb_vect + (dist_l - desired_space) * linear_const * u_vect_l
             fb_vect = fb_vect + (dist_r - desired_space) * linear_const * u_vect_r
-            fb_vect = fb_vect + (inter_target[deci_domi[i]] - inter_curr[i]) * bend_const * u_vect_in
+            if formation_stretched:
+                fb_vect = (fb_vect +
+                    (inter_target[deci_domi[i]] - inter_curr[i]) * bend_const * u_vect_in)
+            else:
+                fb_vect = (fb_vect +
+                    (inter_target_circle - inter_curr[i]) * bend_const * u_vect_in)
             # update one step of position
             robot_poses[i] = robot_poses_t[i] + disp_coef * fb_vect
+
+        # check if the stretching process is done
+        if not formation_stretched:
+            formation_stretched = True
+            for i in range(swarm_size):
+                if abs(inter_curr[i] - inter_target_circle) > formation_stretched_err:
+                    formation_stretched = False
+                    break
+            if formation_stretched:
+                # stretching finished
+                print("loop is reshaping to " + shape_catalog[shape_decision] + " ...")
 
         # update the graphics
         disp_poses_update()

@@ -752,7 +752,9 @@ while False:
 #     sys.exit()
 
 # # store the variable "robot_poses", "robot_key_neighbors"
-# with open('demo3_30_robot_poses', 'w') as f:
+# tmp_filepath = os.path.join('tmp', 'demo3_30_robot_poses')
+# # tmp_filepath = os.path.join('tmp', 'demo3_100_robot_poses')
+# with open(tmp_filepath, 'w') as f:
 #     pickle.dump([robot_poses, robot_key_neighbors, line_robots], f)
 # raw_input("<Press Enter to continue>")
 # sys.exit()
@@ -765,7 +767,9 @@ while True:
     print("##### simulation 2: consensus decision making #####")
 
     # restore variable "robot_poses", "robot_key_neighbors"
-    with open('demo3_30_robot_poses') as f:
+    tmp_filepath = os.path.join('tmp', 'demo3_30_robot_poses')
+    # tmp_filepath = os.path.join('tmp', 'demo3_100_robot_poses')
+    with open(tmp_filepath) as f:
         robot_poses, robot_key_neighbors, line_robots = pickle.load(f)
 
     # shift the robots to the middle of the window

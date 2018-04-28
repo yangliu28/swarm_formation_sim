@@ -1763,7 +1763,8 @@ while True:
     # force_choice = np.random.choice(force_shape_set)
     # force_shape_set.remove(force_choice)
     # shape_decision = force_choice
-    # print("forced shape to {}: {}".format(shape_decision, shape_catalog[shape_decision]))
+    # print("force shape to {}: {} (for video recording)".format(shape_decision,
+    #     shape_catalog[shape_decision]))
 
     # spring constants in SMA
     linear_const = 1.0
@@ -1818,6 +1819,9 @@ while True:
                 print("loop formed with incorrect order")
                 sys.exit()
 
+    # formation control variables
+    inter_err_thres = 0.1
+
     # the loop for simulation 5
     sim_haulted = False
     time_last = pygame.time.get_ticks()
@@ -1825,9 +1829,7 @@ while True:
     frame_period = 100
     sim_freq_control = True
     iter_count = 0
-    print("loop is reshaping to " + shape_catalog[shape_decision] + " with "
-        + str(swarm_size) + " robots ...")
-    inter_err_thres = 0.05
+    print("loop is reshaping to " + shape_catalog[shape_decision] + " ...")
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
