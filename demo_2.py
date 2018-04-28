@@ -27,6 +27,7 @@ import numpy as np
 import pickle
 
 swarm_size = 30  # default swarm size
+manual_mode = False  # manually press enter key to proceed between simulations
 
 # read command line options
 try:
@@ -65,11 +66,14 @@ desired_space = comm_range * desired_space_ratio
 perp_thres = math.pi/18  # threshold, range from the perpendicular line
 devia_angle = math.pi/9  # deviate these much angle from perpendicualr line
 # consensus configuration
-shape_quantity = 30  # the number of decisions
+loop_folder = "loop-data2"  # folder to store the loop shapes
+shape_catalog = ["airplane", "circle", "cross", "goblet", "hand", "K", "lamp", "square",
+    "star", "triangle", "wrench"]
+shape_quantity = len(shape_catalog)  # the number of decisions
 shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
     # also the index in shape_catalog
-loop_folder = "loop-data2"  # folder to store the loop shapes
-shape_catalog = ["circle", "square", "triangle", "star"]
+# variable to force shape to different choices, for video recording
+force_shape_set = range(shape_quantity)
 
 # robot properties
 robot_poses = np.random.rand(swarm_size, 2) * world_side_length  # initialize the robot poses
@@ -274,12 +278,14 @@ robot_group_ids = np.array([-1 for i in range(swarm_size)])  # group id for the 
 
 # movement configuration
 step_moving_dist = 0.05  # should be smaller than destination distance error
-destination_error = 0.08
+destination_error = 0.1
 mov_vec_ratio = 0.5  # ratio used when calculating mov vector
 # spring constants in SMA
 linear_const = 1.0
 bend_const = 0.8
 disp_coef = 0.5
+# for avoiding space too small on loop
+space_good_thres = desired_space * 0.85
 
 # the loop for simulation 1
 sim_haulted = False
@@ -621,8 +627,11 @@ while True:
                     linear_const * vect_r)
                 fb_vect = fb_vect + ((desired_angle - inter_curr) *
                     bend_const * vect_in)
-                if np.linalg.norm(fb_vect)*disp_coef < destination_error:
-                    continue  # stay in position if within destination error
+                if (np.linalg.norm(fb_vect)*disp_coef < destination_error and
+                    dist_table[i,left_key] > space_good_thres and
+                    dist_table[i,right_key] > space_good_thres):
+                    # stay in position if within destination error, and space are good
+                    continue
                 else:
                     robot_oris[i] = math.atan2(fb_vect[1], fb_vect[0])
         # check if out of boundaries
@@ -704,7 +713,7 @@ if (len(loop_set) != swarm_size):
     sys.exit()
 
 # # store the variable "robot_poses", "robot_key_neighbors", and "robot_loop_orders"
-# with open('d2_robot_poses', 'w') as f:
+# with open('demo2_30_robot_poses', 'w') as f:
 #     pickle.dump([robot_poses, robot_key_neighbors, robot_loop_orders], f)
 # raw_input("<Press Enter to continue>")
 # sys.exit()
@@ -717,7 +726,7 @@ while True:
     print("##### simulation 2: consensus decision making #####")
 
     # # restore variable "robot_poses", "robot_key_neighbors", and "robot_loop_orders"
-    # with open('d2_robot_poses') as f:
+    # with open('demo2_30_robot_poses') as f:
     #     robot_poses, robot_key_neighbors, robot_loop_orders = pickle.load(f)
 
     # shift the robots to the middle of the window
@@ -955,10 +964,14 @@ while True:
 
     print("##### simulation 3: role assignment & loop reshape #####")
 
-    print("chosen shape decision: {}".format(shape_decision))
-    shape_decision = 3
-    print("forced shape decision: {} - ".format(shape_decision) +
-        shape_catalog[shape_decision])
+    print("chosen shape {}: {}".format(shape_decision, shape_catalog[shape_decision]))
+
+    # force the choice of shape, for video recording
+    if len(force_shape_set) == 0: force_shape_set = range(shape_quantity)
+    force_choice = np.random.choice(force_shape_set)
+    force_shape_set.remove(force_choice)
+    shape_decision = force_choice
+    print("forced shape to {}: {}".format(shape_decision, shape_catalog[shape_decision]))
 
     # read the loop shape from file
     filename = str(swarm_size) + "-" + shape_catalog[shape_decision]

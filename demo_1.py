@@ -391,7 +391,7 @@ while True:
     # prog_counter = 0
     # sys.stdout.write("[" + prog_pos*"-" + "#" + (prog_bar_len-(prog_pos+1))*"-" + "]\r")
     # sys.stdout.flush()
-    while False:
+    while True:
         # close window button to exit the entire program;
         # space key to pause this simulation
         for event in pygame.event.get():
@@ -726,7 +726,7 @@ while True:
     sim_freq_control = True
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))
-    while False:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 2")
@@ -1082,7 +1082,7 @@ while True:
     sim_freq_control = True
     flash_delay = 200
     sys.stdout.write("iteration {}".format(iter_count))
-    while False:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 3")
@@ -1252,11 +1252,11 @@ while True:
 
     ########### simulation 4: loop formation with designated role assignment ###########
 
-    # restore variable "assignment_scheme"
-    # tmp_filepath = os.path.join('tmp', 'demo1_30_assignment_scheme')
-    tmp_filepath = os.path.join('tmp', 'demo1_100_assignment_scheme')
-    with open(tmp_filepath) as f:
-        assignment_scheme = pickle.load(f)
+    # # restore variable "assignment_scheme"
+    # # tmp_filepath = os.path.join('tmp', 'demo1_30_assignment_scheme')
+    # tmp_filepath = os.path.join('tmp', 'demo1_100_assignment_scheme')
+    # with open(tmp_filepath) as f:
+    #     assignment_scheme = pickle.load(f)
 
     print("##### simulation 4: loop formation #####")
 
@@ -1310,7 +1310,7 @@ while True:
     print("swarm robots are forming an ordered loop ...")
     loop_formed = False
     ending_period = 1.0  # grace period
-    while False:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 4")
@@ -1670,7 +1670,8 @@ while True:
                     if (np.linalg.norm(fb_vect)*disp_coef < destination_error and
                         dist_table[i,left_key] > space_good_thres and
                         dist_table[i,right_key] > space_good_thres):
-                        continue  # stay in position if within destination error
+                        # stay in position if within destination error, and space are good
+                        continue
                     else:
                         robot_oris[i] = math.atan2(fb_vect[1], fb_vect[0])
             # check if out of boundaries
@@ -1747,22 +1748,22 @@ while True:
 
     ########### simulation 5: loop reshaping to chosen shape ###########
 
-    # restore variable "robot_poses"
-    # tmp_filepath = os.path.join('tmp', 'demo1_30_robot_poses2')
-    tmp_filepath = os.path.join('tmp', 'demo1_100_robot_poses2')
-    with open(tmp_filepath) as f:
-        robot_poses, robot_key_neighbors = pickle.load(f)
+    # # restore variable "robot_poses"
+    # # tmp_filepath = os.path.join('tmp', 'demo1_30_robot_poses2')
+    # tmp_filepath = os.path.join('tmp', 'demo1_100_robot_poses2')
+    # with open(tmp_filepath) as f:
+    #     robot_poses, robot_key_neighbors = pickle.load(f)
 
     print("##### simulation 5: loop reshaping #####")
 
     print("chosen shape {}: {}".format(shape_decision, shape_catalog[shape_decision]))
 
-    # force the choice of shape, for video recording
-    if len(force_shape_set) == 0: force_shape_set = range(shape_quantity)
-    force_choice = np.random.choice(force_shape_set)
-    force_shape_set.remove(force_choice)
-    shape_decision = force_choice
-    print("forced shape to {}: {}".format(shape_decision, shape_catalog[shape_decision]))
+    # # force the choice of shape, for video recording
+    # if len(force_shape_set) == 0: force_shape_set = range(shape_quantity)
+    # force_choice = np.random.choice(force_shape_set)
+    # force_shape_set.remove(force_choice)
+    # shape_decision = force_choice
+    # print("forced shape to {}: {}".format(shape_decision, shape_catalog[shape_decision]))
 
     # spring constants in SMA
     linear_const = 1.0

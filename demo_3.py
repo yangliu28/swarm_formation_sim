@@ -25,6 +25,7 @@ import numpy as np
 import pickle
 
 swarm_size = 30  # default swarm size
+manual_mode = False  # manually press enter key to proceed between simulations
 
 # read command line options
 try:
@@ -751,7 +752,7 @@ while False:
 #     sys.exit()
 
 # # store the variable "robot_poses", "robot_key_neighbors"
-# with open('d3_robot_poses', 'w') as f:
+# with open('demo3_30_robot_poses', 'w') as f:
 #     pickle.dump([robot_poses, robot_key_neighbors, line_robots], f)
 # raw_input("<Press Enter to continue>")
 # sys.exit()
@@ -764,7 +765,7 @@ while True:
     print("##### simulation 2: consensus decision making #####")
 
     # restore variable "robot_poses", "robot_key_neighbors"
-    with open('d3_robot_poses') as f:
+    with open('demo3_30_robot_poses') as f:
         robot_poses, robot_key_neighbors, line_robots = pickle.load(f)
 
     # shift the robots to the middle of the window
