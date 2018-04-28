@@ -625,8 +625,12 @@ while True:
                 pygame.draw.circle(screen, color_grey, disp_poses[i],
                     robot_size_formation, robot_width_empty)
             elif robot_states[i] == 0:  # full circle for state '0' robot
-                pygame.draw.circle(screen, color_grey, disp_poses[i],
-                    robot_size_formation, 0)
+                if robot_seeds[i]:  # black color for seed robot
+                    pygame.draw.circle(screen, color_black, disp_poses[i],
+                        robot_size_formation, 0)
+                else:  # grey for non-seed robot
+                    pygame.draw.circle(screen, color_grey, disp_poses[i],
+                        robot_size_formation, 0)
         # draw the in-group robots by each group
         for group_id_temp in groups.keys():
             if groups[group_id_temp][2]:
@@ -637,13 +641,18 @@ while True:
             conn_draw_sets = []  # avoid draw same connection two times
             # draw the robots and connections in the group
             for i in groups[group_id_temp][0]:
-                pygame.draw.circle(screen, color_group, disp_poses[i],
-                    robot_size_formation, 0)
                 for j in local_conn_lists[i]:
                     if set([i,j]) not in conn_draw_sets:
                         pygame.draw.line(screen, color_group, disp_poses[i],
                             disp_poses[j], conn_width_formation)
                         conn_draw_sets.append(set([i,j]))
+                # draw robots in the group
+                if robot_seeds[i]:  # force color black for seed robot
+                    pygame.draw.circle(screen, color_black, disp_poses[i],
+                        robot_size_formation, 0)
+                else:
+                    pygame.draw.circle(screen, color_group, disp_poses[i],
+                        robot_size_formation, 0)
         pygame.display.update()
 
         # reduce life time of robot '-1' and groups
@@ -1691,8 +1700,12 @@ while True:
                 pygame.draw.circle(screen, color_grey, disp_poses[i],
                     robot_size_formation, robot_width_empty)
             elif robot_states[i] == 0:  # full circle for state '0' robot
-                pygame.draw.circle(screen, color_grey, disp_poses[i],
-                    robot_size_formation, 0)
+                if robot_seeds[i]:  # black color for seed robot
+                    pygame.draw.circle(screen, color_black, disp_poses[i],
+                        robot_size_formation, 0)
+                else:  # grey for non-seed robot
+                    pygame.draw.circle(screen, color_grey, disp_poses[i],
+                        robot_size_formation, 0)
             # draw text of the assigned roles for all robots
             text = font.render(str(int(assignment_scheme[i])), True, color_grey)
             # text = font.render(str(int(i)), True, color_grey)
@@ -1707,13 +1720,18 @@ while True:
             conn_draw_sets = []  # avoid draw same connection two times
             # draw the robots and connections in the group
             for i in groups[group_id_temp][0]:
-                pygame.draw.circle(screen, color_group, disp_poses[i],
-                    robot_size_formation, 0)
                 for j in robot_key_neighbors[i]:
                     if set([i,j]) not in conn_draw_sets:
                         pygame.draw.line(screen, color_group, disp_poses[i],
                             disp_poses[j], conn_width_formation)
                         conn_draw_sets.append(set([i,j]))
+                # draw robots in the group
+                if robot_seeds[i]:  # force color black for seed robot
+                    pygame.draw.circle(screen, color_black, disp_poses[i],
+                        robot_size_formation, 0)
+                else:
+                    pygame.draw.circle(screen, color_group, disp_poses[i],
+                        robot_size_formation, 0)
         pygame.display.update()
 
         # reduce life time of robot '-1' and groups

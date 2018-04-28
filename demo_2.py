@@ -655,8 +655,12 @@ while True:
             pygame.draw.circle(screen, color_grey, disp_poses[i],
                 robot_size, robot_empty_width)
         elif robot_states[i] == 0:  # full circle for state '0' robot
-            pygame.draw.circle(screen, color_grey, disp_poses[i],
-                robot_size, 0)
+            if robot_seeds[i]:  # black color for seed robot
+                pygame.draw.circle(screen, color_black, disp_poses[i],
+                    robot_size, 0)
+            else:  # grey for non-seed robot
+                pygame.draw.circle(screen, color_grey, disp_poses[i],
+                    robot_size, 0)
     # draw the in-group robots by group
     for group_id_temp in groups.keys():
         if groups[group_id_temp][2]:
@@ -667,13 +671,18 @@ while True:
         conn_draw_sets = []  # avoid draw same connection two times
         # draw the robots and connections in the group
         for i in groups[group_id_temp][0]:
-            pygame.draw.circle(screen, color_group, disp_poses[i],
-                robot_size, 0)
             for j in robot_key_neighbors[i]:
                 if set([i,j]) not in conn_draw_sets:
                     pygame.draw.line(screen, color_group, disp_poses[i],
                         disp_poses[j], conn_width)
                     conn_draw_sets.append(set([i,j]))
+            # draw robots in the group
+            if robot_seeds[i]:  # force color black for seed robot
+                pygame.draw.circle(screen, color_black, disp_poses[i],
+                    robot_size, 0)
+            else:
+                pygame.draw.circle(screen, color_group, disp_poses[i],
+                    robot_size, 0)
     pygame.display.update()
 
     # reduce life time of robot '-1' and groups
@@ -724,18 +733,18 @@ if (len(loop_set) != swarm_size):
 # raw_input("<Press Enter to continue>")
 # sys.exit()
 
+# # restore variable "robot_poses", "robot_key_neighbors", and "robot_loop_orders"
+# tmp_filepath = os.path.join('tmp', 'demo2_30_robot_poses')
+# # tmp_filepath = os.path.join('tmp', 'demo2_100_robot_poses')
+# with open(tmp_filepath) as f:
+#     robot_poses, robot_key_neighbors, robot_loop_orders = pickle.load(f)
+
 # simulation 2 and 3 will run repeatedly since here
 while True:
 
     ########### simulation 2: consensus decision making for target loop shape ###########
 
     print("##### simulation 2: consensus decision making #####")
-
-    # # restore variable "robot_poses", "robot_key_neighbors", and "robot_loop_orders"
-    # tmp_filepath = os.path.join('tmp', 'demo2_30_robot_poses')
-    # # tmp_filepath = os.path.join('tmp', 'demo2_100_robot_poses')
-    # with open(tmp_filepath) as f:
-    #     robot_poses, robot_key_neighbors, robot_loop_orders = pickle.load(f)
 
     # shift the robots to the middle of the window
     x_max, y_max = np.amax(robot_poses, axis=0)
@@ -1052,8 +1061,8 @@ while True:
     sim_freq_control = True
     print("loop is stretching ...")
     iter_count = 0
-    sys.stdout.write("iteration {}".format(iter_count))
-    sys.stdout.flush()
+    # sys.stdout.write("iteration {}".format(iter_count))
+    # sys.stdout.flush()
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
@@ -1074,8 +1083,8 @@ while True:
 
         # increase iteration count
         iter_count = iter_count + 1
-        sys.stdout.write("\riteration {}".format(iter_count))
-        sys.stdout.flush()
+        # sys.stdout.write("\riteration {}".format(iter_count))
+        # sys.stdout.flush()
 
         # update the dominant decision for all robot
         deci_domi = np.argmax(pref_dist, axis=1)
