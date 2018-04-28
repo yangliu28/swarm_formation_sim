@@ -17,6 +17,8 @@
     # Simulation 2: consensus decision making for target curve shape
     # Simulation 3: curve reshape
 
+# It's not a good demo.
+
 
 from __future__ import print_function
 import pygame
@@ -29,7 +31,7 @@ manual_mode = False  # manually press enter key to proceed between simulations
 
 # read command line options
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'n:', , ['manual'])
+    opts, args = getopt.getopt(sys.argv[1:], 'n:', ['manual'])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit()
@@ -63,11 +65,13 @@ desired_space = comm_range * desired_space_ratio
 perp_thres = math.pi/18  # threshold, range from the perpendicular line
 devia_angle = math.pi/9  # deviate these much angle from perpendicualr line
 # consensus configuration
-shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
-    # also the index in shape_catalog
 curve_folder = "curve-data"  # folder to store the curve shapes
 shape_catalog = ["ARM", "CWRU", "DIRL", "KID", "MAD", "squarehelix"]
 shape_quantity = len(shape_catalog)
+shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
+    # also the index in shape_catalog
+# variable to force shape to different choices, for video recording
+force_shape_set = range(shape_quantity)
 
 # robot properties
 robot_poses = np.random.rand(swarm_size, 2) * world_side_length  # initialize the robot poses
@@ -286,7 +290,7 @@ iter_count = 0
 line_formed = False
 ending_period = 5.0  # grace period
 print("swarm robots are forming a straight line ...")
-while False:
+while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:  # close window button is clicked
             print("program exit in simulation 1")
@@ -744,21 +748,21 @@ while False:
         else:
             ending_period = ending_period - frame_period/1000.0
 
-# # check if the line is complete; list robots' order on the line
-# robot_starter = -1
-# for i in range(swarm_size):
-#     if robot_key_neighbors[i][0] == -1:
-#         robot_starter = i
-#         break
-# line_robots = [robot_starter]  # robots on the line, in order
-# robot_curr = robot_starter
-# while (robot_key_neighbors[robot_curr][1] != -1):
-#     robot_next = robot_key_neighbors[robot_curr][1]
-#     line_robots.append(robot_next)
-#     robot_curr = robot_next
-# if (len(set(line_robots)) != swarm_size):
-#     print("line is incomplete after line formation")
-#     sys.exit()
+# check if the line is complete; list robots' order on the line
+robot_starter = -1
+for i in range(swarm_size):
+    if robot_key_neighbors[i][0] == -1:
+        robot_starter = i
+        break
+line_robots = [robot_starter]  # robots on the line, in order
+robot_curr = robot_starter
+while (robot_key_neighbors[robot_curr][1] != -1):
+    robot_next = robot_key_neighbors[robot_curr][1]
+    line_robots.append(robot_next)
+    robot_curr = robot_next
+if (len(set(line_robots)) != swarm_size):
+    print("line is incomplete after line formation")
+    sys.exit()
 
 # # store the variable "robot_poses", "robot_key_neighbors"
 # tmp_filepath = os.path.join('tmp', 'demo3_30_robot_poses')
@@ -768,11 +772,11 @@ while False:
 # raw_input("<Press Enter to continue>")
 # sys.exit()
 
-# restore variable "robot_poses", "robot_key_neighbors"
-tmp_filepath = os.path.join('tmp', 'demo3_30_robot_poses')
-# tmp_filepath = os.path.join('tmp', 'demo3_100_robot_poses')
-with open(tmp_filepath) as f:
-    robot_poses, robot_key_neighbors, line_robots = pickle.load(f)
+# # restore variable "robot_poses", "robot_key_neighbors"
+# tmp_filepath = os.path.join('tmp', 'demo3_30_robot_poses')
+# # tmp_filepath = os.path.join('tmp', 'demo3_100_robot_poses')
+# with open(tmp_filepath) as f:
+#     robot_poses, robot_key_neighbors, line_robots = pickle.load(f)
 
 # simulation 2 and 3 will run repeatedly since here
 while True:
@@ -1060,7 +1064,174 @@ while True:
 
     print("##### simulation 3: curve reshape #####")
 
+    print("chosen shape {}: {}".format(shape_decision, shape_catalog[shape_decision]))
 
+    # # force the choice of shape, for video recording
+    # if len(force_shape_set) == 0: force_shape_set = range(shape_quantity)
+    # forced_choice = np.random.choice(force_shape_set)
+    # force_shape_set.remove(forced_choice)
+    # shape_decision = forced_choice
+    # print("force shape to {}: {} (for video recording)".format(shape_decision,
+    #     shape_catalog[shape_decision]))
 
+    # read the loop shape from file
+    filename = str(swarm_size) + "-" + shape_catalog[shape_decision]
+    filepath = os.path.join(os.getcwd(), curve_folder, filename)
+    if os.path.isfile(filepath):
+        with open(filepath, 'r') as f:
+            target_poses = pickle.load(f)
+    else:
+        print("fail to locate shape file: {}".format(filepath))
+        sys.exit()
+    # calculate the interior angles for the robots
+    inter_target = np.zeros(swarm_size)
+    for i in range(swarm_size):  # i on the target loop
+        if i == 0 or i == (swarm_size-1):  # robots on the ends
+            inter_target[i] = 0
+            continue
+        vect_l = target_poses[i-1] - target_poses[i]
+        vect_r = target_poses[i+1] - target_poses[i]
+        dist_l = np.linalg.norm(vect_l)
+        dist_r = np.linalg.norm(vect_r)
+        inter_target[i] = math.acos(np.around(
+            np.dot(vect_l, vect_r) / (dist_l * dist_r) ,6))
+        if np.cross(vect_r, vect_l) < 0:
+            inter_target[i] = 2*math.pi - inter_target[i]
+
+    # draw the network for the first time
+    screen.fill(color_white)
+    for i in range(swarm_size):
+        pygame.draw.circle(screen, color_black, disp_poses[i], robot_size, 0)
+        if robot_key_neighbors[i][1] != -1:
+            pygame.draw.line(screen, color_black, disp_poses[i],
+                disp_poses[robot_key_neighbors[i][1]], conn_width)
+    pygame.display.update()
+
+    # formation control variables
+    inter_err_thres = 0.1
+    inter_target_line = math.pi  # interior angle for straight line
+    formation_stretched = False  # whether the stretching process is done
+    formation_stretched_err = inter_target_line*0.1
+
+    # spring constants in SMA
+    linear_const = 1.0
+    bend_const = 0.8
+    disp_coef = 0.05
+
+    # the loop for simulation 3
+    sim_haulted = False
+    time_last = pygame.time.get_ticks()
+    time_now = time_last
+    frame_period = 200
+    sim_freq_control = True
+    print("line is stretching ...")
+    iter_count = 0
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:  # close window button is clicked
+                print("program exit in simulation 3")
+                sys.exit()  # exit the entire program
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE:
+                    sim_haulted = not sim_haulted  # reverse the pause flag
+        if sim_haulted: continue
+
+        # simulation frequency control
+        if sim_freq_control:
+            time_now = pygame.time.get_ticks()
+            if (time_now - time_last) > frame_period:
+                time_last = time_now
+            else:
+                continue
+
+        # increase iteration count
+        iter_count = iter_count + 1
+
+        # update the physics
+        robot_poses_t = np.copy(robot_poses)  # as old poses
+        inter_curr = np.zeros(swarm_size)
+        for i in range(swarm_size):
+            if robot_key_neighbors[i][0] == -1 or robot_key_neighbors[i][1] == -1:
+                i_next = -1
+                if robot_key_neighbors[i][0] == -1:
+                    i_next = robot_key_neighbors[i][1]
+                elif robot_key_neighbors[i][1] == -1:
+                    i_next = robot_key_neighbors[i][0]
+                vect_next = robot_poses_t[i_next]-robot_poses_t[i]
+                dist_next = np.linalg.norm(vect_next)
+                u_vect_next = vect_next / dist_next
+                fb_vect = (dist_next - desired_space) * linear_const * u_vect_next
+                robot_poses[i] = robot_poses_t[i] + disp_coef * fb_vect
+            else:
+                i_l = robot_key_neighbors[i][0]
+                i_r = robot_key_neighbors[i][1]
+                # vectors
+                vect_l = robot_poses_t[i_l] - robot_poses_t[i]
+                vect_r = robot_poses_t[i_r] - robot_poses_t[i]
+                vect_lr = robot_poses_t[i_r] - robot_poses_t[i_l]
+                # distances
+                dist_l = np.linalg.norm(vect_l)
+                dist_r = np.linalg.norm(vect_r)
+                dist_lr = np.linalg.norm(vect_lr)
+                # unit vectors
+                u_vect_l = vect_l / dist_l
+                u_vect_r = vect_r / dist_r
+                u_vect_in = np.array([-vect_lr[1], vect_lr[0]]) / dist_lr
+                # calculate current interior angle
+                inter_curr[i] = math.acos(np.around(
+                    np.dot(vect_l, vect_r) / (dist_l * dist_r), 6))
+                if np.cross(vect_r, vect_l) < 0:
+                    inter_curr[i] = 2*math.pi - inter_curr[i]
+                # feedback vector for the SMA algorithm
+                fb_vect = np.zeros(2)
+                fb_vect = fb_vect + (dist_l - desired_space) * linear_const * u_vect_l
+                fb_vect = fb_vect + (dist_r - desired_space) * linear_const * u_vect_r
+                if formation_stretched:
+                    fb_vect = (fb_vect +
+                        (inter_target[i] - inter_curr[i]) * bend_const * u_vect_in)
+                else:
+                    fb_vect = (fb_vect +
+                        (inter_target_line - inter_curr[i]) * bend_const * u_vect_in)
+                # update one step of position
+                robot_poses[i] = robot_poses_t[i] + disp_coef * fb_vect
+
+        # check if the stretching process is done
+        if not formation_stretched:
+            formation_stretched = True
+            for i in range(swarm_size):
+                if robot_key_neighbors[i][0] != -1 and robot_key_neighbors[i][1] != -1:
+                    if abs(inter_curr[i] - inter_target_line) > formation_stretched_err:
+                        formation_stretched = False
+                        break
+            if formation_stretched:
+                # stretching finished
+                print("line is reshaping to " + shape_catalog[shape_decision] + " ...")
+
+        # update the graphics
+        disp_poses_update()
+        screen.fill(color_white)
+        # draw the connections first
+        for i in range(swarm_size):
+            i_next = robot_key_neighbors[i][1]
+            if i_next != -1:
+                pygame.draw.line(screen, color_black, disp_poses[i], disp_poses[i_next],
+                    conn_width)
+        # draw the robots
+        for i in range(swarm_size):
+            pygame.draw.circle(screen, color_black, disp_poses[i], robot_size, 0)
+        pygame.display.update()
+
+        # calculate the maximum error of interior angle
+        inter_err_max = 0
+        for i in range(swarm_size):
+            err_curr = abs(inter_curr[i] - inter_target[i])
+            if err_curr > inter_err_max: inter_err_max = err_curr
+
+        # check exit condition of simulation 3
+        if converged_all and inter_err_max < inter_err_thres:
+            print("simulation 3 is finished")
+            if manual_mode: raw_input("<Press Enter to continue>")
+            print("")  # empty line
+            break
 
 

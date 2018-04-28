@@ -1053,7 +1053,7 @@ while True:
     bend_const = 0.8
     disp_coef = 0.05
 
-    # the loop for simulation 2
+    # the loop for simulation 3
     sim_haulted = False
     time_last = pygame.time.get_ticks()
     time_now = time_last
