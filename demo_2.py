@@ -726,16 +726,16 @@ if (len(loop_set) != swarm_size):
     sys.exit()
 
 # # store the variable "robot_poses", "robot_key_neighbors", and "robot_loop_orders"
-# tmp_filepath = os.path.join('tmp', 'demo2_30_robot_poses')
-# # tmp_filepath = os.path.join('tmp', 'demo2_100_robot_poses')
+# # tmp_filepath = os.path.join('tmp', 'demo2_30_robot_poses')
+# tmp_filepath = os.path.join('tmp', 'demo2_100_robot_poses')
 # with open(tmp_filepath, 'w') as f:
 #     pickle.dump([robot_poses, robot_key_neighbors, robot_loop_orders], f)
 # raw_input("<Press Enter to continue>")
 # sys.exit()
 
 # # restore variable "robot_poses", "robot_key_neighbors", and "robot_loop_orders"
-# tmp_filepath = os.path.join('tmp', 'demo2_30_robot_poses')
-# # tmp_filepath = os.path.join('tmp', 'demo2_100_robot_poses')
+# # tmp_filepath = os.path.join('tmp', 'demo2_30_robot_poses')
+# tmp_filepath = os.path.join('tmp', 'demo2_100_robot_poses')
 # with open(tmp_filepath) as f:
 #     robot_poses, robot_key_neighbors, robot_loop_orders = pickle.load(f)
 
@@ -1046,7 +1046,7 @@ while True:
     inter_err_thres = 0.1
     inter_target_circle = math.pi - 2*math.pi/swarm_size  # interior angle for circle
     formation_stretched = False  # whether the stretching process is done
-    formation_stretched_err = inter_target_circle*0.2
+    formation_stretched_err = inter_target_circle*0.1
 
     # spring constants in SMA
     linear_const = 1.0

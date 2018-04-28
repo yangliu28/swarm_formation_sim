@@ -768,18 +768,18 @@ while False:
 # raw_input("<Press Enter to continue>")
 # sys.exit()
 
+# restore variable "robot_poses", "robot_key_neighbors"
+tmp_filepath = os.path.join('tmp', 'demo3_30_robot_poses')
+# tmp_filepath = os.path.join('tmp', 'demo3_100_robot_poses')
+with open(tmp_filepath) as f:
+    robot_poses, robot_key_neighbors, line_robots = pickle.load(f)
+
 # simulation 2 and 3 will run repeatedly since here
 while True:
 
     ########### simulation 2: consensus decision making for target curve shape ###########
 
     print("##### simulation 2: consensus decision making #####")
-
-    # restore variable "robot_poses", "robot_key_neighbors"
-    tmp_filepath = os.path.join('tmp', 'demo3_30_robot_poses')
-    # tmp_filepath = os.path.join('tmp', 'demo3_100_robot_poses')
-    with open(tmp_filepath) as f:
-        robot_poses, robot_key_neighbors, line_robots = pickle.load(f)
 
     # shift the robots to the middle of the window
     x_max, y_max = np.amax(robot_poses, axis=0)
