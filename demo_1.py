@@ -89,7 +89,7 @@ for opt,arg in opts:
 # the size of the swarm grow large, it won't be able to be fitted in if performing a line or
 # circle formation. A compromise is to make swarm size proportional to the side length to the
 # power exponent between 1 and 2.
-power_exponent = 1.95  # between 1.0 and 2.0
+power_exponent = 1.3  # between 1.0 and 2.0
     # the larger the parameter, the slower the windows grows with swarm size; vice versa
 # for converting from physical world to display world
 pixels_per_length = 50  # this is to be fixed
@@ -391,7 +391,7 @@ while True:
     # prog_counter = 0
     # sys.stdout.write("[" + prog_pos*"-" + "#" + (prog_bar_len-(prog_pos+1))*"-" + "]\r")
     # sys.stdout.flush()
-    while True:
+    while False:
         # close window button to exit the entire program;
         # space key to pause this simulation
         for event in pygame.event.get():
@@ -668,7 +668,9 @@ while True:
                 ending_period = ending_period - frame_period/1000.0
 
     # # store the variable "robot_poses"
-    # with open('d1_robot_poses', 'w') as f:
+    # # tmp_filepath = os.path.join('tmp', 'demo1_30_robot_poses')
+    # tmp_filepath = os.path.join('tmp', 'demo1_100_robot_poses')
+    # with open(tmp_filepath, 'w') as f:
     #     pickle.dump(robot_poses, f)
     # raw_input("<Press Enter to continue>")
     # break
@@ -676,7 +678,9 @@ while True:
     ########### simulation 2: consensus decision making of target loop shape ###########
 
     # # restore variable "robot_poses"
-    # with open('d1_robot_poses') as f:
+    # # tmp_filepath = os.path.join('tmp', 'demo1_30_robot_poses')
+    # tmp_filepath = os.path.join('tmp', 'demo1_100_robot_poses')
+    # with open(tmp_filepath) as f:
     #     robot_poses = pickle.load(f)
 
     print("##### simulation 2: decision making #####")
@@ -722,7 +726,7 @@ while True:
     sim_freq_control = True
     iter_count = 0
     sys.stdout.write("iteration {}".format(iter_count))
-    while True:
+    while False:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 2")
@@ -1078,7 +1082,7 @@ while True:
     sim_freq_control = True
     flash_delay = 200
     sys.stdout.write("iteration {}".format(iter_count))
-    while True:
+    while False:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 3")
@@ -1239,16 +1243,20 @@ while True:
             break
 
     # # store the variable "assignment_scheme"
-    # with open('d1_assignment_scheme', 'w') as f:
+    # # tmp_filepath = os.path.join('tmp', 'demo1_30_assignment_scheme')
+    # tmp_filepath = os.path.join('tmp', 'demo1_100_assignment_scheme')
+    # with open(tmp_filepath, 'w') as f:
     #     pickle.dump(assignment_scheme, f)
     # raw_input("<Press Enter to continue>")
     # break
 
     ########### simulation 4: loop formation with designated role assignment ###########
 
-    # # restore variable "assignment_scheme"
-    # with open('d1_assignment_scheme') as f:
-    #     assignment_scheme = pickle.load(f)
+    # restore variable "assignment_scheme"
+    # tmp_filepath = os.path.join('tmp', 'demo1_30_assignment_scheme')
+    tmp_filepath = os.path.join('tmp', 'demo1_100_assignment_scheme')
+    with open(tmp_filepath) as f:
+        assignment_scheme = pickle.load(f)
 
     print("##### simulation 4: loop formation #####")
 
@@ -1282,12 +1290,14 @@ while True:
     # use step moving distance in each update, instead of calculating from robot velocity
     # so to make it independent of simulation frequency control
     step_moving_dist = 0.05  # should be smaller than destination distance error
-    destination_error = 0.08
+    destination_error = 0.1
     mov_vec_ratio = 0.5  # ratio used when calculating mov vector
     # spring constants in SMA
     linear_const = 1.0
     bend_const = 0.8
     disp_coef = 0.5
+    # for avoiding space too small on loop
+    space_good_thres = desired_space * 0.85
 
     # the loop for simulation 4
     sim_haulted = False
@@ -1300,7 +1310,7 @@ while True:
     print("swarm robots are forming an ordered loop ...")
     loop_formed = False
     ending_period = 1.0  # grace period
-    while True:
+    while False:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # close window button is clicked
                 print("program exit in simulation 4")
@@ -1612,10 +1622,10 @@ while True:
                     # moving tangent along the circle of radius of "desired_space"
                     robot_oris[i] = math.atan2(robot_poses_t[i,1] - robot_poses_t[center,1],
                         robot_poses_t[i,0] - robot_poses_t[center,0])
-                    # interior angle between 
-                    int_angle_temp = math.acos((math.pow(dist_table[i,center],2) +
+                    # interior angle between
+                    int_angle_temp = math.acos(np.around((math.pow(dist_table[i,center],2) +
                         math.pow(step_moving_dist,2) - math.pow(desired_space,2)) /
-                        (2.0*dist_table[i,center]*step_moving_dist))
+                        (2.0*dist_table[i,center]*step_moving_dist)))
                     robot_oris[i] = reset_radian(robot_oris[i] + (math.pi - int_angle_temp))
             elif robot_states[i] == 2:
                 # adjusting position to maintain the loop
@@ -1657,7 +1667,9 @@ while True:
                         linear_const * vect_r)
                     fb_vect = fb_vect + ((desired_angle - inter_curr) *
                         bend_const * vect_in)
-                    if np.linalg.norm(fb_vect)*disp_coef < destination_error:
+                    if (np.linalg.norm(fb_vect)*disp_coef < destination_error and
+                        dist_table[i,left_key] > space_good_thres and
+                        dist_table[i,right_key] > space_good_thres):
                         continue  # stay in position if within destination error
                     else:
                         robot_oris[i] = math.atan2(fb_vect[1], fb_vect[0])
@@ -1726,16 +1738,20 @@ while True:
                 ending_period = ending_period - frame_period/1000.0
 
     # # store the variable "robot_poses", "robot_key_neighbors"
-    # with open('d1_robot_poses2', 'w') as f:
+    # # tmp_filepath = os.path.join('tmp', 'demo1_30_robot_poses2')
+    # tmp_filepath = os.path.join('tmp', 'demo1_100_robot_poses2')
+    # with open(tmp_filepath, 'w') as f:
     #     pickle.dump([robot_poses, robot_key_neighbors], f)
     # raw_input("<Press Enter to continue>")
     # break
 
     ########### simulation 5: loop reshaping to chosen shape ###########
 
-    # # restore variable "robot_poses"
-    # with open('d1_robot_poses2') as f:
-    #     robot_poses, robot_key_neighbors = pickle.load(f)
+    # restore variable "robot_poses"
+    # tmp_filepath = os.path.join('tmp', 'demo1_30_robot_poses2')
+    tmp_filepath = os.path.join('tmp', 'demo1_100_robot_poses2')
+    with open(tmp_filepath) as f:
+        robot_poses, robot_key_neighbors = pickle.load(f)
 
     print("##### simulation 5: loop reshaping #####")
 

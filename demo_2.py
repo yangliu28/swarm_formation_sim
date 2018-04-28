@@ -41,7 +41,7 @@ for opt,arg in opts:
         manual_mode = True
 
 # calculate world size and screen size
-power_exponent = 1.95  # between 1.0 and 2.0
+power_exponent = 1.3  # between 1.0 and 2.0
     # the larger the parameter, the slower the windows grows with swarm size; vice versa
 pixels_per_length = 50  # fixed
 # calculate world_side_coef from a desired screen size for 30 robots

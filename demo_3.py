@@ -39,7 +39,7 @@ for opt,arg in opts:
         manual_mode = True
 
 # calculate world size and screen size
-power_exponent = 1.95  # between 1.0 and 2.0
+power_exponent = 1.3  # between 1.0 and 2.0
     # the larger the parameter, the slower the windows grows with swarm size; vice versa
 pixels_per_length = 50  # fixed
 # calculate world_side_coef from a desired screen size for 30 robots
@@ -62,11 +62,11 @@ desired_space = comm_range * desired_space_ratio
 perp_thres = math.pi/18  # threshold, range from the perpendicular line
 devia_angle = math.pi/9  # deviate these much angle from perpendicualr line
 # consensus configuration
-shape_quantity = 30  # the number of decisions
 shape_decision = -1  # the index of chosen decision, in range(shape_quantity)
     # also the index in shape_catalog
 curve_folder = "curve-data"  # folder to store the curve shapes
-shape_catalog = ["circle", "square", "triangle", "star"]
+shape_catalog = ["ARM", "CWRU", "DIRL", "KID", "MAD", "squarehelix"]
+shape_quantity = len(shape_catalog)
 
 # robot properties
 robot_poses = np.random.rand(swarm_size, 2) * world_side_length  # initialize the robot poses
