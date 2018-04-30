@@ -1,8 +1,6 @@
 # swarm_formation_sim
 A collection of swarm robot formation simulations using Python with Pygame and Matplotlib. I have done [swarm robot simulations with ROS](https://github.com/yangliu28/swarm_robot_ros_sim.git) before, but the combination of Python, Pygame and Matplotlib help verify the swarm algorithm quickly in a simplier setup, and model the swarm robots as dots to skip the collision problem.
 
-![](banner.pdf)
-
 ![](banner.png)
 
 ## Contents
