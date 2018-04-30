@@ -22,11 +22,9 @@ All the formation control algorithms simulated here agree on a few conditions of
 
 *trigridnet_probabilistic_consensus.py* is the test program for probabilistic consensus decision making algorithm, running on 2D equilateral triangle grid netwroks. *trigridnet_generator.py* is the corresponding 2D triangle grid network generator. *trigridnet_role_assignment.py* is the one-to-one role assignment simulation on the triangle grid, message relay is used for the consensus of assignment scheme.
 
-*demo_1.py* is the first integrated demo that combines previous simulations. The robots first aggregate together to form a random network. They run consensus decision making to choose the target loop shape, then the role assignment using message relay for target assignment. The robots disperse and aggregate again to form a loop with robots on their designated order. The loop then reshapes to the chosen shape.
+*demo_1.py* is the first demo that combines previous simulations. The robots first aggregate together to form a random network. They run consensus decision making to choose the target loop shape, then the role assignment using message relay for target assignment. The robots disperse and aggregate again to form a loop with robots on their designated order. The loop then reshapes to the chosen shape.
 
-*demo_2.py* is the second integrated demo.
-
-*demo_3.py* is the third integrated demo.
+*demo_2.py* is the second demo that combines previous simulations differently. The robots first aggregate to form a loop. They run consensus decision making to choose the target loop shape, then role assignment on the loop using an adapted consensus algorithm. At the same time of role assignment, the robots dynamically reshape to the chosen shape.
 
 ## Run the simulations
 Install corresponding version of Pygame for your Python, optional dependencies include numpy, matplotlib, etc. See the header of the desired '.py' to find the necessary dependencies. Some simulation examples are listed below.
@@ -62,10 +60,6 @@ Demo 1 (aggregation + decision making + role assignment + loop formation + loop 
 Demo 2 (loop formation + (decision making + role assignment/loop reshape)):
 
 `python demo_2.py -n 30`
-
-Demo 3 (line formation + (decision making + line reshape)):
-
-`python demo_3.py -n 30`
 
 ## Publications
 
