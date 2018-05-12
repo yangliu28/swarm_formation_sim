@@ -15,11 +15,9 @@ loop_folder = 'loop-data'
 
 # parameters for display, window origin is at left up corner
 screen_size = (600, 400)  # width and height in pixels
-    # top half for initial formation, bottom half for target formation
-background_color = (0,0,0)  # black background
-robot_color = (255,0,0)  # red for robot and the line segments
-robot_color_s = (255,153,153)  # pink for the start robot
-robot_size = 5  # robot modeled as dot, number of pixels for radius
+color_black = (0,0,0)
+color_white = (255,255,255)
+robot_size = 6  # robot modeled as dot, number of pixels for radius
 
 # set up the simulation window and surface object
 icon = pygame.image.load("icon_geometry_art.jpg")
@@ -87,18 +85,14 @@ for i in range(poly_n):
     nodes[i][1] = nodes[i][1] - geometry_center[1] + world_size[1]/2
 
 # draw the polygon
-screen.fill(background_color)
+screen.fill(color_white)
 disp_pos = [[0,0] for i in range(poly_n)]
-# pink color for the first robot
-disp_pos[0] = world_to_display(nodes[0], world_size, screen_size)
-pygame.draw.circle(screen, robot_color_s, disp_pos[0], robot_size, 0)
-# red color for the rest robots and line segments
-for i in range(1, poly_n):
+for i in range(poly_n):
     disp_pos[i] = world_to_display(nodes[i], world_size, screen_size)
-    pygame.draw.circle(screen, robot_color, disp_pos[i], robot_size, 0)
+    pygame.draw.circle(screen, color_black, disp_pos[i], robot_size, 0)
 for i in range(poly_n-1):
-    pygame.draw.line(screen, robot_color, disp_pos[i], disp_pos[i+1])
-pygame.draw.line(screen, robot_color, disp_pos[poly_n-1], disp_pos[0])
+    pygame.draw.line(screen, color_black, disp_pos[i], disp_pos[i+1], 2)
+pygame.draw.line(screen, color_black, disp_pos[poly_n-1], disp_pos[0], 2)
 pygame.display.update()
 
 sim_exit = False  # simulation exit flag
