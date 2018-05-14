@@ -29,15 +29,18 @@ import getopt
 def main():
     size = 0  # network size to be read from input
 
+    savefile = True
     # read command line options
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'n:')
+        opts, args = getopt.getopt(sys.argv[1:], 'n:', ['nosave'])
     except getopt.GetoptError as err:
         print str(err)
         sys.exit()
     for opt,arg in opts:
         if opt == '-n':
             size = int(arg)
+        elif opt == '--nosave':
+            savefile = False
 
     # use list to store the node information
     nodes_t = []  # target nodes pool, for decided nodes in target network
@@ -74,20 +77,21 @@ def main():
                 connections[j][i] = 1
 
     # the network has been generated, save it to file
-    save_folder = 'trigrid-networks'  # folder for triangle grid network files
-    save_path = os.path.join(os.getcwd(), save_folder)
-    filename_count = 1  # always start to try filename with suffix of 1
-    new_filename = str(size) + '-' + str(filename_count)
-    all_files = os.listdir(save_path)
-    # check to avoid filename duplication
-    while new_filename in all_files:
-        filename_count = filename_count + 1
+    if savefile:
+        save_folder = 'trigrid-networks'  # folder for triangle grid network files
+        save_path = os.path.join(os.getcwd(), save_folder)
+        filename_count = 1  # always start to try filename with suffix of 1
         new_filename = str(size) + '-' + str(filename_count)
-    new_filepath = os.path.join(save_path, new_filename)
-    f = open(new_filepath, 'w')
-    for pos in nodes_t:
-        f.write(str(pos[0]) + ' ' + str(pos[1]) + '\n')
-    f.close()
+        all_files = os.listdir(save_path)
+        # check to avoid filename duplication
+        while new_filename in all_files:
+            filename_count = filename_count + 1
+            new_filename = str(size) + '-' + str(filename_count)
+        new_filepath = os.path.join(save_path, new_filename)
+        f = open(new_filepath, 'w')
+        for pos in nodes_t:
+            f.write(str(pos[0]) + ' ' + str(pos[1]) + '\n')
+        f.close()
 
     # plot the network as dots and lines
     fig_side_size = int(math.sqrt(size)*0.7)  # calculate fig side size from network size
@@ -118,18 +122,14 @@ def main():
             if connections[i][j] == 1:
                 splt.plot([nodes_t_plt[i][0], nodes_t_plt[j][0]],
                           [nodes_t_plt[i][1], nodes_t_plt[j][1]], '-k')
-    # draw the nodes as dots, origin node as red, rest blue
-    splt.plot(nodes_t_plt[0][0], nodes_t_plt[0][1], 'o',
-              markersize=10, markerfacecolor='red')
-    for i in range(1,size):
+    for i in range(size):
         splt.plot(nodes_t_plt[i][0], nodes_t_plt[i][1], 'o',
-                  markersize=10, markerfacecolor='blue')
+                  markersize=10, markerfacecolor='black')
 
     # show the figure, press to exit
     fig.show()
     # choose one of the following two lines
-    time.sleep(0.5)  # hold the figure for 1 sec and exit
-    # raw_input("<Press enter to close>")  # wait enter key command to exit
+    raw_input("Press <ENTER> to continue")
     plt.close(fig)
 
 
