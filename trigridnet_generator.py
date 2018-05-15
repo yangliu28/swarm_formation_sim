@@ -42,6 +42,8 @@ def main():
         elif opt == '--nosave':
             savefile = False
 
+    node_size = 10  # default 10
+
     # use list to store the node information
     nodes_t = []  # target nodes pool, for decided nodes in target network
     nodes_a = []  # available nodes pool, for nodes available to be added to network
@@ -124,7 +126,7 @@ def main():
                           [nodes_t_plt[i][1], nodes_t_plt[j][1]], '-k')
     for i in range(size):
         splt.plot(nodes_t_plt[i][0], nodes_t_plt[i][1], 'o',
-                  markersize=10, markerfacecolor='black')
+                  markersize=node_size, markerfacecolor='black')
 
     # show the figure, press to exit
     fig.show()
