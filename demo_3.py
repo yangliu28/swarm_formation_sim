@@ -123,6 +123,7 @@ for i in seed_list_temp[:seed_quantity]:
 color_white = (255,255,255)
 color_black = (0,0,0)
 color_grey = (128,128,128)
+color_red = (255,0,0)
 distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
     (0,128,128), (230,190,255), (170,110,40), (128,0,0),
@@ -691,16 +692,26 @@ while True:
     screen.fill(color_white)
     # draw the robots of states '-1' and '0'
     for i in range(swarm_size):
+        if robot_seeds[i]:
+            color_temp = color_red
+        else:
+            color_temp = color_grey
         if robot_states[i] == -1:  # empty circle for state '-1' robot
-            pygame.draw.circle(screen, color_grey, disp_poses[i],
+            pygame.draw.circle(screen, color_temp, disp_poses[i],
                 robot_size, robot_empty_width)
         elif robot_states[i] == 0:  # full circle for state '0' robot
-            if robot_seeds[i]:  # black color for seed robot
-                pygame.draw.circle(screen, color_black, disp_poses[i],
-                    robot_size, 0)
-            else:  # grey for non-seed robot
-                pygame.draw.circle(screen, color_grey, disp_poses[i],
-                    robot_size, 0)
+            pygame.draw.circle(screen, color_temp, disp_poses[i],
+                robot_size, 0)
+        # if robot_states[i] == -1:  # empty circle for state '-1' robot
+        #     pygame.draw.circle(screen, color_grey, disp_poses[i],
+        #         robot_size, robot_empty_width)
+        # elif robot_states[i] == 0:  # full circle for state '0' robot
+        #     if robot_seeds[i]:  # black color for seed robot
+        #         pygame.draw.circle(screen, color_black, disp_poses[i],
+        #             robot_size, 0)
+        #     else:  # grey for non-seed robot
+        #         pygame.draw.circle(screen, color_grey, disp_poses[i],
+        #             robot_size, 0)
     # draw the in-group robots by group
     for group_id_temp in groups.keys():
         if groups[group_id_temp][2]:
@@ -718,8 +729,14 @@ while True:
                         disp_poses[j], conn_width)
                     conn_draw_sets.append(set([i,j]))
             # draw robots in the group
-            if robot_seeds[i]:  # force color black for seed robot
-                pygame.draw.circle(screen, color_black, disp_poses[i],
+            # if robot_seeds[i]:  # force color black for seed robot
+            #     pygame.draw.circle(screen, color_black, disp_poses[i],
+            #         robot_size, 0)
+            # else:
+            #     pygame.draw.circle(screen, color_group, disp_poses[i],
+            #         robot_size, 0)
+            if robot_seeds[i]:  # force color red for seed robot
+                pygame.draw.circle(screen, color_red, disp_poses[i],
                     robot_size, 0)
             else:
                 pygame.draw.circle(screen, color_group, disp_poses[i],
