@@ -60,6 +60,8 @@
 # Change color plan for the shape formation in simulation 1 and 4, use red color for seed robot
 # regardless of its states. Use black for dominant group robots, and use grey for the rest.
 # The same to the simulation 1 in demo 2.
+# As I later find out, it's not the color that make seed robot hard to distinguish, it's because
+# the size of the dot is small.
 
 
 from __future__ import print_function
