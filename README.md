@@ -70,7 +70,7 @@ Demo 2 (loop formation + (decision making + role assignment/loop reshape)):
 ## Publications
 To be added.
 
-## Further Improvements
+## Possible Improvements
 * Decision making with dynamically changing network topology.
 * Experiments with malfunctioning robots and unstable communication.
 * Make the transition between tasks happen as a collective.
