@@ -164,10 +164,10 @@ for opt,arg in opts:
         nobargraph = True
 
 # override parameters
-net_filename = "50-3"
-net_filepath = os.path.join(os.getcwd(), net_folder, net_filename)
-net_size = int(net_filename.split('-')[0])
-deci_num = 50
+# net_filename = "50-3"
+# net_filepath = os.path.join(os.getcwd(), net_folder, net_filename)
+# net_size = int(net_filename.split('-')[0])
+# deci_num = 50
 repeat_times = 100
 nobargraph = True
 
@@ -634,59 +634,59 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                 sum_temp = np.sum(deci_dist[i])
                 deci_dist[i] = deci_dist[i] / sum_temp
 
-        # graphics animation, both pygame window and matplotlib window
-        # 1.pygame window for dynamics of network's groups
-        screen.fill(color_white)
-        # draw the regualr connecting lines
-        for i in range(net_size):
-            for j in range(i+1, net_size):
-                if connections[i][j]:
-                    pygame.draw.line(screen, color_black,
-                                     nodes_disp[i], nodes_disp[j], norm_line_width)
-        # draw the connecting lines marking the groups
-        for i in range(len(groups)):
-            group_len = len(groups[i])
-            for j in range(group_len):
-                for k in range(j+1, group_len):
-                    j_node = groups[i][j]
-                    k_node = groups[i][k]
-                    # check if two nodes in one group is connected
-                    if connections[j_node][k_node]:
-                        # wider lines for group connections
-                        pygame.draw.line(screen, distinct_color_set[group_colors[i]],
-                            nodes_disp[j_node], nodes_disp[k_node], group_line_width)
-        # draw the nodes as dots
-        for i in range(net_size):
-            pygame.draw.circle(screen, distinct_color_set[node_colors[i]],
-                nodes_disp[i], node_size, 0)
-        pygame.display.update()
-        # # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
+        # # graphics animation, both pygame window and matplotlib window
+        # # 1.pygame window for dynamics of network's groups
+        # screen.fill(color_white)
+        # # draw the regualr connecting lines
+        # for i in range(net_size):
+        #     for j in range(i+1, net_size):
+        #         if connections[i][j]:
+        #             pygame.draw.line(screen, color_black,
+        #                              nodes_disp[i], nodes_disp[j], norm_line_width)
+        # # draw the connecting lines marking the groups
+        # for i in range(len(groups)):
+        #     group_len = len(groups[i])
+        #     for j in range(group_len):
+        #         for k in range(j+1, group_len):
+        #             j_node = groups[i][j]
+        #             k_node = groups[i][k]
+        #             # check if two nodes in one group is connected
+        #             if connections[j_node][k_node]:
+        #                 # wider lines for group connections
+        #                 pygame.draw.line(screen, distinct_color_set[group_colors[i]],
+        #                     nodes_disp[j_node], nodes_disp[k_node], group_line_width)
+        # # draw the nodes as dots
+        # for i in range(net_size):
+        #     pygame.draw.circle(screen, distinct_color_set[node_colors[i]],
+        #         nodes_disp[i], node_size, 0)
+        # pygame.display.update()
+        # # # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
+        # # if not nobargraph:
+        # #     dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
+        # #     ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, color='b')
+        # #     fig.canvas.draw()
+        # #     fig.show()
+        # # 2.matplotlib window for 2D bar graph of discrete entropy
         # if not nobargraph:
-        #     dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
-        #     ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, color='b')
+        #     # calculate the discrete entropy for all distributions
+        #     ent_sum = 0
+        #     for i in range(net_size):
+        #         ent = 0
+        #         for j in range(deci_num):
+        #             if deci_dist[i][j] == 0: continue
+        #             ent = ent - deci_dist[i][j] * math.log(deci_dist[i][j],2)
+        #         dz[i] = ent
+        #         ent_sum = ent_sum + ent
+        #     print("summation of entropy of all distributions: {}".format(ent_sum))
+        #     # draw the bar graph
+        #         # somehow the old bars are overlapping the current ones, have to clear the
+        #         # figure first, and rebuild the bar graph, as a temporary solution
+        #     fig.clear()
+        #     ax = fig.add_subplot(111, projection='3d')
+        #     bar_colors = [distinct_color_set_float[node_colors[i]] for i in range(net_size)]
+        #     barlist = ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, bar_colors)
         #     fig.canvas.draw()
         #     fig.show()
-        # 2.matplotlib window for 2D bar graph of discrete entropy
-        if not nobargraph:
-            # calculate the discrete entropy for all distributions
-            ent_sum = 0
-            for i in range(net_size):
-                ent = 0
-                for j in range(deci_num):
-                    if deci_dist[i][j] == 0: continue
-                    ent = ent - deci_dist[i][j] * math.log(deci_dist[i][j],2)
-                dz[i] = ent
-                ent_sum = ent_sum + ent
-            print("summation of entropy of all distributions: {}".format(ent_sum))
-            # draw the bar graph
-                # somehow the old bars are overlapping the current ones, have to clear the
-                # figure first, and rebuild the bar graph, as a temporary solution
-            fig.clear()
-            ax = fig.add_subplot(111, projection='3d')
-            bar_colors = [distinct_color_set_float[node_colors[i]] for i in range(net_size)]
-            barlist = ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, bar_colors)
-            fig.canvas.draw()
-            fig.show()
 
         # simulation speed control
         if not skip_speed_control:
@@ -735,4 +735,8 @@ if repeat_times > 1:
     #     print(steps_seed)
     #     print("\ton average of {} steps".format(np.mean(steps_seed)))
 
+# notification
+pygame.mixer.music.load('audio/slow-spring-board.ogg')
+pygame.mixer.music.play(1)  # -1 for playing infinite times
+pygame.mixer.music.set_volume(0.8)  # half volume
 
