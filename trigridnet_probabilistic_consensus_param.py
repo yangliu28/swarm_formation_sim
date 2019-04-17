@@ -1,105 +1,3 @@
-# This simulation tests the consensus achievement algorithm (collective decision making
-# algorithm) on randomly generated 2D triangle grid network. The algorithm is extracted
-# from previous loop reshape simulations for further testing, so that it can be generalized
-# to 2D random network topologies. The distribution evolution method is similar to the
-# loop reshape simulation, except more than three nodes are involved in the weighted
-# averaging process.
-
-# input arguments:
-# '-f': filename of the triangle grid network
-# '-d': number of decisions each node can choose from
-# '-r': repeat times of simulation, with different initial random distribution; default=0
-# '--nobargraph': option to skip the bar graph visualization
-
-# Pygame will be used to animate the dynamic group changes in the network;
-# Matplotlib will be used to draw the unipolarity in a 3D bar graph, the whole decision
-# distribution is not necessary.
-
-# Algorithm to update the groups in 2D triangle grid network:
-# Using a pool of indices for nodes that have not been grouped, those labeled into a
-# group will be remove from the pool. As long as the pool is not enpty, a while loop
-# will continue searching groups one by one. In the loop, it initialize a new group
-# with first node in the pool. It also initialize a fifo-like variable(p_members) for
-# potential members of this group, and an index variable(p_index) for iterating through
-# the potential members. If p_members[p_index] doesn't share same decidion with first node,
-# p_index increases by 1, will check next value in p_members. If it does, then a new member
-# for this group has been found, it will be removed from the pool and p_members, and added
-# to current group. The new group member will also introduce its neighbors as new
-# potential members, but they should not be in p_members and current group, and should be
-# in node pool. The member search for this group will end if p_index iterates to the end
-# of p_members.
-
-# 01/19/2018
-# Testing an invented concept called "holistic dependency", for measuring how much the most
-# depended node is being depended on more than others for maintaining the network connectivity
-# in the holistic view. The final name of the concept may change.
-
-# 01/29/2018
-# Dr. Lee suggest adding colors to different groups. A flashy idea I though at first, but
-# after reconsidering, it has a much better visual effect.
-# Link of a list of 20 distinct colors:
-# https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
-
-# 02/06/2018
-# Adding another experiment scenario: for 100 nodes, at the begining, forcing 10 closely
-# located nodes to have a specific decision (colored in blue), and run simulation.
-
-# 02/12/2018
-# Adding another experiment scenario: for 100 nodes, forcing 10 closely located nodes to
-# have a specific decision (colored in blue), and in the half way toward consensus, seed
-# 20 "stubborn" nodes that won't change their mind at all. Ideally the collective decision
-# will reverse to the one insisted by the new 20 nodes.
-# (The program is really messy now.)
-
-# 02/13/2018
-# Replace the unipolarity with discrete entropy for evaluating the decisiveness of the
-# preference distributions. Adding same colors of the consensus groups to the bar graph.
-
-# 02/26/2018
-# (an excursion of thought)
-# Writing a paper and keep revising it totally ruin the fun of developping this simulation.
-# Writing paper is boring to many people I know, but it's specially painful to me in a
-# subconscious way. I have very strong personal style which runs through every aspect of my
-# life, and the style does not mix well with academia. I love simplicity, elegance, and truth.
-# I rarely claim something in my belief, but these I am very proud to have, and have no
-# intention to compromise them with anything. Academic paper as a form to present the
-# state-of-the-art, and to communicate thought, should contain succinct and honest description
-# of the work. However the two advisors I have worked with (I respect them from the deep of my
-# heart) both revised my papers toward being more acceptable by the publishers. Most of the
-# changes like pharsing and some of the restructuring are very good, reflecting their years of
-# academic training. They make the paper more explicit and easy to understand. Others changes,
-# IMHO, are simply trying to elevate the paper, so on first read people would think this is
-# a very good one by those abstract words. This is what makes me suffer. These changes are
-# steering the paper to the opposite of succinct and honesty. For example, if it is only a
-# method to solve a specific problem, saying it is a systematic approach to solve a series
-# of problem, and using abstract words for the technical terms, does not make the work any
-# better. It would only confuse the readers and let them spend more time to dig out the idea.
-# I could never fight my advisors on these changes, they would say it is just a style of
-# writing, and it brings out the potential of the work. This is like to say, our presented
-# technology can do this, can do that, and potentially it could do much more amazing things.
-# I totally hate the last part! It just give people a chance to bragging things they would
-# never reach. As I find out, quite a few published papers that I believe I understand every
-# bit of it, are trying to elevate their content to a level they don't deserve. If I were to
-# rewrite them, I would cut all the crap and leave only the naked truth and idea. Many
-# researcher picked up this habit in their training with publishing papers, like an untold
-# rule. As for my paper, I really wish my work were that good to be entitled to those words,
-# but they are not. Academia is a sublime place in many people's thinking, as in mine. I have
-# very high standards for the graduation of a PhD. If I kept following my style, and be honest
-# with myself, I knew long ago I would never graduate. I am loving it too much to hate it.
-# (addition to the simulation)
-# Requested by the paper, when visualizing the bar graph for the discrete entropy, adding the
-# summation of all discrete entropy to show how the entropy reduction works.
-
-# 02/28/2018
-# Remove color grey, beige, and coral from the distinct color set, avoid blending with white
-# background. Make the node size larger.
-
-# 03/31/2019
-# Parameter test of distribution difference threshold, and distribution difference power.
-
-import pygame
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from trigridnet_generator import *
 from formation_functions import *
 import math, sys, os, getopt, time
@@ -270,69 +168,6 @@ if calculate_h_dependency:
 # Also uncomment two lines somewhere below to highlight maximum individual dependency node,
 # and halt the program after drawing the network.
 
-# plot the network as dots and lines in pygame window
-pygame.init()  # initialize the pygame
-# find appropriate window size from current network
-# convert node positions from triangle grid to Cartesian, for plotting
-nodes_plt = np.array([trigrid_to_cartesian(pos) for pos in nodes])
-(xmin, ymin) = np.amin(nodes_plt, axis=0)
-(xmax, ymax) = np.amax(nodes_plt, axis=0)
-world_size = (xmax-xmin + 5.0, ymax-ymin + 2.0)  # extra length for clearance
-pixels_per_length = 50  # resolution for converting from world to display
-# display origin is at left top corner
-screen_size = (int(round(world_size[0] * pixels_per_length)),
-               int(round(world_size[1] * pixels_per_length)))
-color_white = (255,255,255)
-color_black = (0,0,0)
-# a set of 20 distinct colors (black and white excluded)
-# distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
-#     (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
-#     (0,128,128), (230,190,255), (170,110,40), (255,250,200), (128,0,0),
-#     (170,255,195), (128,128,0), (255,215,180), (0,0,128), (128,128,128))
-distinct_color_set = ((230,25,75), (60,180,75), (255,225,25), (0,130,200), (245,130,48),
-    (145,30,180), (70,240,240), (240,50,230), (210,245,60), (250,190,190),
-    (0,128,128), (230,190,255), (170,110,40), (128,0,0),
-    (170,255,195), (128,128,0), (0,0,128))
-color_quantity = 17  # grey is removed, and two others
-# convert the color set to float, for use in matplotlib
-distinct_color_set_float = tuple([tuple([color[0]/255.0, color[1]/255.0, color[2]/255.0])
-    for color in distinct_color_set])
-node_size = 10  # node modeled as dot, number of pixels for radius
-group_line_width = 5  # width of the connecting lines inside the groups
-norm_line_width = 2  # width of other connections
-# set up the simulation window and surface object
-icon = pygame.image.load("icon_geometry_art.jpg")
-pygame.display.set_icon(icon)
-screen = pygame.display.set_mode(screen_size)
-pygame.display.set_caption("Probabilistic Consensus of 2D Triangle Grid Network")
-
-# shift the node display positions to the middle of the window
-centroid_temp = np.mean(nodes_plt, axis=0)
-nodes_plt = nodes_plt - centroid_temp + (world_size[0]/2.0, world_size[1]/2.0)
-nodes_disp = [world_to_display(nodes_plt[i], world_size, screen_size)
-              for i in range(net_size)]
-
-# draw the network for the first time
-screen.fill(color_white)  # fill the background
-# draw the connecting lines
-for i in range(net_size):
-    for j in range(i+1, net_size):
-        if connections[i][j]:
-            pygame.draw.line(screen, color_black, nodes_disp[i], nodes_disp[j], norm_line_width)
-# draw the nodes as dots
-for i in range(net_size):
-    pygame.draw.circle(screen, color_black, nodes_disp[i], node_size, 0)
-# highlight the node with maximum individual dependency
-# pygame.draw.circle(screen, color_black, nodes_disp[node_max], node_size*2, 2)
-pygame.display.update()
-
-# # use the following to find the indices of the nodes on graph
-# for i in range(net_size):
-#     pygame.draw.circle(screen, color_black, nodes_disp[i], node_size*2,1)
-#     pygame.display.update()
-#     print "node {} is drawn".format(i)
-#     raw_input("<Press enter to continue>")
-
 # hold the program here to check the netwrok
 # raw_input("Press the <ENTER> key to continue")
 
@@ -374,12 +209,6 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
     # only adjacent block of nodes sharing same dominant decision belongs to same group
     groups = []  # put nodes in groups by their local consensus
     group_sizes = [0 for i in range(net_size)]  # the group size that each node belongs to
-    color_initialized = False  # whether the color assignment has been done for the first time
-    deci_colors = [-1 for i in range(deci_num)]  # color index for each exhibited decision
-        # -1 for not assigned
-    color_assigns = [0 for i in range(color_quantity)]  # number of assignments for each color
-    group_colors = []  # color for the groups
-    node_colors = [0 for i in range(net_size)]  # color for the nodes
 
     # Variable for ratio of distribution difference to distribution difference threshold.
     # The ratio is in range of [0,1], it will be used for constructing the corresponding linear
@@ -389,42 +218,11 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
     # the linear multiplier will be, and the faster the unipolarity increases.
     dist_diff_ratio = [0.0 for i in range(net_size)]
 
-    # start the matplotlib window first before the simulation cycle
-    fig = plt.figure()
-    # fig.canvas.set_window_title('Unipolarity of 2D Triangle Grid Network')
-    fig.canvas.set_window_title('Discrete Entropy of the Preference Distributions')
-    ax = fig.add_subplot(111, projection='3d')
-    x_pos = [pos[0] for pos in nodes_plt]  # the positions of the bars
-    y_pos = [pos[1] for pos in nodes_plt]
-    z_pos = np.zeros(net_size)
-    dx = 0.5 * np.ones(net_size)  # the sizes of the bars
-    dy = 0.5 * np.ones(net_size)
-    dz = np.zeros(net_size)
-    if not nobargraph:
-        fig.canvas.draw()
-        fig.show()
-
     # the simulation cycle
-    sim_exit = False  # simulation exit flag
-    sim_pause = False  # simulation pause flag
     iter_count = 0
-    time_now = pygame.time.get_ticks()  # return milliseconds
-    time_last = time_now  # reset as right now
     time_period = 500  # simulation frequency control, will jump the delay if overflow
     skip_speed_control = True  # if skip speed control, run as fast as it can
-    while not sim_exit:
-        # exit the program by close window button, or Esc or Q on keyboard
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                sim_exit = True  # exit with the close window button
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_SPACE:
-                    sim_pause = not sim_pause  # reverse the pause flag
-                if (event.key == pygame.K_ESCAPE) or (event.key == pygame.K_q):
-                    sim_exit = True  # exit with ESC key or Q key
-
-        # skip the rest if paused
-        if sim_pause: continue
+    while True:
 
         # # the 20 nodes start to cut in here
         # if iter_count == iter_cutin:
@@ -482,72 +280,12 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
             # all connected members for this group have been located
             groups.append(group_temp)  # append the new group
             group_deci.append(deci_domi[first_member])  # append new group's exhibited decision
-        # update the colors for the exhibited decisions
-        if not color_initialized:
-            color_initialized = True
-            select_set = range(color_quantity)  # the initial selecting set
-            all_deci_set = set(group_deci)  # put all exhibited decisions in a set
-            for deci in all_deci_set:  # avoid checking duplicate decisions
-                if len(select_set) == 0:
-                    select_set = range(color_quantity)  # start a new set to select from
-                # # force color blue for first decision, color orange for second decision
-                # if deci == 0:
-                #     chosen_color = 3  # color blue
-                # # elif deci == 1:
-                # #     chosen_color = 4  # color orange
-                # else:
-                #     chosen_color = np.random.choice(select_set)
-                chosen_color = np.random.choice(select_set)
-                select_set.remove(chosen_color)
-                deci_colors[deci] = chosen_color  # assign the chosen color to decision
-                # increase the assignments of chosen color by 1
-                color_assigns[chosen_color] = color_assigns[chosen_color] + 1
-        else:
-            # remove the color for a decision, if it's no longer the decision of any group
-            all_deci_set = set(group_deci)
-            for i in range(deci_num):
-                if deci_colors[i] != -1:  # there was a color assigned before
-                    if i not in all_deci_set:
-                        # decrease the assignments of chosen color by 1
-                        color_assigns[deci_colors[i]] = color_assigns[deci_colors[i]] - 1
-                        deci_colors[i] = -1  # remove the assigned color
-            # assign color for an exhibited decision if not assigned
-            select_set = []  # set of colors to select from, start from empty
-            for i in range(len(groups)):
-                if deci_colors[group_deci[i]] == -1:
-                    if len(select_set) == 0:
-                        # construct a new select_set
-                        color_assigns_min = min(color_assigns)
-                        color_assigns_temp = [j - color_assigns_min for j in color_assigns]
-                        select_set = range(color_quantity)
-                        for j in range(color_quantity):
-                            if color_assigns_temp[j] != 0:
-                                select_set.remove(j)
-                    # if here, the select_set is good to go
-                    # # force color orange for second decision
-                    # if group_deci[i] == 1:
-                    #     chosen_color = 4  # color orange
-                    # else:
-                    #     chosen_color = np.random.choice(select_set)
-                    # if chosen_color in select_set:
-                    #     select_set.remove(chosen_color)
-                    chosen_color = np.random.choice(select_set)
-                    select_set.remove(chosen_color)
-                    deci_colors[group_deci[i]] = chosen_color  # assign the chosen color
-                    # increase the assignments of chosen color by 1
-                    color_assigns[chosen_color] = color_assigns[chosen_color] + 1
-        # update the colors for the groups
-        group_colors = []
-        for i in range(len(groups)):
-            group_colors.append(deci_colors[group_deci[i]])
 
         # 3.update the group size for each node
         for i in range(len(groups)):
             size_temp = len(groups[i])
-            color_temp = group_colors[i]
             for node in groups[i]:
                 group_sizes[node] = size_temp
-                node_colors[node] = color_temp  # update the color for each node
 
         # the decision distribution evolution
         converged_all = True  # flag for convergence of entire network
@@ -634,71 +372,6 @@ for sim_index in range(repeat_times):  # repeat the simulation for these times
                 sum_temp = np.sum(deci_dist[i])
                 deci_dist[i] = deci_dist[i] / sum_temp
 
-        # # graphics animation, both pygame window and matplotlib window
-        # # 1.pygame window for dynamics of network's groups
-        # screen.fill(color_white)
-        # # draw the regualr connecting lines
-        # for i in range(net_size):
-        #     for j in range(i+1, net_size):
-        #         if connections[i][j]:
-        #             pygame.draw.line(screen, color_black,
-        #                              nodes_disp[i], nodes_disp[j], norm_line_width)
-        # # draw the connecting lines marking the groups
-        # for i in range(len(groups)):
-        #     group_len = len(groups[i])
-        #     for j in range(group_len):
-        #         for k in range(j+1, group_len):
-        #             j_node = groups[i][j]
-        #             k_node = groups[i][k]
-        #             # check if two nodes in one group is connected
-        #             if connections[j_node][k_node]:
-        #                 # wider lines for group connections
-        #                 pygame.draw.line(screen, distinct_color_set[group_colors[i]],
-        #                     nodes_disp[j_node], nodes_disp[k_node], group_line_width)
-        # # draw the nodes as dots
-        # for i in range(net_size):
-        #     pygame.draw.circle(screen, distinct_color_set[node_colors[i]],
-        #         nodes_disp[i], node_size, 0)
-        # pygame.display.update()
-        # # # 2.matplotlib window for 3D bar graph of unipolarity of decision distribution
-        # # if not nobargraph:
-        # #     dz = [deci_dist[i][deci_domi[i]] for i in range(net_size)]
-        # #     ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, color='b')
-        # #     fig.canvas.draw()
-        # #     fig.show()
-        # # 2.matplotlib window for 2D bar graph of discrete entropy
-        # if not nobargraph:
-        #     # calculate the discrete entropy for all distributions
-        #     ent_sum = 0
-        #     for i in range(net_size):
-        #         ent = 0
-        #         for j in range(deci_num):
-        #             if deci_dist[i][j] == 0: continue
-        #             ent = ent - deci_dist[i][j] * math.log(deci_dist[i][j],2)
-        #         dz[i] = ent
-        #         ent_sum = ent_sum + ent
-        #     print("summation of entropy of all distributions: {}".format(ent_sum))
-        #     # draw the bar graph
-        #         # somehow the old bars are overlapping the current ones, have to clear the
-        #         # figure first, and rebuild the bar graph, as a temporary solution
-        #     fig.clear()
-        #     ax = fig.add_subplot(111, projection='3d')
-        #     bar_colors = [distinct_color_set_float[node_colors[i]] for i in range(net_size)]
-        #     barlist = ax.bar3d(x_pos, y_pos, z_pos, dx, dy, dz, bar_colors)
-        #     fig.canvas.draw()
-        #     fig.show()
-
-        # simulation speed control
-        if not skip_speed_control:
-            # simulation updating frequency control
-            time_now = pygame.time.get_ticks()
-            time_past = time_now - time_last  # time past since last time_last
-            # needs to delay a bit more if time past has not reach desired period
-            # will skip if time is overdue
-            if time_now - time_last < time_period:
-                pygame.time.delay(time_period-time_past)
-            time_last = pygame.time.get_ticks()  # reset time-last
-
         # iteration count
         print "iteration {}".format(iter_count)
         iter_count = iter_count + 1
@@ -735,8 +408,4 @@ if repeat_times > 1:
     #     print(steps_seed)
     #     print("\ton average of {} steps".format(np.mean(steps_seed)))
 
-# notification
-pygame.mixer.music.load('audio/slow-spring-board.ogg')
-pygame.mixer.music.play(1)  # -1 for playing infinite times
-pygame.mixer.music.set_volume(0.8)  # half volume
 
