@@ -1,3 +1,11 @@
+# Modified from trigridnet_probabilistic_consensus.py on April 2019
+
+# This program is used generate iteration data for various combination of two parameters:
+# distribution difference threshold, and distribution difference power index
+
+# The results showed that these two parameters don't make a significant difference to
+# increase the convergence rate.
+
 from trigridnet_generator import *
 from formation_functions import *
 import math, sys, os, getopt, time
