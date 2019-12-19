@@ -7,6 +7,10 @@ Demo 1: [https://youtu.be/7AcXfG2bxoc](https://youtu.be/7AcXfG2bxoc)
 
 Demo 2: [https://youtu.be/TrTDzD4OjFI](https://youtu.be/TrTDzD4OjFI)
 
+Journal artical: [SN Applied Sciences](https://link.springer.com/article/10.1007/s42452-019-1845-x)
+
+Author's thesis: [OhioLINK](http://rave.ohiolink.edu/etdc/view?acc_num=case1528376075213318)
+
 ## Contents
 All the formation control algorithms simulated here agree on a few conditions of the robots. The robots can sensing relative position of neighbors with in sensing range. The robots can communicate with robots in communication range. Both sensing range and communication range are very small, most time they are treated the same in the simulations. (This corresponds to the physical infrared sensor that does sensing and communicating at same time.) The robot swarm is homogeneous. The robots can do omnidirectional movements. The robots are modelled as dots, so no collision avoidance method is studied here.
 
@@ -80,5 +84,4 @@ To be added.
 
 ## License
 See the [LICENSE](LICENSE.md) file for license rights and limitations (MIT).
-
 
